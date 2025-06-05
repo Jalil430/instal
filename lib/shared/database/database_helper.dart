@@ -2,34 +2,44 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
-  static final DatabaseHelper _instance = DatabaseHelper._internal();
+  static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
-  DatabaseHelper._internal();
-
-  factory DatabaseHelper() => _instance;
+  DatabaseHelper._init();
 
   Future<Database> get database async {
-    _database ??= await _initDatabase();
+    if (_database != null) return _database!;
+    _database = await _initDB('instal.db');
     return _database!;
   }
 
-  Future<Database> _initDatabase() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'instal_app.db');
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
 
     return await openDatabase(
       path,
-      version: 1,
-      onCreate: _onCreate,
+      version: 2, // Increment version to trigger schema update
+      onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
   }
 
-  Future<void> _onCreate(Database db, int version) async {
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Drop and recreate tables with correct column names
+      await db.execute('DROP TABLE IF EXISTS installment_payments');
+      await db.execute('DROP TABLE IF EXISTS installments');
+      await db.execute('DROP TABLE IF EXISTS investors');
+      await db.execute('DROP TABLE IF EXISTS clients');
+      await _createDB(db, newVersion);
+    }
+  }
+
+  Future _createDB(Database db, int version) async {
     // Create clients table
     await db.execute('''
-      CREATE TABLE clients (
+      CREATE TABLE clients(
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         full_name TEXT NOT NULL,
@@ -43,7 +53,7 @@ class DatabaseHelper {
 
     // Create investors table
     await db.execute('''
-      CREATE TABLE investors (
+      CREATE TABLE investors(
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         full_name TEXT NOT NULL,
@@ -57,11 +67,11 @@ class DatabaseHelper {
 
     // Create installments table
     await db.execute('''
-      CREATE TABLE installments (
+      CREATE TABLE installments(
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         client_id TEXT NOT NULL,
-        investor_id TEXT NOT NULL,
+        investor_id TEXT,
         product_name TEXT NOT NULL,
         cash_price REAL NOT NULL,
         installment_price REAL NOT NULL,
@@ -80,49 +90,24 @@ class DatabaseHelper {
 
     // Create installment_payments table
     await db.execute('''
-      CREATE TABLE installment_payments (
+      CREATE TABLE installment_payments(
         id TEXT PRIMARY KEY,
         installment_id TEXT NOT NULL,
         payment_number INTEGER NOT NULL,
         due_date INTEGER NOT NULL,
         expected_amount REAL NOT NULL,
-        paid_amount REAL NOT NULL DEFAULT 0,
-        status TEXT NOT NULL DEFAULT 'предстоящий',
+        paid_amount REAL DEFAULT 0,
+        status TEXT NOT NULL,
         paid_date INTEGER,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         FOREIGN KEY (installment_id) REFERENCES installments (id)
       )
     ''');
-
-    // Create indexes for better performance
-    await db.execute('CREATE INDEX idx_clients_user_id ON clients (user_id)');
-    await db.execute('CREATE INDEX idx_investors_user_id ON investors (user_id)');
-    await db.execute('CREATE INDEX idx_installments_user_id ON installments (user_id)');
-    await db.execute('CREATE INDEX idx_installments_client_id ON installments (client_id)');
-    await db.execute('CREATE INDEX idx_installments_investor_id ON installments (investor_id)');
-    await db.execute('CREATE INDEX idx_installment_payments_installment_id ON installment_payments (installment_id)');
-    await db.execute('CREATE INDEX idx_installment_payments_status ON installment_payments (status)');
-    await db.execute('CREATE INDEX idx_installment_payments_due_date ON installment_payments (due_date)');
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database upgrades here
-    if (oldVersion < newVersion) {
-      // Add migration logic here when needed
-    }
-  }
-
-  Future<void> close() async {
-    final db = await database;
-    await db.close();
-    _database = null;
-  }
-
-  Future<void> deleteDatabase() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'instal_app.db');
-    await databaseFactory.deleteDatabase(path);
-    _database = null;
+  Future close() async {
+    final db = await instance.database;
+    db.close();
   }
 } 
