@@ -4,17 +4,17 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_status_badge.dart';
 import '../domain/entities/installment_payment.dart';
+import 'payment_registration_dialog.dart';
+import 'payment_deletion_dialog.dart';
 
 class InstallmentPaymentItem extends StatefulWidget {
   final InstallmentPayment payment;
-  final VoidCallback onRegisterPayment;
-  final VoidCallback? onDeletePayment;
+  final VoidCallback onPaymentUpdated;
 
   const InstallmentPaymentItem({
     super.key,
     required this.payment,
-    required this.onRegisterPayment,
-    this.onDeletePayment,
+    required this.onPaymentUpdated,
   });
 
   @override
@@ -44,6 +44,24 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
     super.dispose();
   }
 
+  void _handlePaymentRegistration(Offset position) {
+    PaymentRegistrationDialog.show(
+      context: context,
+      position: position,
+      payment: widget.payment,
+      onPaymentRegistered: widget.onPaymentUpdated,
+    );
+  }
+
+  void _handlePaymentDeletion(Offset position) {
+    PaymentDeletionDialog.show(
+      context: context,
+      position: position,
+      payment: widget.payment,
+      onPaymentDeleted: widget.onPaymentUpdated,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -64,7 +82,13 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         _hoverController.reverse();
       },
       child: GestureDetector(
-        onTap: !widget.payment.isPaid ? widget.onRegisterPayment : widget.onDeletePayment,
+        onTapDown: (details) {
+          if (widget.payment.isPaid) {
+            _handlePaymentDeletion(details.globalPosition);
+          } else {
+            _handlePaymentRegistration(details.globalPosition);
+          }
+        },
         child: AnimatedBuilder(
           animation: _hoverAnimation,
           builder: (context, child) {
@@ -275,20 +299,5 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         ),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'оплачено':
-        return AppTheme.successColor;
-      case 'предстоящий':
-        return AppTheme.pendingColor;
-      case 'к оплате':
-        return AppTheme.warningColor;
-      case 'просрочено':
-        return AppTheme.errorColor;
-      default:
-        return AppTheme.textSecondary;
-    }
   }
 } 

@@ -6,6 +6,7 @@ import '../../../shared/widgets/custom_status_badge.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import 'installment_payment_item.dart';
+import 'payment_registration_dialog.dart';
 
 class InstallmentListItem extends StatefulWidget {
   final Installment installment;
@@ -15,10 +16,10 @@ class InstallmentListItem extends StatefulWidget {
   final double leftAmount;
   final List<InstallmentPayment> payments;
   final InstallmentPayment? nextPayment;
+  final bool isExpanded;
   final VoidCallback onTap;
-  final Function(InstallmentPayment) onRegisterPayment;
-  final Function(InstallmentPayment)? onDeletePayment;
   final VoidCallback? onClientTap;
+  final Function(bool) onExpansionChanged;
 
   const InstallmentListItem({
     super.key,
@@ -29,10 +30,10 @@ class InstallmentListItem extends StatefulWidget {
     required this.leftAmount,
     required this.payments,
     this.nextPayment,
+    required this.isExpanded,
     required this.onTap,
-    required this.onRegisterPayment,
-    this.onDeletePayment,
     this.onClientTap,
+    required this.onExpansionChanged,
   });
 
   @override
@@ -41,15 +42,12 @@ class InstallmentListItem extends StatefulWidget {
 
 class _InstallmentListItemState extends State<InstallmentListItem> with TickerProviderStateMixin {
   bool _isHovered = false;
-  bool _isExpanded = false;
   bool _isClientNameHovered = false;
   bool _isArrowHovered = false;
   bool _isNextPaymentHovered = false;
   
   late AnimationController _hoverController;
-  late AnimationController _expandController;
   late Animation<double> _hoverAnimation;
-  late Animation<double> _expandAnimation;
 
   @override
   void initState() {
@@ -58,23 +56,15 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _expandController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
     
     _hoverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _hoverController, curve: Curves.easeInOut),
-    );
-    _expandAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _expandController, curve: Curves.easeInOut),
     );
   }
 
   @override
   void dispose() {
     _hoverController.dispose();
-    _expandController.dispose();
     super.dispose();
   }
 
@@ -102,6 +92,20 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
     
     // Return the status of the next payment that needs attention
     return nextPayment.status;
+  }
+
+  void _handleNextPaymentRegistration(Offset position) {
+    if (widget.nextPayment != null) {
+      PaymentRegistrationDialog.show(
+        context: context,
+        position: position,
+        payment: widget.nextPayment!,
+        onPaymentRegistered: () {
+          // Trigger parent refresh
+          widget.onExpansionChanged(widget.isExpanded);
+        },
+      );
+    }
   }
 
   @override
@@ -136,7 +140,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   decoration: BoxDecoration(
-                    color: _isExpanded
+                    color: widget.isExpanded
                         ? Color.lerp(
                             const Color(0xFFF8F9FA),
                             const Color(0xFFF1F3F4),
@@ -286,7 +290,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                         onEnter: (_) => setState(() => _isNextPaymentHovered = true),
                                         onExit: (_) => setState(() => _isNextPaymentHovered = false),
                                         child: GestureDetector(
-                                          onTap: () => widget.onRegisterPayment(widget.nextPayment!),
+                                          onTapDown: (details) => _handleNextPaymentRegistration(details.globalPosition),
                                           child: Container(
                                             height: 28,
                                             decoration: BoxDecoration(
@@ -341,7 +345,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                   ),
                                   child: IconButton(
                                     icon: AnimatedRotation(
-                                      turns: _isExpanded ? 0.5 : 0,
+                                      turns: widget.isExpanded ? 0.5 : 0,
                                       duration: const Duration(milliseconds: 200),
                                       child: Icon(
                                         Icons.keyboard_arrow_down_rounded,
@@ -352,12 +356,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                       ),
                                     ),
                                     onPressed: () {
-                                      setState(() => _isExpanded = !_isExpanded);
-                                      if (_isExpanded) {
-                                        _expandController.forward();
-                                      } else {
-                                        _expandController.reverse();
-                                      }
+                                      widget.onExpansionChanged(!widget.isExpanded);
                                     },
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
@@ -379,33 +378,26 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
           ),
         ),
         // Expandable payment list as table rows
-        AnimatedBuilder(
-          animation: _expandAnimation,
-          builder: (context, child) {
-            return ClipRect(
-              child: Align(
-                alignment: Alignment.topCenter,
-                heightFactor: _expandAnimation.value,
-                child: Container(
-                  color: const Color(0xFFF8F9FA),
-                  child: Column(
-                    children: [
-                      // Payment items as table rows
-                      ...widget.payments.map((payment) {
-                        return InstallmentPaymentItem(
-                          payment: payment,
-                          onRegisterPayment: () => widget.onRegisterPayment(payment),
-                          onDeletePayment: widget.onDeletePayment != null 
-                              ? () => widget.onDeletePayment!(payment)
-                              : null,
-                        );
-                      }).toList(),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: widget.isExpanded ? null : 0,
+          child: widget.isExpanded ? Container(
+            color: const Color(0xFFF8F9FA),
+            child: Column(
+              children: [
+                // Payment items as table rows
+                ...widget.payments.map((payment) {
+                  return InstallmentPaymentItem(
+                    payment: payment,
+                    onPaymentUpdated: () {
+                      // Trigger parent refresh
+                      widget.onExpansionChanged(widget.isExpanded);
+                    },
+                  );
+                }),
+              ],
+            ),
+          ) : const SizedBox.shrink(),
         ),
       ],
     );

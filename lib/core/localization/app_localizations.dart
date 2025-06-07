@@ -78,6 +78,8 @@ class AppLocalizations {
   String get editClient => locale.languageCode == 'ru' ? 'Редактировать клиента' : 'Edit Client';
   String get editInvestor => locale.languageCode == 'ru' ? 'Редактировать инвестора' : 'Edit Investor';
   String get registerPayment => locale.languageCode == 'ru' ? 'Зарегистрировать платеж' : 'Register Payment';
+  String get confirm => locale.languageCode == 'ru' ? 'Подтвердить' : 'Confirm';
+  String get cancelPayment => locale.languageCode == 'ru' ? 'Отменить' : 'Cancel Payment';
   
   // Sort options
   String get sortBy => locale.languageCode == 'ru' ? 'Сортировать по' : 'Sort by';
@@ -87,6 +89,9 @@ class AppLocalizations {
   String get fieldRequired => locale.languageCode == 'ru' ? 'Это поле обязательно' : 'This field is required';
   String get invalidNumber => locale.languageCode == 'ru' ? 'Неверный номер' : 'Invalid number';
   String get invalidAmount => locale.languageCode == 'ru' ? 'Неверная сумма' : 'Invalid amount';
+  
+  // Dialog messages
+  String get cancelPaymentQuestion => locale.languageCode == 'ru' ? 'Отменить оплату этого платежа?' : 'Cancel payment for this installment?';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -7,7 +7,6 @@ class RegisterPayment {
 
   Future<void> call({
     required String paymentId,
-    required double paidAmount,
     required DateTime paidDate,
   }) async {
     final payment = await repository.getPaymentById(paymentId);
@@ -16,9 +15,8 @@ class RegisterPayment {
     }
 
     final updatedPayment = payment.copyWith(
-      paidAmount: paidAmount,
+      isPaid: true,
       paidDate: paidDate,
-      status: 'оплачено',
       updatedAt: DateTime.now(),
     );
 

@@ -18,8 +18,7 @@ class PaymentScheduleService {
         paymentNumber: 0,
         dueDate: installment.downPaymentDate,
         expectedAmount: installment.downPayment,
-        paidAmount: 0.0,
-        status: 'предстоящий',
+        isPaid: false,
         createdAt: now,
         updatedAt: now,
       ));
@@ -39,8 +38,7 @@ class PaymentScheduleService {
         paymentNumber: i,
         dueDate: dueDate,
         expectedAmount: installment.monthlyPayment,
-        paidAmount: 0.0,
-        status: 'предстоящий',
+        isPaid: false,
         createdAt: now,
         updatedAt: now,
       ));
