@@ -78,15 +78,13 @@ class CreateInstallment {
 
     // Create down payment if there is one
     if (downPayment > 0) {
-      final downPaymentStatus = _calculatePaymentStatus(downPaymentDate, now);
       payments.add(InstallmentPayment(
         id: '${installmentId}_0',
         installmentId: installmentId,
         paymentNumber: 0,
         dueDate: downPaymentDate,
         expectedAmount: downPayment,
-        paidAmount: 0,
-        status: downPaymentStatus,
+        isPaid: false,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ));
@@ -100,33 +98,18 @@ class CreateInstallment {
         installmentStartDate.day,
       );
       
-      final status = _calculatePaymentStatus(dueDate, now);
-      
       payments.add(InstallmentPayment(
         id: '${installmentId}_$i',
         installmentId: installmentId,
         paymentNumber: i,
         dueDate: dueDate,
         expectedAmount: monthlyPayment,
-        paidAmount: 0,
-        status: status,
+        isPaid: false,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ));
     }
 
     return payments;
-  }
-
-  String _calculatePaymentStatus(DateTime dueDate, DateTime now) {
-    final difference = dueDate.difference(now).inDays;
-    
-    if (difference < -2) {
-      return 'просрочено'; // Overdue (more than 2 days past due)
-    } else if (difference <= 0) {
-      return 'к оплате'; // Due (today or yesterday)
-    } else {
-      return 'предстоящий'; // Upcoming
-    }
   }
 } 

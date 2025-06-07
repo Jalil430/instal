@@ -14,7 +14,7 @@ class CustomStatusBadge extends StatelessWidget {
     required this.status,
     this.width,
     this.padding,
-    this.fontSize = 11,
+    this.fontSize = 12,
     this.fontWeight = FontWeight.w400,
   });
 

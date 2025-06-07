@@ -8,11 +8,13 @@ import '../domain/entities/installment_payment.dart';
 class InstallmentPaymentItem extends StatefulWidget {
   final InstallmentPayment payment;
   final VoidCallback onRegisterPayment;
+  final VoidCallback? onDeletePayment;
 
   const InstallmentPaymentItem({
     super.key,
     required this.payment,
     required this.onRegisterPayment,
+    this.onDeletePayment,
   });
 
   @override
@@ -62,7 +64,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         _hoverController.reverse();
       },
       child: GestureDetector(
-        onTap: widget.payment.status != 'оплачено' ? widget.onRegisterPayment : null,
+        onTap: !widget.payment.isPaid ? widget.onRegisterPayment : widget.onDeletePayment,
         child: AnimatedBuilder(
           animation: _hoverAnimation,
           builder: (context, child) {
@@ -102,7 +104,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                               ? l10n?.downPayment ?? 'Первоначальный взнос'
                               : '${l10n?.month ?? 'Месяц'} ${widget.payment.paymentNumber}',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                                 fontSize: 14,
                               ),
                           overflow: TextOverflow.ellipsis,
@@ -125,8 +127,8 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                                   dateFormat.format(widget.payment.dueDate),
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: AppTheme.textPrimary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
                                       ),
                                 ),
                                 Text(
@@ -140,7 +142,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                             ),
                             
                             // Show paid date if available
-                            if (widget.payment.status == 'оплачено' && widget.payment.paidDate != null) ...[
+                            if (widget.payment.isPaid && widget.payment.paidDate != null) ...[
                               Container(
                                 margin: const EdgeInsets.symmetric(horizontal: 12),
                                 width: 1,
@@ -154,8 +156,8 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                                     dateFormat.format(widget.payment.paidDate!),
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: AppTheme.successColor,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400,
                                         ),
                                   ),
                                   Text(
@@ -218,14 +220,12 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                       padding: const EdgeInsets.only(left: 8),
                       child: Row(
                         children: [
-                          // Expected Amount
+                          // Payment Amount
                           Text(
-                            widget.payment.status == 'оплачено' && widget.payment.paidAmount > 0
-                                ? currencyFormat.format(widget.payment.paidAmount)
-                                : currencyFormat.format(widget.payment.expectedAmount),
+                            currencyFormat.format(widget.payment.expectedAmount),
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 14,
                                   color: AppTheme.textPrimary,
                                 ),
                           ),
@@ -237,26 +237,28 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: widget.payment.status == 'оплачено'
-                                  ? AppTheme.successColor.withOpacity(0.1)
+                              color: widget.payment.isPaid
+                                  ? (_isHovered 
+                                      ? AppTheme.errorColor.withOpacity(0.1)
+                                      : AppTheme.backgroundColor)
                                   : _isHovered 
                                       ? AppTheme.primaryColor.withOpacity(0.1)
                                       : AppTheme.backgroundColor,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: widget.payment.status == 'оплачено'
-                                    ? AppTheme.successColor.withOpacity(0.3)
-                                    : AppTheme.borderColor.withOpacity(0.5),
+                                color: AppTheme.borderColor.withOpacity(0.5),
                                 width: 1,
                               ),
                             ),
                             child: Icon(
-                              widget.payment.status == 'оплачено'
-                                  ? Icons.check_rounded
+                              widget.payment.isPaid
+                                  ? Icons.close_rounded
                                   : Icons.add_rounded,
                               size: 14,
-                              color: widget.payment.status == 'оплачено'
-                                  ? AppTheme.successColor
+                              color: widget.payment.isPaid
+                                  ? (_isHovered 
+                                      ? AppTheme.errorColor
+                                      : AppTheme.textSecondary)
                                   : _isHovered 
                                       ? AppTheme.primaryColor
                                       : AppTheme.textSecondary,

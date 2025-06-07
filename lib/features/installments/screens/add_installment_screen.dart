@@ -190,8 +190,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
         paymentNumber: 0,
         dueDate: installment.downPaymentDate,
         expectedAmount: installment.downPayment,
-        paidAmount: 0,
-        status: 'предстоящий',
+        isPaid: false,
         paidDate: null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -212,8 +211,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
         paymentNumber: i,
         dueDate: dueDate,
         expectedAmount: installment.monthlyPayment,
-        paidAmount: 0,
-        status: _getPaymentStatus(dueDate),
+        isPaid: false,
         paidDate: null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -223,20 +221,6 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     // Save all payments
     for (final payment in payments) {
       await _installmentRepository.createPayment(payment);
-    }
-  }
-
-  String _getPaymentStatus(DateTime dueDate) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
-    
-    if (due.isBefore(today.subtract(const Duration(days: 2)))) {
-      return 'просрочено';
-    } else if (due.isAtSameMomentAs(today) || due.isAtSameMomentAs(today.subtract(const Duration(days: 1)))) {
-      return 'к оплате';
-    } else {
-      return 'предстоящий';
     }
   }
 

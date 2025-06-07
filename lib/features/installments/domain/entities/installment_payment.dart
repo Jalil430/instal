@@ -4,8 +4,7 @@ class InstallmentPayment {
   final int paymentNumber; // 0 for down payment, 1-n for monthly payments
   final DateTime dueDate;
   final double expectedAmount;
-  final double paidAmount;
-  final String status; // оплачено, предстоящий, к оплате, просрочено
+  final bool isPaid;
   final DateTime? paidDate;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -16,8 +15,7 @@ class InstallmentPayment {
     required this.paymentNumber,
     required this.dueDate,
     required this.expectedAmount,
-    required this.paidAmount,
-    required this.status,
+    required this.isPaid,
     this.paidDate,
     required this.createdAt,
     required this.updatedAt,
@@ -29,8 +27,7 @@ class InstallmentPayment {
     int? paymentNumber,
     DateTime? dueDate,
     double? expectedAmount,
-    double? paidAmount,
-    String? status,
+    bool? isPaid,
     DateTime? paidDate,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -41,8 +38,7 @@ class InstallmentPayment {
       paymentNumber: paymentNumber ?? this.paymentNumber,
       dueDate: dueDate ?? this.dueDate,
       expectedAmount: expectedAmount ?? this.expectedAmount,
-      paidAmount: paidAmount ?? this.paidAmount,
-      status: status ?? this.status,
+      isPaid: isPaid ?? this.isPaid,
       paidDate: paidDate ?? this.paidDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -51,13 +47,40 @@ class InstallmentPayment {
 
   bool get isDownPayment => paymentNumber == 0;
   
-  bool get isPaid => status == 'оплачено';
+  /// Dynamically calculated status based on current date and payment state
+  String get status {
+    // If payment is paid
+    if (isPaid) {
+      return 'оплачено';
+    }
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    
+    // Calculate days difference
+    final daysDifference = today.difference(due).inDays;
+    
+    if (daysDifference > 2) {
+      // More than 2 days overdue
+      return 'просрочено';
+    } else if (daysDifference >= 0) {
+      // Due today or up to 2 days overdue
+      return 'к оплате';
+    } else {
+      // Future payment
+      return 'предстоящий';
+    }
+  }
   
   bool get isOverdue => status == 'просрочено';
   
   bool get isDue => status == 'к оплате';
   
   bool get isUpcoming => status == 'предстоящий';
+
+  /// Get the actual payment amount (0 if not paid, expectedAmount if paid)
+  double get paidAmount => isPaid ? expectedAmount : 0.0;
 
   String get paymentLabel {
     if (isDownPayment) {
@@ -67,16 +90,36 @@ class InstallmentPayment {
   }
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is InstallmentPayment && other.id == id;
+  String toString() {
+    return 'InstallmentPayment(id: $id, paymentNumber: $paymentNumber, isPaid: $isPaid, status: $status)';
   }
 
   @override
-  int get hashCode => id.hashCode;
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+  
+    return other is InstallmentPayment &&
+      other.id == id &&
+      other.installmentId == installmentId &&
+      other.paymentNumber == paymentNumber &&
+      other.dueDate == dueDate &&
+      other.expectedAmount == expectedAmount &&
+      other.isPaid == isPaid &&
+      other.paidDate == paidDate &&
+      other.createdAt == createdAt &&
+      other.updatedAt == updatedAt;
+  }
 
   @override
-  String toString() {
-    return 'InstallmentPayment(id: $id, paymentNumber: $paymentNumber, status: $status)';
+  int get hashCode {
+    return id.hashCode ^
+      installmentId.hashCode ^
+      paymentNumber.hashCode ^
+      dueDate.hashCode ^
+      expectedAmount.hashCode ^
+      isPaid.hashCode ^
+      paidDate.hashCode ^
+      createdAt.hashCode ^
+      updatedAt.hashCode;
   }
 } 

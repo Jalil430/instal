@@ -431,8 +431,10 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                       InstallmentPayment? nextPayment;
                                       
                                       for (final payment in payments) {
-                                        paidAmount += payment.paidAmount;
-                                        if (nextPayment == null && payment.status != 'оплачено') {
+                                        if (payment.isPaid) {
+                                          paidAmount += payment.expectedAmount;
+                                        }
+                                        if (nextPayment == null && !payment.isPaid) {
                                           nextPayment = payment;
                                         }
                                       }
@@ -452,6 +454,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                           nextPayment: nextPayment,
                                           onTap: () => context.go('/installments/${installment.id}'),
                                           onRegisterPayment: (payment) => _showRegisterPaymentDialog(payment),
+                                          onDeletePayment: (payment) => _showDeletePaymentDialog(payment),
                                           onClientTap: () => context.go('/clients/${installment.clientId}'),
                                         ),
                                       );
@@ -551,6 +554,73 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       ),
     );
   }
+
+  void _showDeletePaymentDialog(InstallmentPayment payment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Отменить оплату'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              payment.paymentNumber == 0 
+                  ? 'Первоначальный взнос'
+                  : 'Месяц ${payment.paymentNumber}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Вы уверены, что хотите отменить оплату этого платежа?',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final updatedPayment = payment.copyWith(
+                  isPaid: false,
+                  paidDate: null,
+                );
+                
+                await _installmentRepository.updatePayment(updatedPayment);
+                _loadData(); // Reload data after payment cancellation
+                Navigator.of(context).pop();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Оплата отменена')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка: $e')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Отменить оплату'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EnhancedRegisterPaymentDialog extends StatefulWidget {
@@ -567,7 +637,6 @@ class _EnhancedRegisterPaymentDialog extends StatefulWidget {
 }
 
 class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPaymentDialog> with SingleTickerProviderStateMixin {
-  late TextEditingController _amountController;
   late InstallmentRepository _repository;
   bool _isLoading = false;
   late AnimationController _animationController;
@@ -576,9 +645,6 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(
-      text: widget.payment.expectedAmount.toStringAsFixed(0),
-    );
     _repository = InstallmentRepositoryImpl(
       InstallmentLocalDataSourceImpl(DatabaseHelper.instance),
     );
@@ -596,13 +662,18 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
 
   @override
   void dispose() {
-    _amountController.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(
+      locale: 'ru_RU',
+      symbol: '₽',
+      decimalDigits: 0,
+    );
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: ScaleTransition(
@@ -661,7 +732,7 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Регистрация платежа',
+                            'Отметить как оплаченный',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -703,7 +774,7 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                   children: [
                     // Payment Info
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: AppTheme.backgroundColor,
                         borderRadius: BorderRadius.circular(12),
@@ -719,16 +790,17 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Ожидаемая сумма',
+                                  'Сумма к оплате',
                                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                                     color: AppTheme.textSecondary,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
-                                  '${widget.payment.expectedAmount.toStringAsFixed(0)} ₽',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
+                                  currencyFormat.format(widget.payment.expectedAmount),
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primaryColor,
                                   ),
                                 ),
                               ],
@@ -736,10 +808,10 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                           ),
                           Container(
                             width: 1,
-                            height: 40,
+                            height: 50,
                             color: AppTheme.borderColor,
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 20),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,10 +822,10 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                                     color: AppTheme.textSecondary,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
                                   DateFormat('dd.MM.yyyy').format(widget.payment.dueDate),
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -766,73 +838,34 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                     
                     const SizedBox(height: 20),
                     
-                    // Amount Input
-                    Text(
-                      'Сумма платежа',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    // Confirmation text
                     Container(
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            offset: const Offset(0, 1),
-                            blurRadius: 3,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _amountController,
-                        keyboardType: TextInputType.number,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withOpacity(0.2),
+                          width: 1,
                         ),
-                        decoration: InputDecoration(
-                          hintText: 'Введите сумму',
-                          suffixIcon: Container(
-                            margin: const EdgeInsets.all(8),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: AppTheme.primaryColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: Text(
-                              '₽',
-                              style: TextStyle(
+                              'Платеж будет отмечен как полностью оплаченный на сумму ${currencyFormat.format(widget.payment.expectedAmount)}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          filled: true,
-                          fillColor: AppTheme.backgroundColor,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppTheme.borderColor.withOpacity(0.5),
-                              width: 1,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppTheme.borderColor.withOpacity(0.5),
-                              width: 1,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppTheme.primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -906,7 +939,7 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
                                   ),
                                 )
                               : const Text(
-                                  'Сохранить',
+                                  'Отметить как оплаченный',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16,
@@ -926,16 +959,12 @@ class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPayment
   }
 
   Future<void> _handlePayment() async {
-    final amount = double.tryParse(_amountController.text) ?? 0;
-    if (amount <= 0) return;
-
     setState(() => _isLoading = true);
 
     try {
       final updatedPayment = widget.payment.copyWith(
-        paidAmount: amount,
+        isPaid: true,
         paidDate: DateTime.now(),
-        status: 'оплачено',
       );
       
       await _repository.updatePayment(updatedPayment);

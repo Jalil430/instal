@@ -7,8 +7,7 @@ class InstallmentPaymentModel extends InstallmentPayment {
     required super.paymentNumber,
     required super.dueDate,
     required super.expectedAmount,
-    required super.paidAmount,
-    required super.status,
+    required super.isPaid,
     super.paidDate,
     required super.createdAt,
     required super.updatedAt,
@@ -21,8 +20,7 @@ class InstallmentPaymentModel extends InstallmentPayment {
       paymentNumber: map['payment_number'] as int,
       dueDate: DateTime.fromMillisecondsSinceEpoch(map['due_date'] as int),
       expectedAmount: map['expected_amount'] as double,
-      paidAmount: map['paid_amount'] as double,
-      status: map['status'] as String,
+      isPaid: (map['is_paid'] as int) == 1,
       paidDate: map['paid_date'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(map['paid_date'] as int)
           : null,
@@ -38,8 +36,7 @@ class InstallmentPaymentModel extends InstallmentPayment {
       paymentNumber: payment.paymentNumber,
       dueDate: payment.dueDate,
       expectedAmount: payment.expectedAmount,
-      paidAmount: payment.paidAmount,
-      status: payment.status,
+      isPaid: payment.isPaid,
       paidDate: payment.paidDate,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
@@ -53,8 +50,7 @@ class InstallmentPaymentModel extends InstallmentPayment {
       'payment_number': paymentNumber,
       'due_date': dueDate.millisecondsSinceEpoch,
       'expected_amount': expectedAmount,
-      'paid_amount': paidAmount,
-      'status': status,
+      'is_paid': isPaid ? 1 : 0,
       'paid_date': paidDate?.millisecondsSinceEpoch,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
@@ -63,6 +59,6 @@ class InstallmentPaymentModel extends InstallmentPayment {
 
   @override
   String toString() {
-    return 'InstallmentPaymentModel(id: $id, paymentNumber: $paymentNumber, status: $status)';
+    return 'InstallmentPaymentModel(id: $id, paymentNumber: $paymentNumber, isPaid: $isPaid, status: $status)';
   }
 } 

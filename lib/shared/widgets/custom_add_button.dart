@@ -19,7 +19,7 @@ class CustomAddButton extends StatelessWidget {
     this.width,
     this.height = 44,
     this.fontSize = 14,
-    this.fontWeight = FontWeight.w600,
+    this.fontWeight = FontWeight.w500,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
   });
 

@@ -19,15 +19,15 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // Increment version to trigger schema update
+      version: 3, // Increment version to trigger schema update
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Drop and recreate tables with correct column names
+    if (oldVersion < 3) {
+      // Drop and recreate tables with updated schema
       await db.execute('DROP TABLE IF EXISTS installment_payments');
       await db.execute('DROP TABLE IF EXISTS installments');
       await db.execute('DROP TABLE IF EXISTS investors');
@@ -96,8 +96,7 @@ class DatabaseHelper {
         payment_number INTEGER NOT NULL,
         due_date INTEGER NOT NULL,
         expected_amount REAL NOT NULL,
-        paid_amount REAL DEFAULT 0,
-        status TEXT NOT NULL,
+        is_paid INTEGER DEFAULT 0,
         paid_date INTEGER,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,

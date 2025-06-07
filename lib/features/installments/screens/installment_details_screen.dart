@@ -100,7 +100,8 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
   }
 
   double get _totalPaidAmount {
-    return _payments.fold(0, (sum, payment) => sum + payment.paidAmount);
+    return _payments.fold(0.0, (sum, payment) => 
+        sum + (payment.isPaid ? payment.expectedAmount : 0.0));
   }
 
   double get _totalRemainingAmount {
@@ -309,6 +310,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
                               return InstallmentPaymentItem(
                                 payment: payment,
                                 onRegisterPayment: () => _showRegisterPaymentDialog(payment),
+                                onDeletePayment: () => _showDeletePaymentDialog(payment),
                               );
                             }).toList(),
                           ),
@@ -418,6 +420,73 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       ),
     );
   }
+
+  void _showDeletePaymentDialog(InstallmentPayment payment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Отменить оплату'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              payment.paymentNumber == 0 
+                  ? 'Первоначальный взнос'
+                  : 'Месяц ${payment.paymentNumber}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Вы уверены, что хотите отменить оплату этого платежа?',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final updatedPayment = payment.copyWith(
+                  isPaid: false,
+                  paidDate: null,
+                );
+                
+                await _installmentRepository.updatePayment(updatedPayment);
+                _loadData(); // Reload data after payment cancellation
+                Navigator.of(context).pop();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Оплата отменена')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка: $e')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Отменить оплату'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RegisterPaymentDialog extends StatefulWidget {
@@ -434,39 +503,48 @@ class _RegisterPaymentDialog extends StatefulWidget {
 }
 
 class _RegisterPaymentDialogState extends State<_RegisterPaymentDialog> {
-  late TextEditingController _amountController;
   late InstallmentRepository _repository;
 
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(
-      text: widget.payment.expectedAmount.toStringAsFixed(0),
-    );
     _repository = InstallmentRepositoryImpl(
       InstallmentLocalDataSourceImpl(DatabaseHelper.instance),
     );
   }
 
   @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(
+      locale: 'ru_RU',
+      symbol: '₽',
+      decimalDigits: 0,
+    );
+
     return AlertDialog(
-      title: Text('Регистрация платежа ${widget.payment.paymentNumber == 0 ? "(Первоначальный взнос)" : "(Месяц ${widget.payment.paymentNumber})"}'),
+      title: Text('Отметить как оплаченный'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: _amountController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Сумма платежа',
-              suffixText: '₽',
+          Text(
+            widget.payment.paymentNumber == 0 
+                ? 'Первоначальный взнос'
+                : 'Месяц ${widget.payment.paymentNumber}',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Сумма: ${currencyFormat.format(widget.payment.expectedAmount)}',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Платеж будет отмечен как полностью оплаченный.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
             ),
           ),
         ],
@@ -478,20 +556,16 @@ class _RegisterPaymentDialogState extends State<_RegisterPaymentDialog> {
         ),
         ElevatedButton(
           onPressed: () async {
-            final amount = double.tryParse(_amountController.text) ?? 0;
-            if (amount > 0) {
-              final updatedPayment = widget.payment.copyWith(
-                paidAmount: amount,
-                paidDate: DateTime.now(),
-                status: 'оплачено',
-              );
-              
-              await _repository.updatePayment(updatedPayment);
-              widget.onPaymentRegistered();
-              Navigator.of(context).pop();
-            }
+            final updatedPayment = widget.payment.copyWith(
+              isPaid: true,
+              paidDate: DateTime.now(),
+            );
+            
+            await _repository.updatePayment(updatedPayment);
+            widget.onPaymentRegistered();
+            Navigator.of(context).pop();
           },
-          child: const Text('Сохранить'),
+          child: const Text('Отметить как оплаченный'),
         ),
       ],
     );

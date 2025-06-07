@@ -17,6 +17,7 @@ class InstallmentListItem extends StatefulWidget {
   final InstallmentPayment? nextPayment;
   final VoidCallback onTap;
   final Function(InstallmentPayment) onRegisterPayment;
+  final Function(InstallmentPayment)? onDeletePayment;
   final VoidCallback? onClientTap;
 
   const InstallmentListItem({
@@ -30,6 +31,7 @@ class InstallmentListItem extends StatefulWidget {
     this.nextPayment,
     required this.onTap,
     required this.onRegisterPayment,
+    this.onDeletePayment,
     this.onClientTap,
   });
 
@@ -77,26 +79,29 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
   }
 
   String _getOverallStatus() {
-    // Determine overall status based on payments
-    bool hasOverdue = false;
-    bool hasDueToPay = false;
-    bool hasUpcoming = false;
+    // If no payments, return default
+    if (widget.payments.isEmpty) return 'предстоящий';
     
-    for (final payment in widget.payments) {
-      if (payment.status == 'просрочено') {
-        hasOverdue = true;
-        break;
-      } else if (payment.status == 'к оплате') {
-        hasDueToPay = true;
-      } else if (payment.status == 'предстоящий') {
-        hasUpcoming = true;
-      }
+    // First check for overdue payments (highest priority)
+    bool hasOverdue = widget.payments.any((payment) => payment.status == 'просрочено');
+    if (hasOverdue) return 'просрочено';
+    
+    // Get the next unpaid payment (by due date) to determine the most relevant status
+    final unpaidPayments = widget.payments
+        .where((payment) => payment.status != 'оплачено')
+        .toList();
+    
+    if (unpaidPayments.isEmpty) {
+      // All payments are paid
+      return 'оплачено';
     }
     
-    if (hasOverdue) return 'просрочено';
-    if (hasDueToPay) return 'к оплате';
-    if (hasUpcoming) return 'предстоящий';
-    return 'оплачено';
+    // Sort unpaid payments by due date to get the next one
+    unpaidPayments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    final nextPayment = unpaidPayments.first;
+    
+    // Return the status of the next payment that needs attention
+    return nextPayment.status;
   }
 
   @override
@@ -304,7 +309,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   color: AppTheme.textPrimary,
                                                   fontWeight: FontWeight.w400,
-                                                  fontSize: 11,
+                                                  fontSize: 12,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
@@ -390,6 +395,9 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                         return InstallmentPaymentItem(
                           payment: payment,
                           onRegisterPayment: () => widget.onRegisterPayment(payment),
+                          onDeletePayment: widget.onDeletePayment != null 
+                              ? () => widget.onDeletePayment!(payment)
+                              : null,
                         );
                       }).toList(),
                     ],
