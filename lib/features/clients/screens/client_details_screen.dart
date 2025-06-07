@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../shared/widgets/custom_add_button.dart';
 import '../domain/entities/client.dart';
 import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
@@ -229,10 +230,10 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                                     ),
                               ),
                               const Spacer(),
-                              ElevatedButton.icon(
+                              CustomAddButton(
+                                text: 'Добавить рассрочку',
                                 onPressed: () => context.go('/installments/add'),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Добавить рассрочку'),
+                                icon: Icons.add,
                               ),
                             ],
                           ),

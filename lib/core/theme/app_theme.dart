@@ -21,11 +21,32 @@ class AppTheme {
   static const Color successColor = Color(0xFF10B981);
   static const Color warningColor = Color(0xFFF59E0B);
   static const Color errorColor = Color(0xFFEF4444);
-  static const Color pendingColor = Color(0xFF3B82F6);
+  static const Color pendingColor = primaryColor; // Use primary color for consistent blue
   
   // Border and divider colors
   static const Color borderColor = Color(0xFFE5E7EB);
   static const Color dividerColor = Color(0xFFF3F4F6);
+  
+  // Subtle Element Design Pattern
+  // Use these for consistent styling of interactive elements like search bars, 
+  // dropdowns, buttons, and table headers that need subtle primary color styling
+  static Color get subtleBackgroundColor => primaryColor.withOpacity(0.04);
+  static Color get subtleBorderColor => primaryColor.withOpacity(0.1);
+  
+  // Alternative for hover states and more emphasis
+  static Color get subtleHoverColor => primaryColor.withOpacity(0.08);
+  static Color get subtleAccentColor => primaryColor.withOpacity(0.15);
+  
+  // Bright and Standing Out Elements Design Pattern
+  // Use these for elements that need to draw attention and stand out prominently
+  static Color get brightPrimaryColor => primaryColor; // Full intensity primary color
+  static Color get brightSecondaryColor => primaryDark; // Darker variant for depth
+  static Color get brightAccentColor => accentColor; // Accent color for special highlights
+  
+  // Interactive bright elements (buttons, links, CTAs)
+  static Color get interactiveBrightColor => primaryColor;
+  static Color get interactiveBrightHover => primaryDark;
+  static Color get interactiveBrightShadow => primaryColor.withOpacity(0.3);
   
   // Sidebar colors
   static const Color sidebarBackground = Color(0xFF1F2937);

@@ -107,7 +107,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
                 Row(
                   children: [
                     Text(
-                      l10n?.clients ?? 'Клиенты',
+                      l10n?.client ?? 'Клиент',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const Spacer(),

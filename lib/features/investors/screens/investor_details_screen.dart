@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../shared/widgets/custom_add_button.dart';
 import '../domain/entities/investor.dart';
 import '../domain/repositories/investor_repository.dart';
 import '../data/repositories/investor_repository_impl.dart';
@@ -266,10 +267,10 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                                     ),
                               ),
                               const Spacer(),
-                              ElevatedButton.icon(
+                              CustomAddButton(
+                                text: 'Добавить рассрочку',
                                 onPressed: () => context.go('/installments/add'),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Добавить рассрочку'),
+                                icon: Icons.add,
                               ),
                             ],
                           ),

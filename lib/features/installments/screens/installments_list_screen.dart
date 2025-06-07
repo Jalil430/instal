@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../shared/widgets/custom_dropdown.dart';
+import '../../../shared/widgets/custom_search_bar.dart';
 import '../widgets/installment_list_item.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
@@ -12,6 +14,8 @@ import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
 import '../../clients/data/datasources/client_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
+import 'package:intl/intl.dart';
+import '../../../shared/widgets/custom_add_button.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
@@ -20,7 +24,7 @@ class InstallmentsListScreen extends StatefulWidget {
   State<InstallmentsListScreen> createState() => _InstallmentsListScreenState();
 }
 
-class _InstallmentsListScreenState extends State<InstallmentsListScreen> {
+class _InstallmentsListScreenState extends State<InstallmentsListScreen> with TickerProviderStateMixin {
   String _searchQuery = '';
   String _sortBy = 'status';
   late InstallmentRepository _installmentRepository;
@@ -29,12 +33,29 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> {
   Map<String, String> _clientNames = {};
   Map<String, List<InstallmentPayment>> _installmentPayments = {};
   bool _isLoading = true;
+  
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    
     _initializeRepositories();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   void _initializeRepositories() {
@@ -75,6 +96,8 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> {
         _installmentPayments = installmentPayments;
         _isLoading = false;
       });
+      
+      _fadeController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
       // Handle error
@@ -167,224 +190,360 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> {
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Header with search and sort
+          // Enhanced Header with search and sort
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
+            decoration: BoxDecoration(
               color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                  spreadRadius: 0,
                 ),
-              ),
+              ],
             ),
             child: Column(
               children: [
+                // Title and Actions Row
                 Row(
                   children: [
-                    Text(
-                      l10n?.installments ?? 'Рассрочки',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    // Title without Icon
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n?.installments ?? 'Рассрочки',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          '${_filteredAndSortedInstallments.length} ${_getItemsText(_filteredAndSortedInstallments.length)}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                     const Spacer(),
-                    // Search field
-                    SizedBox(
-                      width: 300,
-                      height: 40,
-                      child: TextField(
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        decoration: InputDecoration(
-                          hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.installments ?? 'рассрочки').toLowerCase()}...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: AppTheme.borderColor),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                      ),
+                    // Enhanced Search field
+                    CustomSearchBar(
+                      value: _searchQuery,
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.installments ?? 'рассрочки').toLowerCase()}...',
+                      width: 320,
                     ),
                     const SizedBox(width: 16),
-                    // Sort dropdown
-                    Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.borderColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: DropdownButton<String>(
-                        value: _sortBy,
-                        underline: const SizedBox(),
-                        icon: const Icon(Icons.arrow_drop_down),
-                        items: {
-                          'creationDate': l10n?.creationDate ?? 'Дате создания',
-                          'status': l10n?.status ?? 'Статус',
-                          'amount': l10n?.amount ?? 'Сумма',
-                          'client': l10n?.clients ?? 'Клиенты',
-                        }.entries.map((entry) {
-                          return DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _sortBy = value!),
-                      ),
+                    // Enhanced Sort dropdown
+                    CustomDropdown(
+                      value: _sortBy,
+                      width: 200,
+                      items: {
+                        'creationDate': l10n?.creationDate ?? 'Дата создания',
+                        'status': l10n?.status ?? 'Статус',
+                        'amount': l10n?.amount ?? 'Сумма',
+                        'client': l10n?.client ?? 'Клиент',
+                      },
+                      onChanged: (value) => setState(() => _sortBy = value!),
                     ),
                     const SizedBox(width: 16),
-                    ElevatedButton.icon(
+                    // Custom Add button
+                    CustomAddButton(
+                      text: l10n?.addInstallment ?? 'Добавить рассрочку',
                       onPressed: () => context.go('/installments/add'),
-                      icon: const Icon(Icons.add),
-                      label: Text(l10n?.addInstallment ?? 'Добавить рассрочку'),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          // Table Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    l10n?.clients ?? 'Клиенты',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    l10n?.productName ?? 'Название товара',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    l10n?.paidAmount ?? 'Оплачено',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    l10n?.leftAmount ?? 'Осталось',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    l10n?.dueDate ?? 'Срок оплаты',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    l10n?.status ?? 'Статус',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                const SizedBox(width: 200), // Space for next payment section
-              ],
-            ),
-          ),
-          // List
+          
+          // Continuous Table Section
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredAndSortedInstallments.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 64,
-                              color: AppTheme.textSecondary.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Нет рассрочек',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: () => context.go('/installments/add'),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Добавить первую рассрочку'),
-                            ),
-                          ],
+            child: Container(
+              color: AppTheme.surfaceColor,
+              child: _isLoading
+                  ? Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        itemCount: _filteredAndSortedInstallments.length,
-                        itemBuilder: (context, index) {
-                          final installment = _filteredAndSortedInstallments[index];
-                          final payments = _installmentPayments[installment.id] ?? [];
-                          final clientName = _clientNames[installment.clientId] ?? 'Unknown';
-                          
-                          // Calculate paid amount and next payment
-                          double paidAmount = 0;
-                          InstallmentPayment? nextPayment;
-                          
-                          for (final payment in payments) {
-                            paidAmount += payment.paidAmount;
-                            if (nextPayment == null && payment.status != 'оплачено') {
-                              nextPayment = payment;
-                            }
-                          }
-                          
-                          final leftAmount = installment.installmentPrice - paidAmount;
-                          
-                          return InstallmentListItem(
-                            installment: installment,
-                            clientName: clientName,
-                            productName: installment.productName,
-                            paidAmount: paidAmount,
-                            leftAmount: leftAmount,
-                            payments: payments,
-                            nextPayment: nextPayment,
-                            onTap: () => context.go('/installments/${installment.id}'),
-                            onRegisterPayment: (payment) => _showRegisterPaymentDialog(payment),
-                          );
-                        },
                       ),
+                    )
+                  : _filteredAndSortedInstallments.isEmpty
+                      ? _buildEnhancedEmptyState(context)
+                      : Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                offset: const Offset(0, 1),
+                                blurRadius: 3,
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Table Header
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.subtleBackgroundColor,
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(12),
+                                    topRight: Radius.circular(12),
+                                  ),
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: AppTheme.subtleBorderColor,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Text(
+                                          (l10n?.client ?? 'Клиент').toUpperCase(),
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 12,
+                                                letterSpacing: 0.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Text(
+                                          (l10n?.productName ?? 'Название товара').toUpperCase(),
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 12,
+                                                letterSpacing: 0.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Text(
+                                          (l10n?.paidAmount ?? 'Оплачено').toUpperCase(),
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 12,
+                                                letterSpacing: 0.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Text(
+                                          (l10n?.leftAmount ?? 'Осталось').toUpperCase(),
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 12,
+                                                letterSpacing: 0.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Text(
+                                          (l10n?.dueDate ?? 'Срок оплаты').toUpperCase(),
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 12,
+                                                letterSpacing: 0.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Text(
+                                          (l10n?.status ?? 'Статус').toUpperCase(),
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: AppTheme.textSecondary,
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 12,
+                                                letterSpacing: 0.5,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 160,
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Text(
+                                        'СЛЕДУЮЩИЙ ПЛАТЕЖ',
+                                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                              color: AppTheme.textSecondary,
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 12,
+                                              letterSpacing: 0.5,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              // Table Content
+                              Expanded(
+                                child: FadeTransition(
+                                  opacity: _fadeAnimation,
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    itemCount: _filteredAndSortedInstallments.length,
+                                    itemBuilder: (context, index) {
+                                      final installment = _filteredAndSortedInstallments[index];
+                                      final payments = _installmentPayments[installment.id] ?? [];
+                                      final clientName = _clientNames[installment.clientId] ?? 'Unknown';
+                                      
+                                      // Calculate paid amount and next payment
+                                      double paidAmount = 0;
+                                      InstallmentPayment? nextPayment;
+                                      
+                                      for (final payment in payments) {
+                                        paidAmount += payment.paidAmount;
+                                        if (nextPayment == null && payment.status != 'оплачено') {
+                                          nextPayment = payment;
+                                        }
+                                      }
+                                      
+                                      final leftAmount = installment.installmentPrice - paidAmount;
+                                      
+                                      return AnimatedContainer(
+                                        duration: Duration(milliseconds: 100 + (index * 50)),
+                                        curve: Curves.easeOutCubic,
+                                        child: InstallmentListItem(
+                                          installment: installment,
+                                          clientName: clientName,
+                                          productName: installment.productName,
+                                          paidAmount: paidAmount,
+                                          leftAmount: leftAmount,
+                                          payments: payments,
+                                          nextPayment: nextPayment,
+                                          onTap: () => context.go('/installments/${installment.id}'),
+                                          onRegisterPayment: (payment) => _showRegisterPaymentDialog(payment),
+                                          onClientTap: () => context.go('/clients/${installment.clientId}'),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildEnhancedEmptyState(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.textSecondary.withOpacity(0.05),
+                    AppTheme.textSecondary.withOpacity(0.02),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppTheme.textSecondary.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 56,
+                color: AppTheme.textSecondary.withOpacity(0.4),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Нет рассрочек',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Создайте первую рассрочку для начала работы',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary.withOpacity(0.8),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            CustomAddButton(
+              text: 'Добавить первую рассрочку',
+              onPressed: () => context.go('/installments/add'),
+              fontSize: 16,
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getItemsText(int count) {
+    if (count % 10 == 1 && count % 100 != 11) {
+      return 'рассрочка';
+    } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
+      return 'рассрочки';
+    } else {
+      return 'рассрочек';
+    }
+  }
+
   void _showRegisterPaymentDialog(InstallmentPayment payment) {
     showDialog(
       context: context,
-      builder: (context) => _RegisterPaymentDialog(
+      barrierDismissible: false,
+      builder: (context) => _EnhancedRegisterPaymentDialog(
         payment: payment,
         onPaymentRegistered: () {
           _loadData(); // Reload data after payment
@@ -394,22 +553,25 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> {
   }
 }
 
-class _RegisterPaymentDialog extends StatefulWidget {
+class _EnhancedRegisterPaymentDialog extends StatefulWidget {
   final InstallmentPayment payment;
   final VoidCallback onPaymentRegistered;
 
-  const _RegisterPaymentDialog({
+  const _EnhancedRegisterPaymentDialog({
     required this.payment,
     required this.onPaymentRegistered,
   });
 
   @override
-  State<_RegisterPaymentDialog> createState() => _RegisterPaymentDialogState();
+  State<_EnhancedRegisterPaymentDialog> createState() => _EnhancedRegisterPaymentDialogState();
 }
 
-class _RegisterPaymentDialogState extends State<_RegisterPaymentDialog> {
+class _EnhancedRegisterPaymentDialogState extends State<_EnhancedRegisterPaymentDialog> with SingleTickerProviderStateMixin {
   late TextEditingController _amountController;
   late InstallmentRepository _repository;
+  bool _isLoading = false;
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
@@ -420,54 +582,368 @@ class _RegisterPaymentDialogState extends State<_RegisterPaymentDialog> {
     _repository = InstallmentRepositoryImpl(
       InstallmentLocalDataSourceImpl(DatabaseHelper.instance),
     );
+    
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
+    
+    _animationController.forward();
   }
 
   @override
   void dispose() {
     _amountController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Регистрация платежа ${widget.payment.paymentNumber == 0 ? "(Первоначальный взнос)" : "(Месяц ${widget.payment.paymentNumber})"}'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _amountController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Сумма платежа',
-              suffixText: '₽',
-            ),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
+          width: 400,
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                offset: const Offset(0, 10),
+                blurRadius: 30,
+                spreadRadius: 0,
+              ),
+            ],
           ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Отмена'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            final amount = double.tryParse(_amountController.text) ?? 0;
-            if (amount > 0) {
-              final updatedPayment = widget.payment.copyWith(
-                paidAmount: amount,
-                paidDate: DateTime.now(),
-                status: 'оплачено',
-              );
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryColor.withOpacity(0.1),
+                      AppTheme.primaryColor.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.payment_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Регистрация платежа',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.payment.paymentNumber == 0 
+                                ? "Первоначальный взнос"
+                                : "Месяц ${widget.payment.paymentNumber}",
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: AppTheme.textSecondary,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppTheme.backgroundColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               
-              await _repository.updatePayment(updatedPayment);
-              widget.onPaymentRegistered();
-              Navigator.of(context).pop();
-            }
-          },
-          child: const Text('Сохранить'),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Payment Info
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.borderColor.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ожидаемая сумма',
+                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${widget.payment.expectedAmount.toStringAsFixed(0)} ₽',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: AppTheme.borderColor,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Срок оплаты',
+                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  DateFormat('dd.MM.yyyy').format(widget.payment.dueDate),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Amount Input
+                    Text(
+                      'Сумма платежа',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            offset: const Offset(0, 1),
+                            blurRadius: 3,
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _amountController,
+                        keyboardType: TextInputType.number,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Введите сумму',
+                          suffixIcon: Container(
+                            margin: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '₽',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.backgroundColor,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppTheme.borderColor.withOpacity(0.5),
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppTheme.borderColor.withOpacity(0.5),
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppTheme.primaryColor,
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Actions
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(
+                            color: AppTheme.borderColor,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Отмена',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.9)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withOpacity(0.3),
+                              offset: const Offset(0, 4),
+                              blurRadius: 12,
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handlePayment,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Сохранить',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
+  }
+
+  Future<void> _handlePayment() async {
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    if (amount <= 0) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final updatedPayment = widget.payment.copyWith(
+        paidAmount: amount,
+        paidDate: DateTime.now(),
+        status: 'оплачено',
+      );
+      
+      await _repository.updatePayment(updatedPayment);
+      widget.onPaymentRegistered();
+      Navigator.of(context).pop();
+    } catch (e) {
+      // Handle error
+      setState(() => _isLoading = false);
+    }
   }
 } 

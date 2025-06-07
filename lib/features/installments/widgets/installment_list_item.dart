@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../shared/widgets/custom_status_badge.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import 'installment_payment_item.dart';
@@ -16,6 +17,7 @@ class InstallmentListItem extends StatefulWidget {
   final InstallmentPayment? nextPayment;
   final VoidCallback onTap;
   final Function(InstallmentPayment) onRegisterPayment;
+  final VoidCallback? onClientTap;
 
   const InstallmentListItem({
     super.key,
@@ -28,15 +30,51 @@ class InstallmentListItem extends StatefulWidget {
     this.nextPayment,
     required this.onTap,
     required this.onRegisterPayment,
+    this.onClientTap,
   });
 
   @override
   State<InstallmentListItem> createState() => _InstallmentListItemState();
 }
 
-class _InstallmentListItemState extends State<InstallmentListItem> {
+class _InstallmentListItemState extends State<InstallmentListItem> with TickerProviderStateMixin {
   bool _isHovered = false;
   bool _isExpanded = false;
+  bool _isClientNameHovered = false;
+  bool _isArrowHovered = false;
+  bool _isNextPaymentHovered = false;
+  
+  late AnimationController _hoverController;
+  late AnimationController _expandController;
+  late Animation<double> _hoverAnimation;
+  late Animation<double> _expandAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _expandController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _hoverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeInOut),
+    );
+    _expandAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _expandController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    _expandController.dispose();
+    super.dispose();
+  }
 
   String _getOverallStatus() {
     // Determine overall status based on payments
@@ -77,197 +115,291 @@ class _InstallmentListItemState extends State<InstallmentListItem> {
     return Column(
       children: [
         MouseRegion(
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
+          onEnter: (_) {
+            setState(() => _isHovered = true);
+            _hoverController.forward();
+          },
+          onExit: (_) {
+            setState(() => _isHovered = false);
+            _hoverController.reverse();
+          },
           child: GestureDetector(
             onTap: widget.onTap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 1),
-              decoration: BoxDecoration(
-                color: _isHovered ? AppTheme.backgroundColor : AppTheme.surfaceColor,
-                border: Border(
-                  bottom: BorderSide(
-                    color: _isExpanded ? Colors.transparent : AppTheme.borderColor,
-                    width: 1,
+            child: AnimatedBuilder(
+              animation: _hoverAnimation,
+              builder: (context, child) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                  decoration: BoxDecoration(
+                    color: _isExpanded
+                        ? Color.lerp(
+                            const Color(0xFFF8F9FA),
+                            const Color(0xFFF1F3F4),
+                            _hoverAnimation.value,
+                          )
+                        : Color.lerp(
+                            AppTheme.surfaceColor,
+                            AppTheme.backgroundColor,
+                            _hoverAnimation.value * 0.6,
+                          ),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: AppTheme.borderColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: _isHovered ? [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withOpacity(0.08),
+                        offset: const Offset(0, 2),
+                        blurRadius: 8,
+                        spreadRadius: 0,
+                      ),
+                    ] : null,
                   ),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
-                child: Row(
-                  children: [
-                    // Client Name
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        widget.clientName,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                    ),
-                    // Product Name
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        widget.productName,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                    // Paid Amount
-                    Expanded(
-                      child: Text(
-                        currencyFormat.format(widget.paidAmount),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.successColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                    ),
-                    // Left Amount
-                    Expanded(
-                      child: Text(
-                        currencyFormat.format(widget.leftAmount),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                    // Due Date
-                    Expanded(
-                      child: Text(
-                        dateFormat.format(nextDueDate),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                    // Status
-                    Expanded(
-                      child: _buildStatusBadge(context, _getOverallStatus()),
-                    ),
-                    // Next Payment Section
-                    Container(
-                      width: 200,
-                      padding: const EdgeInsets.only(left: 16),
-                      child: Row(
-                        children: [
-                          if (widget.nextPayment != null) ...[
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => widget.onRegisterPayment(widget.nextPayment!),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    child: Row(
+                      children: [
+                        // Client Name - Simple
+                        Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: GestureDetector(
+                              onTap: widget.onClientTap,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: MouseRegion(
+                                  onEnter: (_) => setState(() => _isClientNameHovered = true),
+                                  onExit: (_) => setState(() => _isClientNameHovered = false),
+                                  child: IntrinsicWidth(
+                                    child: Text(
+                                      widget.clientName,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                            color: widget.onClientTap != null 
+                                                ? AppTheme.interactiveBrightColor
+                                                : AppTheme.textPrimary,
+                                            decoration: widget.onClientTap != null && _isClientNameHovered
+                                                ? TextDecoration.underline
+                                                : TextDecoration.none,
+                                            decorationColor: widget.onClientTap != null 
+                                                ? AppTheme.interactiveBrightColor
+                                                : AppTheme.textPrimary,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  textStyle: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                child: Text(
-                                  widget.nextPayment!.paymentNumber == 0
-                                      ? l10n?.downPayment ?? 'Первоначальный взнос'
-                                      : '${l10n?.month ?? 'Месяц'} ${widget.nextPayment!.paymentNumber}',
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                          ],
-                          IconButton(
-                            icon: Icon(
-                              _isExpanded
-                                  ? Icons.arrow_drop_up
-                                  : Icons.arrow_drop_down,
-                              color: AppTheme.textSecondary,
-                            ),
-                            onPressed: () {
-                              setState(() => _isExpanded = !_isExpanded);
-                            },
                           ),
-                        ],
-                      ),
+                        ),
+                        // Product Name - Simple
+                        Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Text(
+                              widget.productName,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        // Paid Amount - Plain text
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Text(
+                              currencyFormat.format(widget.paidAmount),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 14,
+                                  ),
+                              textAlign: TextAlign.start,
+                            ),
+                          ),
+                        ),
+                        // Left Amount - Plain text
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Text(
+                              currencyFormat.format(widget.leftAmount),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                              textAlign: TextAlign.start,
+                            ),
+                          ),
+                        ),
+                        // Due Date - Plain text
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Text(
+                              dateFormat.format(nextDueDate),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                              textAlign: TextAlign.start,
+                            ),
+                          ),
+                        ),
+                        // Status
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Container(
+                              width: 120, // Fixed width for consistency
+                              alignment: Alignment.centerLeft,
+                              child: CustomStatusBadge(
+                                status: _getOverallStatus(),
+                                width: 110,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Next Payment Section
+                        Container(
+                          width: 160,
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Row(
+                            children: [
+                              // Next payment button area (takes remaining space)
+                              Expanded(
+                                child: widget.nextPayment != null 
+                                    ? MouseRegion(
+                                        onEnter: (_) => setState(() => _isNextPaymentHovered = true),
+                                        onExit: (_) => setState(() => _isNextPaymentHovered = false),
+                                        child: GestureDetector(
+                                          onTap: () => widget.onRegisterPayment(widget.nextPayment!),
+                                          child: Container(
+                                            height: 28,
+                                            decoration: BoxDecoration(
+                                              color: _isNextPaymentHovered 
+                                                  ? AppTheme.subtleHoverColor
+                                                  : AppTheme.subtleBackgroundColor,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: _isNextPaymentHovered 
+                                                    ? AppTheme.subtleAccentColor
+                                                    : AppTheme.subtleBorderColor,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                (widget.nextPayment!.paymentNumber == 0
+                                                    ? l10n?.downPayment ?? 'Первоначальный взнос'
+                                                    : '${l10n?.month ?? 'Месяц'} ${widget.nextPayment!.paymentNumber}'),
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: AppTheme.textPrimary,
+                                                  fontWeight: FontWeight.w400,
+                                                  fontSize: 11,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Container(), // Empty space when no next payment
+                              ),
+                              const SizedBox(width: 6),
+                              // Arrow button (fixed position)
+                              MouseRegion(
+                                onEnter: (_) => setState(() => _isArrowHovered = true),
+                                onExit: (_) => setState(() => _isArrowHovered = false),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: _isArrowHovered 
+                                        ? AppTheme.subtleHoverColor
+                                        : AppTheme.backgroundColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: _isArrowHovered 
+                                          ? AppTheme.subtleAccentColor
+                                          : AppTheme.borderColor.withOpacity(0.5),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    icon: AnimatedRotation(
+                                      turns: _isExpanded ? 0.5 : 0,
+                                      duration: const Duration(milliseconds: 200),
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        color: _isArrowHovered 
+                                            ? AppTheme.primaryColor
+                                            : AppTheme.textSecondary,
+                                        size: 16,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      setState(() => _isExpanded = !_isExpanded);
+                                      if (_isExpanded) {
+                                        _expandController.forward();
+                                      } else {
+                                        _expandController.reverse();
+                                      }
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    hoverColor: Colors.transparent,
+                                    splashColor: Colors.transparent,
+                                    highlightColor: Colors.transparent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-        // Expandable payment list
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
+        // Expandable payment list as table rows
+        AnimatedBuilder(
+          animation: _expandAnimation,
+          builder: (context, child) {
+            return ClipRect(
+              child: Align(
+                alignment: Alignment.topCenter,
+                heightFactor: _expandAnimation.value,
+                child: Container(
+                  color: const Color(0xFFF8F9FA),
+                  child: Column(
+                    children: [
+                      // Payment items as table rows
+                      ...widget.payments.map((payment) {
+                        return InstallmentPaymentItem(
+                          payment: payment,
+                          onRegisterPayment: () => widget.onRegisterPayment(payment),
+                        );
+                      }).toList(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            child: Column(
-              children: widget.payments.map((payment) {
-                return InstallmentPaymentItem(
-                  payment: payment,
-                  onRegisterPayment: () => widget.onRegisterPayment(payment),
-                );
-              }).toList(),
-            ),
-          ),
-          crossFadeState: _isExpanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 200),
+            );
+          },
         ),
       ],
     );
   }
-
-  Widget _buildStatusBadge(BuildContext context, String status) {
-    final l10n = AppLocalizations.of(context);
-    
-    String label;
-    Color color;
-    Color backgroundColor;
-
-    switch (status) {
-      case 'оплачено':
-        label = l10n?.paid ?? 'Оплачено';
-        color = AppTheme.successColor;
-        backgroundColor = AppTheme.successColor.withOpacity(0.1);
-        break;
-      case 'предстоящий':
-        label = l10n?.upcoming ?? 'Предстоящий';
-        color = AppTheme.pendingColor;
-        backgroundColor = AppTheme.pendingColor.withOpacity(0.1);
-        break;
-      case 'к оплате':
-        label = l10n?.dueToPay ?? 'К оплате';
-        color = AppTheme.warningColor;
-        backgroundColor = AppTheme.warningColor.withOpacity(0.1);
-        break;
-      case 'просрочено':
-        label = l10n?.overdue ?? 'Просрочено';
-        color = AppTheme.errorColor;
-        backgroundColor = AppTheme.errorColor.withOpacity(0.1);
-        break;
-      default:
-        label = status;
-        color = AppTheme.textSecondary;
-        backgroundColor = AppTheme.textSecondary.withOpacity(0.1);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
-    );
-  }
-} 
+}

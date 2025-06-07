@@ -18,6 +18,7 @@ class AppLocalizations {
 
   // Navigation
   String get installments => locale.languageCode == 'ru' ? 'Рассрочки' : 'Installments';
+  String get client => locale.languageCode == 'ru' ? 'Клиент' : 'Client';
   String get clients => locale.languageCode == 'ru' ? 'Клиенты' : 'Clients';
   String get investors => locale.languageCode == 'ru' ? 'Инвесторы' : 'Investors';
   
@@ -79,7 +80,7 @@ class AppLocalizations {
   
   // Sort options
   String get sortBy => locale.languageCode == 'ru' ? 'Сортировать по' : 'Sort by';
-  String get creationDate => locale.languageCode == 'ru' ? 'Дате создания' : 'Creation Date';
+  String get creationDate => locale.languageCode == 'ru' ? 'Дата создания' : 'Creation Date';
   
   // Validation messages
   String get fieldRequired => locale.languageCode == 'ru' ? 'Это поле обязательно' : 'This field is required';
