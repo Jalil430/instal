@@ -206,7 +206,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                               widget.productName,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                   ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -299,7 +299,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                             child: Center(
                                               child: Text(
                                                 (widget.nextPayment!.paymentNumber == 0
-                                                    ? l10n?.downPayment ?? 'Первоначальный взнос'
+                                                    ? l10n?.downPaymentShort ?? 'Взнос'
                                                     : '${l10n?.month ?? 'Месяц'} ${widget.nextPayment!.paymentNumber}'),
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   color: AppTheme.textPrimary,

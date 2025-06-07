@@ -43,6 +43,7 @@ class AppLocalizations {
   String get installmentPrice => locale.languageCode == 'ru' ? 'Цена в рассрочку' : 'Installment Price';
   String get term => locale.languageCode == 'ru' ? 'Срок (месяцы)' : 'Term (Months)';
   String get downPayment => locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
+  String get downPaymentShort => locale.languageCode == 'ru' ? 'Взнос' : 'Down';
   String get monthlyPayment => locale.languageCode == 'ru' ? 'Ежемесячный платеж' : 'Monthly Payment';
   String get buyingDate => locale.languageCode == 'ru' ? 'Дата покупки' : 'Buying Date';
   String get installmentStartDate => locale.languageCode == 'ru' ? 'Дата начала рассрочки' : 'Installment Start Date';
