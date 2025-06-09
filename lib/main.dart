@@ -13,11 +13,24 @@ void main() async {
   // Initialize database
   await DatabaseHelper.instance.database;
   
-  runApp(const InstalApp());
+  runApp(InstalApp());
 }
 
-class InstalApp extends StatelessWidget {
+class InstalApp extends StatefulWidget {
   const InstalApp({super.key});
+
+  @override
+  State<InstalApp> createState() => _InstalAppState();
+}
+
+class _InstalAppState extends State<InstalApp> {
+  Locale _locale = const Locale('ru');
+
+  void setLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +39,7 @@ class InstalApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       routerConfig: AppRouter.router,
-      locale: const Locale('ru'), // Russian as default
+      locale: _locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -34,6 +47,23 @@ class InstalApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) {
+        // Pass setLocale down via InheritedWidget or directly if needed
+        return LocaleSetter(
+          setLocale: setLocale,
+          child: child!,
+        );
+      },
     );
   }
+}
+
+class LocaleSetter extends InheritedWidget {
+  final void Function(Locale) setLocale;
+  const LocaleSetter({required this.setLocale, required Widget child}) : super(child: child);
+
+  static LocaleSetter? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<LocaleSetter>();
+
+  @override
+  bool updateShouldNotify(LocaleSetter oldWidget) => setLocale != oldWidget.setLocale;
 }

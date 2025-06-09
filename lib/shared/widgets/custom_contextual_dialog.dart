@@ -82,16 +82,14 @@ class _ContextualDialogWrapper<T> extends StatelessWidget {
           left: left,
           top: top,
           child: Material(
-            elevation: 8,
             borderRadius: BorderRadius.circular(8),
-            shadowColor: Colors.black.withOpacity(0.3),
             child: Container(
               width: width,
               decoration: BoxDecoration(
                 color: AppTheme.surfaceColor,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppTheme.borderColor.withOpacity(0.3),
+                  color: AppTheme.subtleBorderColor,
                   width: 1,
                 ),
               ),

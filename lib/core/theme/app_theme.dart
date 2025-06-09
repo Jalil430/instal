@@ -54,6 +54,77 @@ class AppTheme {
   static const Color sidebarIconActiveColor = Colors.white;
   static const Color sidebarHoverColor = Color(0xFF374151);
   
+  // Table and List row colors
+  static Color get tableHeaderBackground => subtleBackgroundColor;
+  static Color get tableRowHoverBackground => backgroundColor.withOpacity(0.6);
+  static Color get tableRowExpandedBackground => const Color(0xFFF8F9FA);
+  static Color get tableRowBorderColor => borderColor.withOpacity(0.3);
+  
+  // Typography sizes based on design patterns
+  static const double fontSizeLarge = 16.0;
+  static const double fontSizeMedium = 14.0;
+  static const double fontSizeMiddle = 13.0;
+  static const double fontSizeSmall = 12.0;
+  
+  // Font weights based on design patterns
+  static const FontWeight fontWeightRegular = FontWeight.w400;
+  static const FontWeight fontWeightMedium = FontWeight.w500;
+  static const FontWeight fontWeightSemiBold = FontWeight.w600;
+  
+  // Standard spacing values (8px grid)
+  static const double spacingXxs = 4.0;
+  static const double spacingXs = 8.0;
+  static const double spacingSm = 12.0;
+  static const double spacingMd = 16.0;
+  static const double spacingLg = 20.0;
+  static const double spacingXl = 24.0;
+  static const double spacingXxl = 28.0;
+  static const double spacingHuge = 32.0;
+  
+  // Standard border radius values
+  static const double borderRadiusSmall = 6.0;
+  static const double borderRadiusMedium = 8.0;
+  static const double borderRadiusLarge = 12.0;
+  
+  // Animation durations
+  static const Duration animationQuick = Duration(milliseconds: 150);
+  static const Duration animationStandard = Duration(milliseconds: 200);
+  static const Duration animationLong = Duration(milliseconds: 300);
+  
+  // Fixed element sizes
+  static const double statusBadgeWidth = 110.0;
+  static const double searchBarWidth = 320.0;
+  static const double dropdownWidth = 200.0;
+  static const double smallButtonSize = 28.0;
+  
+  // Standard shadows
+  static List<BoxShadow> get subtleShadow => [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.02),
+      offset: const Offset(0, 1),
+      blurRadius: 3,
+      spreadRadius: 0,
+    ),
+  ];
+  
+  static List<BoxShadow> get mediumShadow => [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.05),
+      offset: const Offset(0, 2),
+      blurRadius: 8,
+      spreadRadius: 0,
+    ),
+  ];
+  
+  static List<BoxShadow> get hoverShadow => [
+    BoxShadow(
+      color: primaryColor.withOpacity(0.08),
+      offset: const Offset(0, 2),
+      blurRadius: 8,
+      spreadRadius: 0,
+    ),
+  ];
+  
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
@@ -81,7 +152,7 @@ class AppTheme {
       color: cardColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(borderRadiusLarge),
         side: const BorderSide(color: borderColor, width: 1),
       ),
     ),
@@ -90,13 +161,13 @@ class AppTheme {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: spacingXl, vertical: spacingSm),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(borderRadiusMedium),
         ),
         textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+          fontSize: fontSizeLarge,
+          fontWeight: fontWeightMedium,
           fontFamily: 'Inter',
         ),
       ),
@@ -105,13 +176,13 @@ class AppTheme {
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryColor,
         side: const BorderSide(color: primaryColor),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: spacingXl, vertical: spacingSm),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(borderRadiusMedium),
         ),
         textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+          fontSize: fontSizeLarge,
+          fontWeight: fontWeightMedium,
           fontFamily: 'Inter',
         ),
       ),
@@ -120,22 +191,22 @@ class AppTheme {
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(borderRadiusMedium),
         borderSide: const BorderSide(color: borderColor),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(borderRadiusMedium),
         borderSide: const BorderSide(color: borderColor),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(borderRadiusMedium),
         borderSide: const BorderSide(color: primaryColor, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(borderRadiusMedium),
         borderSide: const BorderSide(color: errorColor),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: spacingMd, vertical: spacingSm),
       hintStyle: const TextStyle(color: textHint),
     ),
     dividerTheme: const DividerThemeData(
@@ -145,73 +216,73 @@ class AppTheme {
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
         fontSize: 32,
-        fontWeight: FontWeight.w700,
+        fontWeight: fontWeightSemiBold,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       headlineMedium: TextStyle(
         fontSize: 24,
-        fontWeight: FontWeight.w600,
+        fontWeight: fontWeightSemiBold,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       headlineSmall: TextStyle(
         fontSize: 20,
-        fontWeight: FontWeight.w600,
+        fontWeight: fontWeightSemiBold,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       titleLarge: TextStyle(
         fontSize: 18,
-        fontWeight: FontWeight.w600,
+        fontWeight: fontWeightSemiBold,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       titleMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
+        fontSize: fontSizeLarge,
+        fontWeight: fontWeightMedium,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       titleSmall: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
+        fontSize: fontSizeMedium,
+        fontWeight: fontWeightMedium,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       bodyLarge: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
+        fontSize: fontSizeLarge,
+        fontWeight: fontWeightRegular,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       bodyMedium: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
+        fontSize: fontSizeMedium,
+        fontWeight: fontWeightRegular,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       bodySmall: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
+        fontSize: fontSizeSmall,
+        fontWeight: fontWeightRegular,
         color: textSecondary,
         fontFamily: 'Inter',
       ),
       labelLarge: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
+        fontSize: fontSizeMedium,
+        fontWeight: fontWeightMedium,
         color: textPrimary,
         fontFamily: 'Inter',
       ),
       labelMedium: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+        fontSize: fontSizeSmall,
+        fontWeight: fontWeightMedium,
         color: textSecondary,
         fontFamily: 'Inter',
       ),
       labelSmall: TextStyle(
         fontSize: 11,
-        fontWeight: FontWeight.w500,
+        fontWeight: fontWeightMedium,
         color: textSecondary,
         fontFamily: 'Inter',
       ),

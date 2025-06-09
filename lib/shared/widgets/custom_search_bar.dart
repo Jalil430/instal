@@ -16,7 +16,7 @@ class CustomSearchBar extends StatefulWidget {
     required this.onChanged,
     required this.hintText,
     this.width,
-    this.height = 44,
+    this.height = 40,
     this.icon,
     this.controller,
   });
@@ -65,7 +65,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
               padding: const EdgeInsets.all(12),
               child: Icon(
                 widget.icon ?? Icons.search_rounded,
-                size: 20,
+                size: 18,
                 color: AppTheme.textHint,
               ),
             ),

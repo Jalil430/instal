@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
@@ -17,7 +18,9 @@ import '../../investors/domain/repositories/investor_repository.dart';
 import '../../investors/data/repositories/investor_repository_impl.dart';
 import '../../investors/data/datasources/investor_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../widgets/installment_payment_item.dart';
+import '../../../shared/widgets/custom_confirmation_dialog.dart';
 
 class InstallmentDetailsScreen extends StatefulWidget {
   final String installmentId;
@@ -77,7 +80,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       }
 
       final client = await _clientRepository.getClientById(installment.clientId);
-      final investor = installment.investorId.isNotEmpty 
+      final investor = installment.investorId.isNotEmpty
           ? await _investorRepository.getInvestorById(installment.investorId)
           : null;
       final payments = await _installmentRepository.getPaymentsByInstallmentId(widget.installmentId);
@@ -100,8 +103,8 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
   }
 
   double get _totalPaidAmount {
-    return _payments.fold(0.0, (sum, payment) => 
-        sum + (payment.isPaid ? payment.expectedAmount : 0.0));
+    return _payments.fold(
+        0.0, (sum, payment) => sum + (payment.isPaid ? payment.expectedAmount : 0.0));
   }
 
   double get _totalRemainingAmount {
@@ -146,175 +149,128 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
     final dateFormat = DateFormat('dd.MM.yyyy');
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Header
+          // Top section
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
+            color: AppTheme.surfaceColor,
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => context.go('/installments'),
-                  icon: const Icon(Icons.arrow_back),
+                CustomIconButton(
+                  routePath: '/installments',
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Рассрочка: ${_installment!.productName}',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Клиент: ${_client?.fullName ?? "Неизвестно"}',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                    ],
+                Text(
+                  'Детали рассрочки',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => context.go('/installments/${widget.installmentId}/edit'),
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Редактировать'),
+                const Spacer(),
+                const SizedBox(width: 12),
+                CustomIconButton(
+                  icon: Icons.delete_outline,
+                  onPressed: () async {
+                    final confirmed = await showCustomConfirmationDialog(
+                      context: context,
+                      title: 'Удалить рассрочку',
+                      content: 'Вы уверены, что хотите удалить рассрочку?',
+                    );
+                    if (confirmed == true) {
+                      try {
+                        await _installmentRepository.deleteInstallment(_installment!.id);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Рассрочка удалена')),
+                          );
+                          context.go('/installments');
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Ошибка удаления: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  hoverBackgroundColor: AppTheme.errorColor.withOpacity(0.1),
+                  hoverIconColor: AppTheme.errorColor,
+                  hoverBorderColor: AppTheme.errorColor.withOpacity(0.3),
                 ),
               ],
             ),
           ),
-          // Content
+          // Main content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Installment Info Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: 'Общая сумма',
-                          value: currencyFormat.format(_installment!.installmentPrice),
-                          icon: Icons.account_balance_wallet,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: 'Оплачено',
-                          value: currencyFormat.format(_totalPaidAmount),
-                          icon: Icons.check_circle,
-                          color: AppTheme.successColor,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildInfoCard(
-                          title: 'Остаток',
-                          value: currencyFormat.format(_totalRemainingAmount),
-                          icon: Icons.pending,
-                          color: _totalRemainingAmount > 0 ? AppTheme.warningColor : AppTheme.successColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Installment Details
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Детали рассрочки',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildDetailRow('Товар', _installment!.productName),
-                        _buildDetailRow('Клиент', _client?.fullName ?? 'Неизвестно'),
-                        if (_investor != null)
-                          _buildDetailRow('Инвестор', _investor!.fullName),
-                        _buildDetailRow('Цена без рассрочки', currencyFormat.format(_installment!.cashPrice)),
-                        _buildDetailRow('Цена в рассрочку', currencyFormat.format(_installment!.installmentPrice)),
-                        _buildDetailRow('Срок', '${_installment!.termMonths} месяцев'),
-                        _buildDetailRow('Первоначальный взнос', currencyFormat.format(_installment!.downPayment)),
-                        _buildDetailRow('Ежемесячный платеж', currencyFormat.format(_installment!.monthlyPayment)),
-                        _buildDetailRow('Дата покупки', dateFormat.format(_installment!.downPaymentDate)),
-                        _buildDetailRow('Начало рассрочки', dateFormat.format(_installment!.installmentStartDate)),
-                        _buildDetailRow('Окончание рассрочки', dateFormat.format(_installment!.installmentEndDate)),
-                      ],
+                  // Information section
+                  Text(
+                    'Информация',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  // Payments List
+                  const SizedBox(height: 20),
+                  _buildInfoRow(l10n?.productNameHeader ?? 'ТОВАР', _installment!.productName),
+                  _buildInfoRow(l10n?.client ?? 'Клиент', _client?.fullName ?? 'Неизвестно'),
+                  if (_investor != null) _buildInfoRow(l10n?.investors ?? 'Инвестор', _investor!.fullName),
+                  _buildInfoRow(l10n?.cashPrice ?? 'Цена без рассрочки', currencyFormat.format(_installment!.cashPrice)),
+                  _buildInfoRow(l10n?.installmentPrice ?? 'Цена в рассрочку', currencyFormat.format(_installment!.installmentPrice)),
+                  _buildInfoRow(l10n?.term ?? 'Срок', '${_installment!.termMonths} ${l10n?.monthsLabel ?? 'месяцев'}'),
+                  _buildInfoRow(l10n?.downPaymentFull ?? 'Первоначальный взнос', currencyFormat.format(_installment!.downPayment)),
+                  _buildInfoRow(l10n?.monthlyPayment ?? 'Ежемесячный платеж', currencyFormat.format(_installment!.monthlyPayment)),
+                  _buildInfoRow(l10n?.buyingDate ?? 'Дата покупки', dateFormat.format(_installment!.downPaymentDate)),
+                  _buildInfoRow(l10n?.installmentStartDate ?? 'Дата начала рассрочки', dateFormat.format(_installment!.installmentStartDate)),
+                  _buildInfoRow(l10n?.installmentEndDate ?? 'Дата окончания рассрочки', dateFormat.format(_installment!.installmentEndDate)),
+                  _buildInfoRow(l10n?.paidAmount ?? 'Оплачено', currencyFormat.format(_totalPaidAmount)),
+                  _buildInfoRow(l10n?.leftAmount ?? 'Остаток', currencyFormat.format(_totalRemainingAmount)),
+
+                  const SizedBox(height: 20),
+
+                  // Payment Schedule section
+                  Text(
+                    l10n?.scheduleHeader ?? 'График платежей',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Container(
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'График платежей',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ),
+                        _buildTableHeader(context),
                         if (_payments.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(24),
+                          Padding(
+                            padding: const EdgeInsets.all(24),
                             child: Center(
-                              child: Text('Нет платежей'),
+                              child: Text(l10n?.noPayments ?? 'Нет платежей'),
                             ),
                           )
                         else
-                          Column(
-                            children: _payments.map((payment) {
-                              return InstallmentPaymentItem(
-                                payment: payment,
-                                onPaymentUpdated: () {
-                                  _loadData(); // Reload data after payment update
-                                },
-                              );
-                            }).toList(),
-                          ),
+                          ..._payments.map((payment) {
+                            return InstallmentPaymentItem(
+                              payment: payment,
+                              onPaymentUpdated: _loadData,
+                              isExpanded: false,
+                            );
+                          }),
                       ],
                     ),
                   ),
@@ -327,64 +283,109 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
     );
   }
 
-  Widget _buildInfoCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
+  Widget _buildTableHeader(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+        color: AppTheme.subtleBackgroundColor,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(11),
+          topRight: Radius.circular(11),
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.subtleBorderColor,
+            width: 1,
           ),
-        ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 20),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                l10n?.paymentHeader ?? 'ПЛАТЕЖ',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
               ),
-              const Spacer(),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                l10n?.date ?? 'ДАТА',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(), // Spacer to match layout
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(), // Spacer to match layout
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(), // Spacer to match layout
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                l10n?.statusHeader ?? 'СТАТУС',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+            ),
+          ),
+          Container(
+            width: 160,
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(
+              l10n?.amountHeader ?? 'СУММА',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+              textAlign: TextAlign.start,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -392,17 +393,22 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
             width: 200,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: Colors.grey,
+              ),
             ),
           ),
+          const SizedBox(width: 32),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary,
+              ),
             ),
           ),
         ],

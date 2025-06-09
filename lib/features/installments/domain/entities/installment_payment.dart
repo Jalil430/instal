@@ -61,11 +61,11 @@ class InstallmentPayment {
     // Calculate days difference
     final daysDifference = today.difference(due).inDays;
     
-    if (daysDifference > 2) {
-      // More than 2 days overdue
+    if (daysDifference > 0) {
+      // Even 1 day overdue is considered late
       return 'просрочено';
-    } else if (daysDifference >= 0) {
-      // Due today or up to 2 days overdue
+    } else if (daysDifference == 0) {
+      // Due today only
       return 'к оплате';
     } else {
       // Future payment

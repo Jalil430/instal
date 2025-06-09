@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_status_badge.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/installment_payment.dart';
 import 'payment_registration_dialog.dart';
 import 'payment_deletion_dialog.dart';
@@ -10,11 +11,13 @@ import 'payment_deletion_dialog.dart';
 class InstallmentPaymentItem extends StatefulWidget {
   final InstallmentPayment payment;
   final VoidCallback onPaymentUpdated;
+  final bool isExpanded;
 
   const InstallmentPaymentItem({
     super.key,
     required this.payment,
     required this.onPaymentUpdated,
+    this.isExpanded = false,
   });
 
   @override
@@ -25,6 +28,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
   bool _isHovered = false;
   late AnimationController _hoverController;
   late Animation<double> _hoverAnimation;
+  final GlobalKey _actionButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -45,21 +49,63 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
   }
 
   void _handlePaymentRegistration(Offset position) {
-    PaymentRegistrationDialog.show(
-      context: context,
-      position: position,
-      payment: widget.payment,
-      onPaymentRegistered: widget.onPaymentUpdated,
-    );
+    // Get the button's position in the screen coordinate system
+    if (_actionButtonKey.currentContext != null) {
+      final RenderBox renderBox = _actionButtonKey.currentContext!.findRenderObject() as RenderBox;
+      final Size size = renderBox.size;
+      final Offset buttonPosition = renderBox.localToGlobal(Offset.zero);
+      
+      // Center of the button
+      final Offset centerPosition = Offset(
+        buttonPosition.dx + size.width / 2,
+        buttonPosition.dy + size.height / 2,
+      );
+      
+      PaymentRegistrationDialog.show(
+        context: context,
+        position: position.dx > 0 && position.dy > 0 ? position : centerPosition,
+        payment: widget.payment,
+        onPaymentRegistered: widget.onPaymentUpdated,
+      );
+    } else {
+      // Fallback to whatever position is given
+      PaymentRegistrationDialog.show(
+        context: context,
+        position: position,
+        payment: widget.payment,
+        onPaymentRegistered: widget.onPaymentUpdated,
+      );
+    }
   }
 
   void _handlePaymentDeletion(Offset position) {
-    PaymentDeletionDialog.show(
-      context: context,
-      position: position,
-      payment: widget.payment,
-      onPaymentDeleted: widget.onPaymentUpdated,
-    );
+    // Get the button's position in the screen coordinate system
+    if (_actionButtonKey.currentContext != null) {
+      final RenderBox renderBox = _actionButtonKey.currentContext!.findRenderObject() as RenderBox;
+      final Size size = renderBox.size;
+      final Offset buttonPosition = renderBox.localToGlobal(Offset.zero);
+      
+      // Center of the button
+      final Offset centerPosition = Offset(
+        buttonPosition.dx + size.width / 2,
+        buttonPosition.dy + size.height / 2,
+      );
+      
+      PaymentDeletionDialog.show(
+        context: context,
+        position: position.dx > 0 && position.dy > 0 ? position : centerPosition,
+        payment: widget.payment,
+        onPaymentDeleted: widget.onPaymentUpdated,
+      );
+    } else {
+      // Fallback to whatever position is given
+      PaymentDeletionDialog.show(
+        context: context,
+        position: position,
+        payment: widget.payment,
+        onPaymentDeleted: widget.onPaymentUpdated,
+      );
+    }
   }
 
   @override
@@ -71,6 +117,20 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('dd.MM.yyyy');
+    
+    // Conditional colors based on the context (expanded in list vs. in details screen)
+    final Color baseColor;
+    final Color hoverColor;
+
+    if (widget.isExpanded) {
+      // Colors for when it's part of an expanded list item
+      baseColor = const Color(0xFFF8F9FA);
+      hoverColor = const Color(0xFFF1F3F4);
+    } else {
+      // Colors to match the non-expanded InstallmentListItem
+      baseColor = AppTheme.surfaceColor;
+      hoverColor = AppTheme.backgroundColor;
+    }
 
     return MouseRegion(
       onEnter: (_) {
@@ -95,8 +155,8 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
             return Container(
               decoration: BoxDecoration(
                 color: Color.lerp(
-                  const Color(0xFFF8F9FA),
-                  const Color(0xFFF1F3F4),
+                  baseColor,
+                  hoverColor,
                   _hoverAnimation.value,
                 ),
                 border: Border(
@@ -105,14 +165,6 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                     width: 1,
                   ),
                 ),
-                boxShadow: _isHovered ? [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.08),
-                    offset: const Offset(0, 2),
-                    blurRadius: 8,
-                    spreadRadius: 0,
-                  ),
-                ] : null,
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -156,7 +208,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                                       ),
                                 ),
                                 Text(
-                                  'Срок оплаты',
+                                  l10n?.dueDate ?? 'Срок оплаты',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: AppTheme.textSecondary,
                                         fontSize: 10,
@@ -185,7 +237,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                                         ),
                                   ),
                                   Text(
-                                    'Оплачено',
+                                    l10n?.paid ?? 'Оплачено',
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: AppTheme.successColor.withOpacity(0.7),
                                           fontSize: 10,
@@ -256,37 +308,22 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                           
                           const Spacer(),
                           
-                          // Action indicator
-                          Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: widget.payment.isPaid
-                                  ? (_isHovered 
-                                      ? AppTheme.errorColor.withOpacity(0.1)
-                                      : AppTheme.backgroundColor)
-                                  : _isHovered 
-                                      ? AppTheme.primaryColor.withOpacity(0.1)
-                                      : AppTheme.backgroundColor,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: AppTheme.borderColor.withOpacity(0.5),
-                                width: 1,
-                              ),
-                            ),
-                            child: Icon(
-                              widget.payment.isPaid
-                                  ? Icons.close_rounded
-                                  : Icons.add_rounded,
-                              size: 14,
-                              color: widget.payment.isPaid
-                                  ? (_isHovered 
-                                      ? AppTheme.errorColor
-                                      : AppTheme.textSecondary)
-                                  : _isHovered 
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.textSecondary,
-                            ),
+                          // Action indicator using CustomIconButton
+                          CustomIconButton(
+                            size: 28,
+                            icon: widget.payment.isPaid ? Icons.close_rounded : Icons.add_rounded,
+                            interactive: false, // Make it non-tappable
+                            forceHover: _isHovered, // Control hover from parent
+                            // Colors for hover state are still needed
+                            hoverBackgroundColor: widget.payment.isPaid 
+                                ? AppTheme.errorColor.withOpacity(0.1)
+                                : AppTheme.primaryColor.withOpacity(0.1),
+                            hoverIconColor: widget.payment.isPaid 
+                                ? AppTheme.errorColor
+                                : AppTheme.primaryColor,
+                            hoverBorderColor: widget.payment.isPaid 
+                                ? AppTheme.errorColor.withOpacity(0.3)
+                                : AppTheme.primaryColor.withOpacity(0.3),
                           ),
                         ],
                       ),

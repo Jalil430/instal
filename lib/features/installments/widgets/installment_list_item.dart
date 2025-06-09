@@ -3,10 +3,12 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_status_badge.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import 'installment_payment_item.dart';
 import 'payment_registration_dialog.dart';
+import '../../../shared/widgets/custom_contextual_dialog.dart';
 
 class InstallmentListItem extends StatefulWidget {
   final Installment installment;
@@ -20,6 +22,9 @@ class InstallmentListItem extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onClientTap;
   final Function(bool) onExpansionChanged;
+  final VoidCallback? onDataChanged;
+  final VoidCallback? onDelete;
+  final VoidCallback? onSelect;
 
   const InstallmentListItem({
     super.key,
@@ -34,6 +39,9 @@ class InstallmentListItem extends StatefulWidget {
     required this.onTap,
     this.onClientTap,
     required this.onExpansionChanged,
+    this.onDataChanged,
+    this.onDelete,
+    this.onSelect,
   });
 
   @override
@@ -101,8 +109,8 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
         position: position,
         payment: widget.nextPayment!,
         onPaymentRegistered: () {
-          // Trigger parent refresh
-          widget.onExpansionChanged(widget.isExpanded);
+          // Just refresh data without affecting expansion state
+          widget.onDataChanged?.call();
         },
       );
     }
@@ -134,6 +142,18 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
           },
           child: GestureDetector(
             onTap: widget.onTap,
+            onSecondaryTapDown: (details) async {
+              await CustomContextualDialog.show(
+                context: context,
+                position: details.globalPosition,
+                child: _InstallmentContextMenu(
+                  onSelect: widget.onSelect,
+                  onDelete: widget.onDelete,
+                ),
+                width: 200,
+                estimatedHeight: 100,
+              );
+            },
             child: AnimatedBuilder(
               animation: _hoverAnimation,
               builder: (context, child) {
@@ -157,14 +177,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                         width: 1,
                       ),
                     ),
-                    boxShadow: _isHovered ? [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.08),
-                        offset: const Offset(0, 2),
-                        blurRadius: 8,
-                        spreadRadius: 0,
-                      ),
-                    ] : null,
+                    // No shadow on hover
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -324,47 +337,20 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                     : Container(), // Empty space when no next payment
                               ),
                               const SizedBox(width: 6),
-                              // Arrow button (fixed position)
-                              MouseRegion(
-                                onEnter: (_) => setState(() => _isArrowHovered = true),
-                                onExit: (_) => setState(() => _isArrowHovered = false),
-                                child: Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: _isArrowHovered 
-                                        ? AppTheme.subtleHoverColor
-                                        : AppTheme.backgroundColor,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: _isArrowHovered 
-                                          ? AppTheme.subtleAccentColor
-                                          : AppTheme.borderColor.withOpacity(0.5),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: IconButton(
-                                    icon: AnimatedRotation(
-                                      turns: widget.isExpanded ? 0.5 : 0,
-                                      duration: const Duration(milliseconds: 200),
-                                      child: Icon(
-                                        Icons.keyboard_arrow_down_rounded,
-                                        color: _isArrowHovered 
-                                            ? AppTheme.primaryColor
-                                            : AppTheme.textSecondary,
-                                        size: 16,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      widget.onExpansionChanged(!widget.isExpanded);
-                                    },
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    hoverColor: Colors.transparent,
-                                    splashColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                ),
+                              // Arrow button using CustomIconButton with rotation
+                              CustomIconButton(
+                                size: 28,
+                                icon: Icons.keyboard_arrow_down_rounded,
+                                onPressed: () {
+                                  widget.onExpansionChanged(!widget.isExpanded);
+                                },
+                                backgroundColor: AppTheme.backgroundColor,
+                                hoverBackgroundColor: AppTheme.subtleHoverColor,
+                                iconColor: AppTheme.textSecondary,
+                                hoverIconColor: AppTheme.primaryColor,
+                                borderColor: AppTheme.borderColor.withOpacity(0.5),
+                                hoverBorderColor: AppTheme.subtleAccentColor,
+                                rotation: widget.isExpanded ? 0.5 : 0.0, // Use rotation property
                               ),
                             ],
                           ),
@@ -378,28 +364,109 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
           ),
         ),
         // Expandable payment list as table rows
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: widget.isExpanded ? null : 0,
-          child: widget.isExpanded ? Container(
-            color: const Color(0xFFF8F9FA),
-            child: Column(
-              children: [
-                // Payment items as table rows
-                ...widget.payments.map((payment) {
-                  return InstallmentPaymentItem(
-                    payment: payment,
-                    onPaymentUpdated: () {
-                      // Trigger parent refresh
-                      widget.onExpansionChanged(widget.isExpanded);
-                    },
-                  );
-                }),
-              ],
+        ClipRect(
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            heightFactor: widget.isExpanded ? 1.0 : 0.0,
+            child: Container(
+              color: const Color(0xFFF8F9FA),
+              child: Column(
+                children: [
+                  // Payment items as table rows
+                  ...widget.payments.map((payment) {
+                    return InstallmentPaymentItem(
+                      payment: payment,
+                      onPaymentUpdated: () {
+                        // Just refresh data without affecting expansion state
+                        widget.onDataChanged?.call();
+                      },
+                      isExpanded: true, // Expanded in list item
+                    );
+                  }),
+                ],
+              ),
             ),
-          ) : const SizedBox.shrink(),
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _InstallmentContextMenu extends StatelessWidget {
+  final VoidCallback? onSelect;
+  final VoidCallback? onDelete;
+
+  const _InstallmentContextMenu({this.onSelect, this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ContextMenuTile(
+            icon: Icons.check_box_outline_blank,
+            label: l10n?.select ?? 'Выбрать',
+            onTap: onSelect,
+            textStyle: textStyle,
+          ),
+          _ContextMenuTile(
+            icon: Icons.delete_outline,
+            label: l10n?.deleteAction ?? 'Удалить',
+            onTap: onDelete,
+            textStyle: textStyle?.copyWith(color: Colors.red),
+            iconColor: Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContextMenuTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final TextStyle? textStyle;
+  final Color? iconColor;
+
+  const _ContextMenuTile({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.textStyle,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        Navigator.of(context).pop();
+        onTap?.call();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: iconColor ?? Theme.of(context).iconTheme.color),
+            const SizedBox(width: 12),
+            Text(label, style: textStyle),
+          ],
+        ),
+      ),
     );
   }
 }

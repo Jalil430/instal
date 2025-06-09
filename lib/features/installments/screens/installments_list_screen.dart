@@ -15,7 +15,8 @@ import '../../clients/data/repositories/client_repository_impl.dart';
 import '../../clients/data/datasources/client_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
 import 'package:intl/intl.dart';
-import '../../../shared/widgets/custom_add_button.dart';
+import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/custom_confirmation_dialog.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
@@ -216,14 +217,17 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                       children: [
                         Text(
                           l10n?.installments ?? 'Рассрочки',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: -0.5,
                           ),
                         ),
                         Text(
                           '${_filteredAndSortedInstallments.length} ${_getItemsText(_filteredAndSortedInstallments.length)}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
                             color: AppTheme.textSecondary,
                           ),
                         ),
@@ -252,7 +256,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                     ),
                     const SizedBox(width: 16),
                     // Custom Add button
-                    CustomAddButton(
+                    CustomButton(
                       text: l10n?.addInstallment ?? 'Добавить рассрочку',
                       onPressed: () => context.go('/installments/add'),
                     ),
@@ -276,161 +280,165 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                         ),
                       ),
                     )
-                  : _filteredAndSortedInstallments.isEmpty
-                      ? _buildEnhancedEmptyState(context)
-                      : Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surfaceColor,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                offset: const Offset(0, 1),
-                                blurRadius: 3,
-                                spreadRadius: 0,
-                              ),
-                            ],
+                  : Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            offset: const Offset(0, 1),
+                            blurRadius: 3,
+                            spreadRadius: 0,
                           ),
-                          child: Column(
-                            children: [
-                              // Table Header
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.subtleBackgroundColor,
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(12),
-                                    topRight: Radius.circular(12),
-                                  ),
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: AppTheme.subtleBorderColor,
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 2,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 16),
-                                        child: Text(
-                                          (l10n?.client ?? 'Клиент').toUpperCase(),
-                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 16),
-                                        child: Text(
-                                          (l10n?.productName ?? 'Название товара').toUpperCase(),
-                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 16),
-                                        child: Text(
-                                          (l10n?.paidAmount ?? 'Оплачено').toUpperCase(),
-                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 16),
-                                        child: Text(
-                                          (l10n?.leftAmount ?? 'Осталось').toUpperCase(),
-                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 16),
-                                        child: Text(
-                                          (l10n?.dueDate ?? 'Срок оплаты').toUpperCase(),
-                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 16),
-                                        child: Text(
-                                          (l10n?.status ?? 'Статус').toUpperCase(),
-                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 160,
-                                      padding: const EdgeInsets.only(left: 8),
-                                      child: Text(
-                                        'СЛЕДУЮЩИЙ ПЛАТЕЖ',
-                                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                              color: AppTheme.textSecondary,
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 12,
-                                              letterSpacing: 0.5,
-                                            ),
-                                      ),
-                                    ),
-                                  ],
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Table Header
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.subtleBackgroundColor,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: AppTheme.subtleBorderColor,
+                                  width: 1,
                                 ),
                               ),
-                              
-                              // Table Content
-                              Expanded(
-                                child: FadeTransition(
-                                  opacity: _fadeAnimation,
-                                  child: ListView.builder(
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.client ?? l10n?.client ?? 'Клиент').toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.productName ?? l10n?.productNameHeader ?? 'Название товара').toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.paidAmount ?? 'Оплачено').toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.leftAmount ?? 'Осталось').toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.dueDate ?? 'Срок оплаты').toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.status ?? l10n?.statusHeader ?? 'Статус').toUpperCase(),
+                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 160,
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Text(
+                                    l10n?.nextPaymentHeader ?? 'СЛЕДУЮЩИЙ ПЛАТЕЖ',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Table Content
+                          Expanded(
+                            child: _filteredAndSortedInstallments.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      l10n?.notFound ?? 'Ничего не найдено',
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  )
+                                : ListView.builder(
                                     padding: EdgeInsets.zero,
                                     itemCount: _filteredAndSortedInstallments.length,
                                     itemBuilder: (context, index) {
                                       final installment = _filteredAndSortedInstallments[index];
                                       final payments = _installmentPayments[installment.id] ?? [];
                                       final clientName = _clientNames[installment.clientId] ?? 'Unknown';
-                                      
-                                      // Calculate paid amount and next payment
                                       double paidAmount = 0;
                                       InstallmentPayment? nextPayment;
-                                      
                                       for (final payment in payments) {
                                         if (payment.isPaid) {
                                           paidAmount += payment.expectedAmount;
@@ -439,9 +447,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                           nextPayment = payment;
                                         }
                                       }
-                                      
                                       final leftAmount = installment.installmentPrice - paidAmount;
-                                      
                                       return AnimatedContainer(
                                         duration: Duration(milliseconds: 100 + (index * 50)),
                                         curve: Curves.easeOutCubic,
@@ -458,82 +464,23 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                           onClientTap: () => context.go('/clients/${installment.clientId}'),
                                           onExpansionChanged: (expanded) => setState(() {
                                             _expandedStates[installment.id] = expanded;
-                                            if (expanded) {
-                                              _loadData(); // Refresh data when expanding
-                                            }
                                           }),
+                                          onDataChanged: () => _loadData(),
+                                          onDelete: () => _deleteInstallment(installment),
+                                          onSelect: () {
+                                            print('Selected installment: \'${installment.productName}\'');
+                                          },
                                         ),
                                       );
                                     },
                                   ),
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
+                        ],
+                      ),
+                    ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEnhancedEmptyState(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.textSecondary.withOpacity(0.05),
-                    AppTheme.textSecondary.withOpacity(0.02),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: AppTheme.textSecondary.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                Icons.receipt_long_outlined,
-                size: 56,
-                color: AppTheme.textSecondary.withOpacity(0.4),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Нет рассрочек',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Создайте первую рассрочку для начала работы',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary.withOpacity(0.8),
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            CustomAddButton(
-              text: 'Добавить первую рассрочку',
-              onPressed: () => context.go('/installments/add'),
-              fontSize: 16,
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -545,6 +492,28 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       return 'рассрочки';
     } else {
       return 'рассрочек';
+    }
+  }
+
+  Future<void> _deleteInstallment(Installment installment) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showCustomConfirmationDialog(
+      context: context,
+      title: l10n?.deleteInstallmentTitle ?? 'Удалить рассрочку',
+      content: l10n?.deleteInstallmentConfirmation ?? 'Вы уверены, что хотите удалить рассрочку?',
+    );
+    if (confirmed == true) {
+      try {
+        await _installmentRepository.deleteInstallment(installment.id);
+        _loadData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n?.installmentDeleted ?? 'Рассрочка удалена')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n?.installmentDeleteError(e) ?? 'Ошибка удаления: $e')),
+        );
+      }
     }
   }
 } 

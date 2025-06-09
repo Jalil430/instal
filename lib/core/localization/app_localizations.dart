@@ -92,6 +92,83 @@ class AppLocalizations {
   
   // Dialog messages
   String get cancelPaymentQuestion => locale.languageCode == 'ru' ? 'Отменить оплату этого платежа?' : 'Cancel payment for this installment?';
+
+  // Delete confirmations
+  String deleteInvestorConfirmation(String name) => locale.languageCode == 'ru'
+      ? 'Вы уверены, что хотите удалить инвестора "$name"?'
+      : 'Are you sure you want to delete investor "$name"?';
+  String get deleteInvestorTitle => locale.languageCode == 'ru' ? 'Удалить инвестора' : 'Delete Investor';
+  String get investorDeleted => locale.languageCode == 'ru' ? 'Инвестор удален' : 'Investor deleted';
+  String investorDeleteError(Object e) => locale.languageCode == 'ru'
+      ? 'Ошибка удаления: $e'
+      : 'Delete error: $e';
+
+  String deleteClientConfirmation(String name) => locale.languageCode == 'ru'
+      ? 'Вы уверены, что хотите удалить клиента "$name"?'
+      : 'Are you sure you want to delete client "$name"?';
+  String get deleteClientTitle => locale.languageCode == 'ru' ? 'Удалить клиента' : 'Delete Client';
+  String get clientDeleted => locale.languageCode == 'ru' ? 'Клиент удален' : 'Client deleted';
+  String clientDeleteError(Object e) => locale.languageCode == 'ru'
+      ? 'Ошибка удаления: $e'
+      : 'Delete error: $e';
+
+  // Table headers and section headers
+  String get fullNameHeader => locale.languageCode == 'ru' ? 'ПОЛНОЕ ИМЯ' : 'FULL NAME';
+  String get investmentAmountHeader => locale.languageCode == 'ru' ? 'СУММА ИНВЕСТИЦИИ' : 'INVESTMENT AMOUNT';
+  String get investorShareHeader => locale.languageCode == 'ru' ? 'ДОЛЯ ИНВЕСТОРА' : 'INVESTOR SHARE';
+  String get userShareHeader => locale.languageCode == 'ru' ? 'ДОЛЯ ПОЛЬЗОВАТЕЛЯ' : 'USER SHARE';
+  String get creationDateHeader => locale.languageCode == 'ru' ? 'ДАТА СОЗДАНИЯ' : 'CREATION DATE';
+  String get contactNumberHeader => locale.languageCode == 'ru' ? 'КОНТАКТНЫЙ НОМЕР' : 'CONTACT NUMBER';
+  String get passportNumberHeader => locale.languageCode == 'ru' ? 'НОМЕР ПАСПОРТА' : 'PASSPORT NUMBER';
+  String get addressHeader => locale.languageCode == 'ru' ? 'АДРЕС' : 'ADDRESS';
+  String get productNameHeader => locale.languageCode == 'ru' ? 'ТОВАР' : 'PRODUCT';
+  String get amountHeader => locale.languageCode == 'ru' ? 'СУММА' : 'AMOUNT';
+  String get termHeader => locale.languageCode == 'ru' ? 'СРОК' : 'TERM';
+  String get buyingDateHeader => locale.languageCode == 'ru' ? 'ДАТА ПОКУПКИ' : 'BUYING DATE';
+  String get scheduleHeader => locale.languageCode == 'ru' ? 'График платежей' : 'Payment Schedule';
+  String get financialInfoHeader => locale.languageCode == 'ru' ? 'Финансовая информация' : 'Financial Information';
+  String get datesHeader => locale.languageCode == 'ru' ? 'Сроки и даты' : 'Dates';
+  String get noPayments => locale.languageCode == 'ru' ? 'Нет платежей' : 'No payments';
+  String get noClientsAvailable => locale.languageCode == 'ru' ? 'Нет доступных клиентов' : 'No clients available';
+  String get empty => locale.languageCode == 'ru' ? 'Пусто' : 'Empty';
+  String get selectClient => locale.languageCode == 'ru' ? 'Выберите клиента' : 'Select a client';
+  String get investorOptional => locale.languageCode == 'ru' ? 'Инвестор (необязательно)' : 'Investor (optional)';
+  String get notFound => locale.languageCode == 'ru' ? 'Ничего не найдено' : 'Nothing found';
+  String get nextPaymentHeader => locale.languageCode == 'ru' ? 'СЛЕДУЮЩИЙ ПЛАТЕЖ' : 'NEXT PAYMENT';
+  String get paymentHeader => locale.languageCode == 'ru' ? 'ПЛАТЕЖ' : 'PAYMENT';
+  String get statusHeader => locale.languageCode == 'ru' ? 'СТАТУС' : 'STATUS';
+
+  // Dialogs and validation
+  String get deleteInstallmentTitle => locale.languageCode == 'ru' ? 'Удалить рассрочку' : 'Delete Installment';
+  String get deleteInstallmentConfirmation => locale.languageCode == 'ru' ? 'Вы уверены, что хотите удалить рассрочку?' : 'Are you sure you want to delete this installment?';
+  String get installmentDeleted => locale.languageCode == 'ru' ? 'Рассрочка удалена' : 'Installment deleted';
+  String installmentDeleteError(Object e) => locale.languageCode == 'ru' ? 'Ошибка удаления: $e' : 'Delete error: $e';
+
+  // Validation
+  String get enterProductName => locale.languageCode == 'ru' ? 'Введите название товара' : 'Enter product name';
+  String get enterValidPrice => locale.languageCode == 'ru' ? 'Введите корректную цену' : 'Enter a valid price';
+  String get enterValidTerm => locale.languageCode == 'ru' ? 'Введите срок в месяцах' : 'Enter a valid term in months';
+  String get enterValidDownPayment => locale.languageCode == 'ru' ? 'Введите сумму первоначального взноса' : 'Enter a valid down payment amount';
+  String get enterValidMonthlyPayment => locale.languageCode == 'ru' ? 'Ежемесячный платеж должен быть больше 0' : 'Monthly payment must be greater than 0';
+
+  // Settings and navigation
+  String get settings => locale.languageCode == 'ru' ? 'Настройки' : 'Settings';
+  String get language => locale.languageCode == 'ru' ? 'Язык' : 'Language';
+  String get theme => locale.languageCode == 'ru' ? 'Тема' : 'Theme';
+  String get darkTheme => locale.languageCode == 'ru' ? 'Темная тема' : 'Dark Theme';
+  String get notifications => locale.languageCode == 'ru' ? 'Уведомления' : 'Notifications';
+  String get enableNotifications => locale.languageCode == 'ru' ? 'Включить уведомления' : 'Enable notifications';
+
+  // Month/term labels
+  String get monthShort => locale.languageCode == 'ru' ? 'мес.' : 'mo.';
+  String get monthLabel => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
+  String get monthsLabel => locale.languageCode == 'ru' ? 'месяцев' : 'months';
+  String get downPaymentLabel => locale.languageCode == 'ru' ? 'Взнос' : 'Down';
+  String get downPaymentFull => locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
+
+  // Context menu actions
+  String get select => locale.languageCode == 'ru' ? 'Выбрать' : 'Select';
+  String get deleteAction => locale.languageCode == 'ru' ? 'Удалить' : 'Delete';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

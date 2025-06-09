@@ -10,6 +10,7 @@ import '../../features/clients/screens/add_edit_client_screen.dart';
 import '../../features/investors/screens/investors_list_screen.dart';
 import '../../features/investors/screens/investor_details_screen.dart';
 import '../../features/investors/screens/add_edit_investor_screen.dart';
+import '../../features/settings/settings_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -118,6 +119,14 @@ class AppRouter {
             child: MainLayout(child: AddEditInvestorScreen(investorId: id)),
           );
         },
+      ),
+      // Settings route
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        pageBuilder: (context, state) => MaterialPage(
+          child: MainLayout(child: const SettingsScreen()),
+        ),
       ),
     ],
   );

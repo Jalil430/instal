@@ -9,6 +9,8 @@ import '../domain/repositories/investor_repository.dart';
 import '../data/repositories/investor_repository_impl.dart';
 import '../data/datasources/investor_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
+import '../../../shared/widgets/custom_button.dart';
 
 class AddEditInvestorScreen extends StatefulWidget {
   final String? investorId; // null for add, id for edit
@@ -89,6 +91,12 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
   }
 
   void _calculateUserPercentage() {
+    // Don't calculate if the field is empty
+    if (_investorPercentageController.text.isEmpty) {
+      _userPercentageController.text = '';
+      return;
+    }
+    
     final investorPercentage = double.tryParse(_investorPercentageController.text) ?? 0;
     if (investorPercentage >= 0 && investorPercentage <= 100) {
       final userPercentage = 100 - investorPercentage;
@@ -97,8 +105,13 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
   }
 
   void _calculateInvestorPercentage() {
-    // Only calculate investor percentage if user manually changes user percentage
-    if (!_investorPercentageController.text.isEmpty) return;
+    // Don't calculate if the user percentage field is empty
+    if (_userPercentageController.text.isEmpty) {
+      return;
+    }
+    
+    // Only calculate investor percentage if investor field is empty
+    if (_investorPercentageController.text.isNotEmpty) return;
     
     final userPercentage = double.tryParse(_userPercentageController.text) ?? 0;
     if (userPercentage >= 0 && userPercentage <= 100) {
@@ -180,82 +193,92 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
     final l10n = AppLocalizations.of(context);
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: AppTheme.surfaceColor,
+        body: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: AppTheme.surfaceColor,
       body: Column(
         children: [
-          // Header
+          // Clean Header
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
+            color: AppTheme.surfaceColor,
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => context.go('/investors'),
-                  icon: const Icon(Icons.arrow_back),
+                CustomIconButton(
+                  routePath: '/investors',
                 ),
                 const SizedBox(width: 16),
                 Text(
                   _isEditing 
                       ? (l10n?.editInvestor ?? 'Редактировать инвестора')
                       : (l10n?.addInvestor ?? 'Добавить инвестора'),
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const Spacer(),
                 if (_isSaving) ...[
-                  const CircularProgressIndicator(),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
+                    ),
+                  ),
                   const SizedBox(width: 16),
                 ],
-                ElevatedButton(
-                  onPressed: _isSaving ? null : _saveInvestor,
-                  child: Text(l10n?.save ?? 'Сохранить'),
+                CustomButton(
+                  text: l10n?.save ?? 'Сохранить',
+                  onPressed: _isSaving ? null : () => _saveInvestor(),
+                  showIcon: false,
+                  height: 40,
+                  width: 120,
                 ),
               ],
             ),
           ),
-          // Form
+          // Simple Clean Form
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
               child: Form(
                 key: _formKey,
                 child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                  color: AppTheme.surfaceColor,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Section Header
+                      Text(
+                        'Основная информация',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Full Name
                       _buildTextField(
                         controller: _fullNameController,
                         label: 'Полное имя',
                         validator: (value) => value?.isEmpty == true ? 'Введите полное имя' : null,
-                        icon: Icons.person,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      
                       // Investment Amount
                       _buildTextField(
                         controller: _investmentAmountController,
@@ -263,9 +286,20 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                         keyboardType: TextInputType.number,
                         suffix: '₽',
                         validator: (value) => _validateNumber(value, 'Введите корректную сумму инвестиции'),
-                        icon: Icons.account_balance_wallet,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 26),
+                      
+                      // Section Header
+                      Text(
+                        'Распределение прибыли',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Percentages
                       Row(
                         children: [
@@ -276,10 +310,9 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                               keyboardType: TextInputType.number,
                               suffix: '%',
                               validator: (value) => _validatePercentage(value, 'Введите корректную долю инвестора'),
-                              icon: Icons.percent,
                             ),
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 20),
                           Expanded(
                             child: _buildTextField(
                               controller: _userPercentageController,
@@ -288,7 +321,6 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                               suffix: '%',
                               readOnly: true,
                               validator: (value) => _validatePercentage(value, 'Введите корректную долю пользователя'),
-                              icon: Icons.person_outline,
                             ),
                           ),
                         ],
@@ -298,7 +330,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: AppTheme.primaryColor.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -312,9 +344,11 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                             Expanded(
                               child: Text(
                                 'Доля пользователя рассчитывается автоматически. Сумма долей должна равняться 100%.',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.primaryColor,
-                                    ),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                             ),
                           ],
@@ -344,19 +378,45 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
       controller: controller,
       keyboardType: keyboardType,
       readOnly: readOnly,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: AppTheme.textPrimary,
+      ),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(
+          color: AppTheme.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
         suffixText: suffix,
-        prefixIcon: icon != null ? Icon(icon) : null,
-        border: const OutlineInputBorder(),
+        suffixStyle: TextStyle(
+          color: AppTheme.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        prefixIcon: icon != null ? Icon(icon, color: AppTheme.textSecondary) : null,
+        filled: true,
+        fillColor: readOnly ? AppTheme.subtleBackgroundColor : Colors.white,
+        hoverColor: Color.lerp(AppTheme.surfaceColor, AppTheme.backgroundColor, 0.6),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.borderColor),
+        ),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.borderColor),
         ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: AppTheme.primaryColor),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
-        filled: readOnly,
-        fillColor: readOnly ? AppTheme.backgroundColor : null,
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.errorColor),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       validator: validator,
       inputFormatters: keyboardType == TextInputType.number
@@ -373,17 +433,27 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
   }
 
   String? _validatePercentage(String? value, String message) {
+    // For empty fields, just show the basic validation message
     if (value?.isEmpty == true) return message;
+    
+    // Parse and validate the percentage value
     final number = double.tryParse(value!);
     if (number == null || number < 0 || number > 100) return 'Процент должен быть от 0 до 100';
     
-    // Check if percentages add up to 100
-    final investorPercentage = double.tryParse(_investorPercentageController.text) ?? 0;
-    final userPercentage = double.tryParse(_userPercentageController.text) ?? 0;
-    final total = investorPercentage + userPercentage;
+    // For read-only user percentage field, don't do sum validation if investor field is empty
+    if (value == _userPercentageController.text && _investorPercentageController.text.isEmpty) {
+      return null;
+    }
     
-    if ((total - 100).abs() > 0.1) {
-      return 'Сумма долей должна равняться 100%';
+    // Check if percentages add up to 100 when both fields have values
+    if (_investorPercentageController.text.isNotEmpty && _userPercentageController.text.isNotEmpty) {
+      final investorPercentage = double.tryParse(_investorPercentageController.text) ?? 0;
+      final userPercentage = double.tryParse(_userPercentageController.text) ?? 0;
+      final total = investorPercentage + userPercentage;
+      
+      if ((total - 100).abs() > 0.1) {
+        return 'Сумма долей должна равняться 100%';
+      }
     }
     
     return null;

@@ -9,6 +9,7 @@ import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
 import '../data/datasources/installment_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
+import '../../../shared/widgets/custom_button.dart';
 
 class PaymentDeletionDialog {
   static Future<void> show({
@@ -98,8 +99,8 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
             Expanded(
               child: Text(
                 widget.payment.paymentNumber == 0 
-                    ? (l10n?.downPayment ?? 'Первоначальный взнос')
-                    : '${l10n?.month ?? 'Месяц'} ${widget.payment.paymentNumber}',
+                    ? (l10n?.downPaymentFull ?? 'Первоначальный взнос')
+                    : '${l10n?.monthLabel ?? 'Месяц'} ${widget.payment.paymentNumber}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -165,44 +166,27 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleDeletion,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.errorColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isLoading
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            l10n?.cancelPayment ?? 'Отменить',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            Icons.keyboard_return_rounded,
-                            size: 14,
-                          ),
-                        ],
+              child: _isLoading
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
-              ),
+                    )
+                  : CustomButton(
+                      onPressed: _isLoading ? null : _handleDeletion,
+                      text: l10n?.cancelPayment ?? 'Отменить',
+                      icon: Icons.keyboard_return_rounded,
+                      iconRight: true,
+                      showIcon: true,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.errorColor,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      height: 30,
+                    ),
             ),
           ],
         ),

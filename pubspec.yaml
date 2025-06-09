@@ -41,8 +41,8 @@ dependencies:
   flutter_svg: ^2.0.9
   
   # Database
-  sqflite: ^2.3.0
-  path: ^1.8.3
+  sqflite: ^2.4.2
+  path: ^1.9.1
   
   # State Management
   provider: ^6.1.1
@@ -53,6 +53,7 @@ dependencies:
   
   # Navigation
   go_router: ^12.1.3
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

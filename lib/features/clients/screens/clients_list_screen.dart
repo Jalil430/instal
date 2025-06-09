@@ -8,6 +8,11 @@ import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
 import '../data/datasources/client_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
+import '../../../shared/widgets/custom_search_bar.dart';
+import '../../../shared/widgets/custom_dropdown.dart';
+import '../../../shared/widgets/custom_button.dart';
+import '../widgets/client_list_item.dart';
+import '../../../shared/widgets/custom_confirmation_dialog.dart';
 
 class ClientsListScreen extends StatefulWidget {
   const ClientsListScreen({super.key});
@@ -16,18 +21,36 @@ class ClientsListScreen extends StatefulWidget {
   State<ClientsListScreen> createState() => _ClientsListScreenState();
 }
 
-class _ClientsListScreenState extends State<ClientsListScreen> {
+class _ClientsListScreenState extends State<ClientsListScreen> with TickerProviderStateMixin {
+  final _searchController = TextEditingController();
   String _searchQuery = '';
-  String _sortBy = 'creationDate';
+  String? _sortBy = 'creationDate';
   late ClientRepository _clientRepository;
   List<Client> _clients = [];
   bool _isLoading = true;
+  
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    
     _initializeRepository();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   void _initializeRepository() {
@@ -49,6 +72,8 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
         _clients = clients;
         _isLoading = false;
       });
+      
+      _fadeController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
       print('Error loading data: $e');
@@ -67,16 +92,18 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
     }).toList();
     
     // Sort
-    switch (_sortBy) {
-      case 'name':
-        filtered.sort((a, b) => a.fullName.compareTo(b.fullName));
-        break;
-      case 'contact':
-        filtered.sort((a, b) => a.contactNumber.compareTo(b.contactNumber));
-        break;
-      case 'creationDate':
-      default:
-        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (_sortBy != null) {
+      switch (_sortBy) {
+        case 'name':
+          filtered.sort((a, b) => a.fullName.compareTo(b.fullName));
+          break;
+        case 'contact':
+          filtered.sort((a, b) => a.contactNumber.compareTo(b.contactNumber));
+          break;
+        case 'creationDate':
+        default:
+          filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
     }
     
     return filtered;
@@ -90,189 +117,216 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Header with search and sort
+          // Enhanced Header with search and sort
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
             decoration: const BoxDecoration(
               color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
             ),
             child: Column(
               children: [
+                // Title and Actions Row
                 Row(
                   children: [
-                    Text(
-                      l10n?.client ?? 'Клиент',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    // Title without Icon
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n?.clients ?? 'Клиенты',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          '${_filteredAndSortedClients.length} ${l10n?.clients?.toLowerCase() ?? 'клиенты'}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                     const Spacer(),
-                    // Search field
-                    SizedBox(
-                      width: 300,
-                      height: 40,
-                      child: TextField(
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        decoration: InputDecoration(
-                          hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: AppTheme.borderColor),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                      ),
+                    // Enhanced Search field
+                    CustomSearchBar(
+                      value: _searchQuery,
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
+                      width: 320,
                     ),
                     const SizedBox(width: 16),
-                    // Sort dropdown
-                    Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.borderColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: DropdownButton<String>(
-                        value: _sortBy,
-                        underline: const SizedBox(),
-                        icon: const Icon(Icons.arrow_drop_down),
-                        items: {
-                          'creationDate': l10n?.creationDate ?? 'Дате создания',
-                          'name': 'Имени',
-                          'contact': 'Контакту',
-                        }.entries.map((entry) {
-                          return DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _sortBy = value!),
-                      ),
+                    // Enhanced Sort dropdown
+                    CustomDropdown<String>(
+                      value: _sortBy,
+                      width: 200,
+                      items: {
+                        'creationDate': l10n?.creationDate ?? 'Дата создания',
+                        'name': 'Имени',
+                        'contact': 'Контакту',
+                      },
+                      onChanged: (value) => setState(() => _sortBy = value),
                     ),
                     const SizedBox(width: 16),
-                    ElevatedButton.icon(
+                    // Custom Add button
+                    CustomButton(
+                      text: l10n?.addClient ?? 'Добавить клиента',
                       onPressed: () => context.go('/clients/add'),
-                      icon: const Icon(Icons.add),
-                      label: Text(l10n?.addClient ?? 'Добавить клиента'),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          // Table Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Полное имя',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Контактный номер',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Номер паспорта',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Адрес',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Дата создания',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                const SizedBox(width: 100), // Space for actions
-              ],
-            ),
-          ),
-          // List
+          
+          // Continuous Table Section
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredAndSortedClients.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 64,
-                              color: AppTheme.textSecondary.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Нет клиентов',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: () => context.go('/clients/add'),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Добавить первого клиента'),
-                            ),
-                          ],
+            child: Container(
+              color: AppTheme.surfaceColor,
+              child: _isLoading
+                  ? Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        itemCount: _filteredAndSortedClients.length,
-                        itemBuilder: (context, index) {
-                          final client = _filteredAndSortedClients[index];
-                          final dateFormat = DateFormat('dd.MM.yyyy');
-                          
-                          return _ClientListItem(
-                            client: client,
-                            dateFormat: dateFormat,
-                            onTap: () => context.go('/clients/${client.id}'),
-                            onEdit: () => context.go('/clients/${client.id}/edit'),
-                            onDelete: () => _deleteClient(client),
-                          );
-                        },
                       ),
+                    )
+                  : Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            offset: const Offset(0, 1),
+                            blurRadius: 3,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Table Header
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.subtleBackgroundColor,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: AppTheme.subtleBorderColor,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    l10n?.fullNameHeader ?? 'ПОЛНОЕ ИМЯ',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    l10n?.contactNumberHeader ?? 'КОНТАКТНЫЙ НОМЕР',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    l10n?.passportNumberHeader ?? 'НОМЕР ПАСПОРТА',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    l10n?.addressHeader ?? 'АДРЕС',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    l10n?.creationDateHeader ?? 'ДАТА СОЗДАНИЯ',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Table Content
+                          Expanded(
+                            child: _filteredAndSortedClients.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      l10n?.notFound ?? 'Ничего не найдено',
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    itemCount: _filteredAndSortedClients.length,
+                                    itemBuilder: (context, index) {
+                                      final client = _filteredAndSortedClients[index];
+                                      return ClientListItem(
+                                        client: client,
+                                        onTap: () => context.go('/clients/${client.id}'),
+                                        onEdit: () => context.go('/clients/${client.id}/edit'),
+                                        onDelete: () => _deleteClient(client),
+                                        onSelect: () {
+                                          print('Selected client: \'${client.fullName}\'');
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
           ),
         ],
       ),
@@ -280,25 +334,10 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
   }
 
   Future<void> _deleteClient(Client client) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCustomConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Удалить клиента'),
-        content: Text('Вы уверены, что хотите удалить клиента "${client.fullName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-            ),
-            child: const Text('Удалить'),
-          ),
-        ],
-      ),
+      title: AppLocalizations.of(context)!.deleteClientTitle,
+      content: AppLocalizations.of(context)!.deleteClientConfirmation(client.fullName),
     );
 
     if (confirmed == true) {
@@ -306,131 +345,13 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
         await _clientRepository.deleteClient(client.id);
         _loadData();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Клиент удален')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.clientDeleted)),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка удаления: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.clientDeleteError(e))),
         );
       }
     }
-  }
-}
-
-class _ClientListItem extends StatefulWidget {
-  final Client client;
-  final DateFormat dateFormat;
-  final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const _ClientListItem({
-    required this.client,
-    required this.dateFormat,
-    required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  @override
-  State<_ClientListItem> createState() => _ClientListItemState();
-}
-
-class _ClientListItemState extends State<_ClientListItem> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 1),
-          decoration: BoxDecoration(
-            color: _isHovered ? AppTheme.backgroundColor : AppTheme.surfaceColor,
-            border: const Border(
-              bottom: BorderSide(
-                color: AppTheme.borderColor,
-                width: 1,
-              ),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
-            child: Row(
-              children: [
-                // Full Name
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    widget.client.fullName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                ),
-                // Contact Number
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    widget.client.contactNumber,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-                // Passport Number
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    widget.client.passportNumber,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-                // Address
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    widget.client.address,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Created Date
-                Expanded(
-                  child: Text(
-                    widget.dateFormat.format(widget.client.createdAt),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ),
-                // Actions
-                SizedBox(
-                  width: 100,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        onPressed: widget.onEdit,
-                        icon: const Icon(Icons.edit, size: 20),
-                        tooltip: 'Редактировать',
-                      ),
-                      IconButton(
-                        onPressed: widget.onDelete,
-                        icon: const Icon(Icons.delete, size: 20),
-                        tooltip: 'Удалить',
-                        color: AppTheme.errorColor,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 } 

@@ -8,6 +8,9 @@ import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
 import '../data/datasources/client_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
+import '../../../shared/widgets/custom_button.dart';
+
 
 class AddEditClientScreen extends StatefulWidget {
   final String? clientId; // null for add, id for edit
@@ -157,106 +160,126 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
     final l10n = AppLocalizations.of(context);
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: AppTheme.surfaceColor,
+        body: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: AppTheme.surfaceColor,
       body: Column(
         children: [
-          // Header
+          // Clean Header
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
+            color: AppTheme.surfaceColor,
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => context.go('/clients'),
-                  icon: const Icon(Icons.arrow_back),
+                CustomIconButton(
+                  routePath: '/clients',
                 ),
                 const SizedBox(width: 16),
                 Text(
                   _isEditing 
                       ? (l10n?.editClient ?? 'Редактировать клиента')
                       : (l10n?.addClient ?? 'Добавить клиента'),
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const Spacer(),
                 if (_isSaving) ...[
-                  const CircularProgressIndicator(),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
+                    ),
+                  ),
                   const SizedBox(width: 16),
                 ],
-                ElevatedButton(
-                  onPressed: _isSaving ? null : _saveClient,
-                  child: Text(l10n?.save ?? 'Сохранить'),
+                CustomButton(
+                  text: l10n?.save ?? 'Сохранить',
+                  onPressed: _isSaving ? null : () => _saveClient(),
+                  showIcon: false,
+                  height: 40,
+                  width: 120,
                 ),
               ],
             ),
           ),
-          // Form
+          // Simple Clean Form
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
               child: Form(
                 key: _formKey,
                 child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                  color: AppTheme.surfaceColor,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Section Header
+                      Text(
+                        'Личная информация',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Full Name
                       _buildTextField(
                         controller: _fullNameController,
                         label: 'Полное имя',
                         validator: (value) => value?.isEmpty == true ? 'Введите полное имя' : null,
-                        icon: Icons.person,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      
                       // Contact Number
                       _buildTextField(
                         controller: _contactNumberController,
                         label: 'Контактный номер',
                         keyboardType: TextInputType.phone,
                         validator: (value) => value?.isEmpty == true ? 'Введите контактный номер' : null,
-                        icon: Icons.phone,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 26),
+                      
+                      // Section Header
+                      Text(
+                        'Документы и адрес',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Passport Number
                       _buildTextField(
                         controller: _passportNumberController,
                         label: 'Номер паспорта',
                         validator: (value) => value?.isEmpty == true ? 'Введите номер паспорта' : null,
-                        icon: Icons.credit_card,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      
                       // Address
                       _buildTextField(
                         controller: _addressController,
                         label: 'Адрес',
                         maxLines: 3,
                         validator: (value) => value?.isEmpty == true ? 'Введите адрес' : null,
-                        icon: Icons.location_on,
                       ),
                     ],
                   ),
@@ -281,16 +304,39 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: AppTheme.textPrimary,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: icon != null ? Icon(icon) : null,
-        border: const OutlineInputBorder(),
+        labelStyle: TextStyle(
+          color: AppTheme.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        prefixIcon: icon != null ? Icon(icon, color: AppTheme.textSecondary) : null,
+        filled: true,
+        fillColor: Colors.white,
+        hoverColor: Color.lerp(AppTheme.surfaceColor, AppTheme.backgroundColor, 0.6),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.borderColor),
+        ),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.borderColor),
         ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: AppTheme.primaryColor),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.errorColor),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       validator: validator,
     );

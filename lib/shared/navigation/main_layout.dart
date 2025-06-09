@@ -26,77 +26,90 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       body: Row(
         children: [
-          Container(
-            width: 72,
-            decoration: const BoxDecoration(
-              color: AppTheme.sidebarBackground,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(2, 0),
+          // Modern, redesigned sidebar
+          AnimatedContainer(
+            duration: AppTheme.animationStandard,
+            width: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              border: Border(
+                right: BorderSide(
+                  color: AppTheme.borderColor,
+                  width: 1,
                 ),
-              ],
+              ),
             ),
             child: Column(
               children: [
-                const SizedBox(height: 24),
-                // Logo/App Name
+                const SizedBox(height: AppTheme.spacingLg),
+                // App Logo
                 Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMd),
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.primaryColor,
+                          AppTheme.primaryDark,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: const Center(
                       child: Text(
                         'I',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                // Navigation Items
+                const SizedBox(height: AppTheme.spacingLg),
+                
+                // Navigation Items with updated icons
                 _buildNavItem(
-                  icon: Icons.receipt_long_outlined,
+                  icon: Icons.description_outlined, // Document icon for installments
                   label: l10n?.installments ?? 'Рассрочки',
                   route: '/installments',
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
-                  icon: Icons.people_outline,
+                  icon: Icons.person_outline, // Keep clients icon
                   label: l10n?.clients ?? 'Клиенты',
                   route: '/clients',
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
-                  icon: Icons.account_balance_wallet_outlined,
+                  icon: Icons.attach_money_outlined, // Better paper-money icon for investors
                   label: l10n?.investors ?? 'Инвесторы',
                   route: '/investors',
                   currentRoute: currentRoute,
                 ),
                 const Spacer(),
-                // Settings at bottom
-                const Divider(
-                  color: AppTheme.sidebarHoverColor,
-                  height: 1,
-                ),
+              
+                // Settings at the very bottom corner
                 _buildNavItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Настройки',
+                  icon: Icons.settings_outlined, // Settings gear icon
+                  label: l10n?.settings ?? 'Настройки',
                   route: '/settings',
                   currentRoute: currentRoute,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppTheme.spacingXs), // Match horizontal spacing
               ],
             ),
           ),
@@ -118,54 +131,44 @@ class _MainLayoutState extends State<MainLayout> {
     final isActive = currentRoute.startsWith(route);
     final isHovered = _hoveredRoute == route;
 
-    return Tooltip(
-      message: label,
-      preferBelow: false,
-      verticalOffset: 0,
-      margin: const EdgeInsets.only(left: 72),
-      decoration: BoxDecoration(
-        color: AppTheme.sidebarBackground,
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(2, 2),
+    // Removed Tooltip widget
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredRoute = route),
+      onExit: (_) => setState(() => _hoveredRoute = null),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => context.go(route),
+        child: AnimatedContainer(
+          duration: AppTheme.animationQuick,
+          height: 48,
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingXs,
+            vertical: AppTheme.spacingXxs,
           ),
-        ],
-      ),
-      textStyle: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-      ),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hoveredRoute = route),
-        onExit: (_) => setState(() => _hoveredRoute = null),
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => context.go(route),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            height: 48,
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
+          decoration: BoxDecoration(
+            color: isActive
+                ? AppTheme.subtleBackgroundColor
+                : isHovered
+                    ? AppTheme.subtleHoverColor
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+            border: isActive
+                ? Border.all(
+                    color: AppTheme.subtleBorderColor,
+                    width: 1,
+                  )
+                : null,
+            boxShadow: isActive ? AppTheme.subtleShadow : null,
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 20,
               color: isActive
-                  ? AppTheme.primaryColor.withOpacity(0.1)
+                  ? AppTheme.primaryColor
                   : isHovered
-                      ? AppTheme.sidebarHoverColor
-                      : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Icon(
-                icon,
-                size: 24,
-                color: isActive
-                    ? AppTheme.primaryColor
-                    : isHovered
-                        ? Colors.white
-                        : AppTheme.sidebarIconColor,
-              ),
+                      ? AppTheme.textPrimary
+                      : AppTheme.textSecondary,
             ),
           ),
         ),

@@ -17,7 +17,10 @@ import '../../investors/domain/entities/investor.dart';
 import '../../investors/domain/repositories/investor_repository.dart';
 import '../../investors/data/repositories/investor_repository_impl.dart';
 import '../../investors/data/datasources/investor_local_datasource.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../../../shared/database/database_helper.dart';
+import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/custom_dropdown.dart';
 
 class AddInstallmentScreen extends StatefulWidget {
   const AddInstallmentScreen({super.key});
@@ -51,14 +54,20 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   List<Investor> _investors = [];
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isFormSubmitted = false;
 
   @override
   void initState() {
     super.initState();
     _initializeRepositories();
     _loadData();
+    
+    // Set buying date to today
     _buyingDate = DateTime.now();
-    _installmentStartDate = DateTime.now();
+    
+    // Set installment start date to one month from today
+    final now = DateTime.now();
+    _installmentStartDate = DateTime(now.year, now.month + 1, now.day);
   }
 
   void _initializeRepositories() {
@@ -114,12 +123,24 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     
     if (installmentPrice > 0 && term > 0) {
       final remainingAmount = installmentPrice - downPayment;
-      final monthlyPayment = remainingAmount / term;
+      
+      // Calculate monthly payments based on if there's a down payment
+      final effectiveMonthlyPaymentCount = downPayment > 0 ? term - 1 : term;
+      
+      // Avoid division by zero if term is 1 and there's a down payment
+      if (effectiveMonthlyPaymentCount <= 0) {
+        _monthlyPaymentController.text = '0';
+        return;
+      }
+      
+      final monthlyPayment = remainingAmount / effectiveMonthlyPaymentCount;
       _monthlyPaymentController.text = monthlyPayment.toStringAsFixed(0);
     }
   }
 
   Future<void> _saveInstallment() async {
+    setState(() => _isFormSubmitted = true);
+    
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,6 +202,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
 
   Future<void> _createPaymentSchedule(String installmentId, Installment installment) async {
     final payments = <InstallmentPayment>[];
+    int paymentCount = 0;
     
     // Down payment (payment number 0)
     if (installment.downPayment > 0) {
@@ -195,10 +217,15 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ));
+      
+      // Increment payment count if there's a down payment
+      paymentCount++;
     }
     
-    // Monthly payments
-    for (int i = 1; i <= installment.termMonths; i++) {
+    // Monthly payments - adjust for down payment so total number of payments equals term
+    final monthlyPaymentsCount = installment.termMonths - (installment.downPayment > 0 ? 1 : 0);
+    
+    for (int i = 1; i <= monthlyPaymentsCount; i++) {
       final dueDate = DateTime(
         installment.installmentStartDate.year,
         installment.installmentStartDate.month + i - 1,
@@ -229,72 +256,83 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     final l10n = AppLocalizations.of(context);
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: AppTheme.surfaceColor,
+        body: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: AppTheme.surfaceColor,
       body: Column(
         children: [
-          // Header
+          // Clean Header
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
+            color: AppTheme.surfaceColor,
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => context.go('/installments'),
-                  icon: const Icon(Icons.arrow_back),
+                CustomIconButton(
+                  routePath: '/installments',
                 ),
                 const SizedBox(width: 16),
                 Text(
                   l10n?.addInstallment ?? 'Добавить рассрочку',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const Spacer(),
                 if (_isSaving) ...[
-                  const CircularProgressIndicator(),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
+                    ),
+                  ),
                   const SizedBox(width: 16),
                 ],
-                ElevatedButton(
-                  onPressed: _isSaving ? null : _saveInstallment,
-                  child: Text(l10n?.save ?? 'Сохранить'),
+                CustomButton(
+                  text: l10n?.save ?? 'Сохранить',
+                  onPressed: _isSaving ? null : () => _saveInstallment(),
+                  showIcon: false,
+                  height: 40,
+                  width: 120,
                 ),
               ],
             ),
           ),
-          // Form
+          // Simple Clean Form
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
               child: Form(
                 key: _formKey,
+                autovalidateMode: _isFormSubmitted ? AutovalidateMode.always : AutovalidateMode.disabled,
                 child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                  color: AppTheme.surfaceColor,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Section Headers
+                      Text(
+                        'Основная информация',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Client and Investor Selection
                       Row(
                         children: [
@@ -307,91 +345,113 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       // Product Name
                       _buildTextField(
                         controller: _productNameController,
-                        label: 'Название товара',
-                        validator: (value) => value?.isEmpty == true ? 'Введите название товара' : null,
+                        label: l10n?.productName ?? 'Название товара',
+                        validator: (value) => value?.isEmpty == true ? l10n?.enterProductName ?? 'Введите название товара' : null,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 26),
+                      // Pricing Section Header
+                      Text(
+                        l10n?.financialInfoHeader ?? 'Финансовая информация',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Prices
                       Row(
                         children: [
                           Expanded(
                             child: _buildTextField(
                               controller: _cashPriceController,
-                              label: 'Цена при покупке без рассрочки',
+                              label: l10n?.cashPrice ?? 'Цена при покупке без рассрочки',
                               keyboardType: TextInputType.number,
                               suffix: '₽',
-                              validator: (value) => _validateNumber(value, 'Введите корректную цену'),
+                              validator: (value) => _validateNumber(value, l10n?.enterValidPrice ?? 'Введите корректную цену'),
                             ),
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 20),
                           Expanded(
                             child: _buildTextField(
                               controller: _installmentPriceController,
-                              label: 'Цена при покупке в рассрочку',
+                              label: l10n?.installmentPrice ?? 'Цена при покупке в рассрочку',
                               keyboardType: TextInputType.number,
                               suffix: '₽',
-                              validator: (value) => _validateNumber(value, 'Введите корректную цену'),
+                              validator: (value) => _validateNumber(value, l10n?.enterValidPrice ?? 'Введите корректную цену'),
                               onChanged: (value) => _calculateMonthlyPayment(),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       // Term and Down Payment
                       Row(
                         children: [
                           Expanded(
                             child: _buildTextField(
                               controller: _termController,
-                              label: 'Срок (месяцы)',
+                              label: l10n?.term ?? 'Срок (месяцы)',
                               keyboardType: TextInputType.number,
                               suffix: 'мес.',
-                              validator: (value) => _validateNumber(value, 'Введите срок в месяцах'),
+                              validator: (value) => _validateNumber(value, l10n?.enterValidTerm ?? 'Введите срок в месяцах'),
                               onChanged: (value) => _calculateMonthlyPayment(),
                             ),
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 20),
                           Expanded(
                             child: _buildTextField(
                               controller: _downPaymentController,
-                              label: 'Первоначальный взнос',
+                              label: l10n?.downPaymentFull ?? 'Первоначальный взнос',
                               keyboardType: TextInputType.number,
                               suffix: '₽',
-                              validator: (value) => _validateNumber(value, 'Введите сумму первоначального взноса', allowZero: true),
+                              validator: (value) => _validateNumber(value, l10n?.enterValidDownPayment ?? 'Введите сумму первоначального взноса', allowZero: true),
                               onChanged: (value) => _calculateMonthlyPayment(),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       // Monthly Payment (calculated)
                       _buildTextField(
                         controller: _monthlyPaymentController,
-                        label: 'Ежемесячный платеж',
+                        label: l10n?.monthlyPayment ?? 'Ежемесячный платеж',
                         keyboardType: TextInputType.number,
                         suffix: '₽',
                         readOnly: true,
-                        validator: (value) => _validateNumber(value, 'Ежемесячный платеж должен быть больше 0'),
+                        validator: (value) => _validateNumber(value, l10n?.enterValidMonthlyPayment ?? 'Ежемесячный платеж должен быть больше 0'),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 26),
+                      // Dates Section Header
+                      Text(
+                        l10n?.datesHeader ?? 'Сроки и даты',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      
                       // Dates
                       Row(
                         children: [
                           Expanded(
                             child: _buildDateField(
-                              label: 'Дата покупки',
+                              label: l10n?.buyingDate ?? 'Дата покупки',
                               value: _buyingDate,
                               onChanged: (date) => setState(() => _buyingDate = date),
                             ),
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 20),
                           Expanded(
                             child: _buildDateField(
-                              label: 'Дата начала рассрочки',
+                              label: l10n?.installmentStartDate ?? 'Дата начала рассрочки',
                               value: _installmentStartDate,
                               onChanged: (date) => setState(() => _installmentStartDate = date),
                             ),
@@ -410,37 +470,122 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   }
 
   Widget _buildClientDropdown() {
-    return DropdownButtonFormField<Client>(
-      value: _selectedClient,
-      decoration: const InputDecoration(
-        labelText: 'Клиент',
-        border: OutlineInputBorder(),
-      ),
-      items: _clients.map((client) {
-        return DropdownMenuItem(
-          value: client,
-          child: Text(client.fullName),
-        );
-      }).toList(),
-      onChanged: (client) => setState(() => _selectedClient = client),
-      validator: (value) => value == null ? 'Выберите клиента' : null,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Клиент',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_clients.isEmpty)
+          Container(
+            width: double.infinity,
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.subtleBackgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.subtleBorderColor,
+                width: 1,
+              ),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Нет доступных клиентов',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          )
+        else
+          CustomDropdown<Client?>(
+            value: _selectedClient,
+            items: Map.fromEntries(
+              _clients.map((client) => MapEntry(client, client.fullName)),
+            ),
+            onChanged: (client) => setState(() => _selectedClient = client),
+            hint: 'Пусто',
+            width: double.infinity,
+            height: 44,
+            showSearch: true,
+          ),
+        if (_selectedClient == null && _isFormSubmitted)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 16),
+            child: Text(
+              'Выберите клиента',
+              style: TextStyle(
+                color: AppTheme.errorColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildInvestorDropdown() {
-    return DropdownButtonFormField<Investor>(
-      value: _selectedInvestor,
-      decoration: const InputDecoration(
-        labelText: 'Инвестор (необязательно)',
-        border: OutlineInputBorder(),
-      ),
-      items: _investors.map((investor) {
-        return DropdownMenuItem(
-          value: investor,
-          child: Text(investor.fullName),
-        );
-      }).toList(),
-      onChanged: (investor) => setState(() => _selectedInvestor = investor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Инвестор (необязательно)',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_investors.isEmpty)
+          Container(
+            width: double.infinity,
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.subtleBackgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.subtleBorderColor,
+                width: 1,
+              ),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Нет доступных инвесторов',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          )
+        else
+          CustomDropdown<Investor?>(
+            value: _selectedInvestor,
+            items: Map.fromEntries(
+              _investors.map((investor) => MapEntry(investor, investor.fullName)),
+            ),
+            onChanged: (investor) => setState(() => _selectedInvestor = investor),
+            hint: 'Без инвестора',
+            width: double.infinity, 
+            height: 44,
+            showSearch: true,
+          ),
+      ],
     );
   }
 
@@ -457,12 +602,44 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
       controller: controller,
       keyboardType: keyboardType,
       readOnly: readOnly,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: readOnly ? AppTheme.textSecondary : AppTheme.textPrimary,
+      ),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(
+          color: AppTheme.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
         suffixText: suffix,
-        border: const OutlineInputBorder(),
-        filled: readOnly,
-        fillColor: readOnly ? AppTheme.backgroundColor : null,
+        suffixStyle: TextStyle(
+          color: AppTheme.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        filled: true,
+        fillColor: readOnly ? AppTheme.subtleBackgroundColor : Colors.white,
+        hoverColor: Color.lerp(AppTheme.surfaceColor, AppTheme.backgroundColor, 0.6),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          borderSide: BorderSide(color: AppTheme.errorColor),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       validator: validator,
       onChanged: onChanged,
@@ -490,16 +667,44 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
         }
       },
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Дата',
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.calendar_today),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          hoverColor: Color.lerp(AppTheme.surfaceColor, AppTheme.backgroundColor, 0.6),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+            borderSide: BorderSide(color: AppTheme.borderColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+            borderSide: BorderSide(color: AppTheme.borderColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+            borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          suffixIcon: Icon(
+            Icons.calendar_today,
+            color: AppTheme.textSecondary,
+            size: 20,
+          ),
         ),
         child: Text(
           value != null
               ? '${value!.day.toString().padLeft(2, '0')}.${value!.month.toString().padLeft(2, '0')}.${value!.year}'
               : 'Выберите дату',
-          style: value != null ? null : TextStyle(color: Colors.grey[600]),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: value != null ? AppTheme.textPrimary : AppTheme.textHint,
+          ),
         ),
       ),
     );
