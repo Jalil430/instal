@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/entities/client.dart';
 import '../../../shared/widgets/custom_contextual_dialog.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ClientListItem extends StatefulWidget {
   final Client client;
@@ -217,6 +218,7 @@ class _ClientContextMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
       fontSize: 14,
       fontWeight: FontWeight.w400,
@@ -230,19 +232,19 @@ class _ClientContextMenu extends StatelessWidget {
         children: [
           _ContextMenuTile(
             icon: Icons.check_box_outline_blank,
-            label: 'Выбрать',
+            label: l10n.select,
             onTap: onSelect,
             textStyle: textStyle,
           ),
           _ContextMenuTile(
             icon: Icons.edit_outlined,
-            label: 'Редактировать',
+            label: l10n.edit,
             onTap: onEdit,
             textStyle: textStyle,
           ),
           _ContextMenuTile(
             icon: Icons.delete_outline,
-            label: 'Удалить',
+            label: l10n.deleteAction,
             onTap: onDelete,
             textStyle: textStyle?.copyWith(color: Colors.red),
             iconColor: Colors.red,

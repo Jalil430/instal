@@ -61,7 +61,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
       if (investor == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Инвестор не найден')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.investorNotFound ?? 'Инвестор не найден')),
           );
           context.go('/investors');
         }
@@ -79,7 +79,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoading ?? 'Ошибка загрузки'}: $e')),
         );
       }
     }
@@ -103,11 +103,11 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
-              const Text('Инвестор не найден'),
+              Text(AppLocalizations.of(context)?.investorNotFound ?? 'Инвестор не найден'),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.go('/investors'),
-                child: const Text('Вернуться к списку'),
+                child: Text(AppLocalizations.of(context)?.backToList ?? 'Вернуться к списку'),
               ),
             ],
           ),
@@ -116,8 +116,8 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
     }
 
     final currencyFormat = NumberFormat.currency(
-      locale: 'ru_RU',
-      symbol: '₽',
+      locale: AppLocalizations.of(context)?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: AppLocalizations.of(context)?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('dd.MM.yyyy');
@@ -137,7 +137,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  'Детали инвестора - ${_investor!.fullName}',
+                  '${AppLocalizations.of(context)?.investorDetails ?? 'Детали инвестора'} - ${_investor!.fullName}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -192,7 +192,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                 children: [
                   // Investor Info
                   Text(
-                    'Информация',
+                    AppLocalizations.of(context)?.information ?? 'Информация',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -200,12 +200,12 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildInfoRow('Полное имя', _investor!.fullName),
-                  _buildInfoRow('Сумма инвестиции', currencyFormat.format(_investor!.investmentAmount)),
-                  _buildInfoRow('Доля инвестора', '${_investor!.investorPercentage.toStringAsFixed(1)}%'),
-                  _buildInfoRow('Доля пользователя', '${_investor!.userPercentage.toStringAsFixed(1)}%'),
-                  _buildInfoRow('Дата создания', dateFormat.format(_investor!.createdAt)),
-                  _buildInfoRow('Последнее обновление', dateFormat.format(_investor!.updatedAt)),
+                  _buildInfoRow(AppLocalizations.of(context)?.fullName ?? 'Полное имя', _investor!.fullName),
+                  _buildInfoRow(AppLocalizations.of(context)?.investmentAmount ?? 'Сумма инвестиции', currencyFormat.format(_investor!.investmentAmount)),
+                  _buildInfoRow(AppLocalizations.of(context)?.investorShare ?? 'Доля инвестора', '${_investor!.investorPercentage.toStringAsFixed(1)}%'),
+                  _buildInfoRow(AppLocalizations.of(context)?.userShare ?? 'Доля пользователя', '${_investor!.userPercentage.toStringAsFixed(1)}%'),
+                  _buildInfoRow(AppLocalizations.of(context)?.creationDate ?? 'Дата создания', dateFormat.format(_investor!.createdAt)),
+                  _buildInfoRow(AppLocalizations.of(context)?.lastUpdated ?? 'Последнее обновление', dateFormat.format(_investor!.updatedAt)),
 
                   const SizedBox(height: 20),
 
@@ -213,7 +213,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                   Row(
                     children: [
                       Text(
-                        'Рассрочки инвестора (${_installments.length})',
+                        '${AppLocalizations.of(context)?.investorInstallments ?? 'Рассрочки инвестора'} (${_installments.length})',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -224,7 +224,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                       
                       CustomButton(
                         onPressed: () => context.go('/installments/add?investorId=${widget.investorId}'),
-                        text: 'Добавить рассрочку',
+                        text: AppLocalizations.of(context)?.addInstallment ?? 'Добавить рассрочку',
                         icon: Icons.add,
                         showIcon: true,
                         height: 40
@@ -241,10 +241,10 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                       children: [
                         _buildTableHeader(context),
                         if (_installments.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(24),
+                          Padding(
+                            padding: const EdgeInsets.all(24),
                             child: Center(
-                              child: Text('Нет рассрочек'),
+                              child: Text(AppLocalizations.of(context)?.noInstallments ?? 'Нет рассрочек'),
                             ),
                           )
                         else
@@ -468,7 +468,7 @@ class _InstallmentListItemState extends State<_InstallmentListItem> with TickerP
                   Expanded(
                     flex: 2,
                     child: Text(
-                      '${widget.installment.termMonths} месяцев',
+                      '${widget.installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),

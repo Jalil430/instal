@@ -76,7 +76,11 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
       _fadeController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
-      print('Error loading data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
+        );
+      }
     }
   }
 
@@ -140,7 +144,7 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                           ),
                         ),
                         Text(
-                          '${_filteredAndSortedInvestors.length} ${l10n?.investors?.toLowerCase() ?? 'инвесторы'}',
+                          '${_filteredAndSortedInvestors.length} ${_getInvestorsCountText(_filteredAndSortedInvestors.length)}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
@@ -164,8 +168,8 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                       width: 200,
                       items: {
                         'creationDate': l10n?.creationDate ?? 'Дата создания',
-                        'name': 'Имени',
-                        'investment': 'Инвестиции',
+                        'name': l10n?.sortByName ?? 'Имени',
+                        'investment': l10n?.sortByInvestment ?? 'Инвестиции',
                       },
                       onChanged: (value) => setState(() => _sortBy = value),
                     ),
@@ -340,6 +344,17 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
         ],
       ),
     );
+  }
+
+  String _getInvestorsCountText(int count) {
+    final l10n = AppLocalizations.of(context)!;
+    if (count % 10 == 1 && count % 100 != 11) {
+      return l10n.investor_one;
+    } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
+      return l10n.investor_few;
+    } else {
+      return l10n.investor_many;
+    }
   }
 
   Future<void> _deleteInvestor(Investor investor) async {

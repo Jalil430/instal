@@ -61,7 +61,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
       if (client == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Клиент не найден')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.clientNotFound ?? 'Клиент не найден')),
           );
           context.go('/clients');
         }
@@ -79,7 +79,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoading ?? 'Ошибка загрузки'}: $e')),
         );
       }
     }
@@ -103,11 +103,11 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
-              const Text('Клиент не найден'),
+              Text(AppLocalizations.of(context)?.clientNotFound ?? 'Клиент не найден'),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.go('/clients'),
-                child: const Text('Вернуться к списку'),
+                child: Text(AppLocalizations.of(context)?.backToList ?? 'Вернуться к списку'),
               ),
             ],
           ),
@@ -117,8 +117,8 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
 
     final dateFormat = DateFormat('dd.MM.yyyy');
     final currencyFormat = NumberFormat.currency(
-      locale: 'ru_RU',
-      symbol: '₽',
+      locale: AppLocalizations.of(context)?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: AppLocalizations.of(context)?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 0,
     );
 
@@ -137,7 +137,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  'Детали клиента - ${_client!.fullName}',
+                  '${AppLocalizations.of(context)?.clientDetails ?? 'Детали клиента'} - ${_client!.fullName}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -192,7 +192,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                 children: [
                   // Client Info
                   Text(
-                    'Информация',
+                    AppLocalizations.of(context)?.information ?? 'Информация',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -200,11 +200,11 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildInfoRow('Полное имя', _client!.fullName),
-                  _buildInfoRow('Контактный номер', _client!.contactNumber),
-                  _buildInfoRow('Номер паспорта', _client!.passportNumber),
-                  _buildInfoRow('Адрес', _client!.address),
-                  _buildInfoRow('Дата создания', dateFormat.format(_client!.createdAt)),
+                  _buildInfoRow(AppLocalizations.of(context)?.fullName ?? 'Полное имя', _client!.fullName),
+                  _buildInfoRow(AppLocalizations.of(context)?.contactNumber ?? 'Контактный номер', _client!.contactNumber),
+                  _buildInfoRow(AppLocalizations.of(context)?.passportNumber ?? 'Номер паспорта', _client!.passportNumber),
+                  _buildInfoRow(AppLocalizations.of(context)?.address ?? 'Адрес', _client!.address),
+                  _buildInfoRow(AppLocalizations.of(context)?.creationDate ?? 'Дата создания', dateFormat.format(_client!.createdAt)),
 
                   const SizedBox(height: 20),
 
@@ -212,7 +212,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   Row(
                     children: [
                       Text(
-                        'Рассрочки клиента (${_installments.length})',
+                        '${AppLocalizations.of(context)?.clientInstallments ?? 'Рассрочки клиента'} (${_installments.length})',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -222,7 +222,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                       const Spacer(),
                       CustomButton(
                         onPressed: () => context.go('/installments/add?clientId=${widget.clientId}'),
-                        text: 'Добавить рассрочку',
+                        text: AppLocalizations.of(context)?.addInstallment ?? 'Добавить рассрочку',
                         icon: Icons.add,
                         showIcon: true,
                         height: 40
@@ -239,10 +239,10 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                       children: [
                         _buildTableHeader(context),
                         if (_installments.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(24),
+                          Padding(
+                            padding: const EdgeInsets.all(24),
                             child: Center(
-                              child: Text('Нет рассрочек'),
+                              child: Text(AppLocalizations.of(context)?.noInstallments ?? 'Нет рассрочек'),
                             ),
                           )
                         else
@@ -466,7 +466,7 @@ class _InstallmentListItemState extends State<_InstallmentListItem> with TickerP
                   Expanded(
                     flex: 2,
                     child: Text(
-                      '${widget.installment.termMonths} месяцев',
+                      '${widget.installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),

@@ -77,21 +77,22 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
   }
 
   String _getOverallStatus() {
+    final l10n = AppLocalizations.of(context)!;
     // If no payments, return default
-    if (widget.payments.isEmpty) return 'предстоящий';
+    if (widget.payments.isEmpty) return l10n.upcoming;
     
     // First check for overdue payments (highest priority)
-    bool hasOverdue = widget.payments.any((payment) => payment.status == 'просрочено');
-    if (hasOverdue) return 'просрочено';
+    bool hasOverdue = widget.payments.any((payment) => payment.status == l10n.overdue);
+    if (hasOverdue) return l10n.overdue;
     
     // Get the next unpaid payment (by due date) to determine the most relevant status
     final unpaidPayments = widget.payments
-        .where((payment) => payment.status != 'оплачено')
+        .where((payment) => payment.status != l10n.paid)
         .toList();
     
     if (unpaidPayments.isEmpty) {
       // All payments are paid
-      return 'оплачено';
+      return l10n.paid;
     }
     
     // Sort unpaid payments by due date to get the next one
@@ -120,8 +121,8 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final currencyFormat = NumberFormat.currency(
-      locale: 'ru_RU',
-      symbol: '₽',
+      locale: l10n?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('dd.MM.yyyy');
@@ -425,8 +426,8 @@ class _InstallmentContextMenu extends StatelessWidget {
             icon: Icons.delete_outline,
             label: l10n?.deleteAction ?? 'Удалить',
             onTap: onDelete,
-            textStyle: textStyle?.copyWith(color: Colors.red),
-            iconColor: Colors.red,
+            textStyle: textStyle?.copyWith(color: AppTheme.errorColor),
+            iconColor: AppTheme.errorColor,
           ),
         ],
       ),

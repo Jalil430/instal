@@ -100,7 +100,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
+        SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
       );
     }
   }
@@ -144,7 +144,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите клиента')),
+        SnackBar(content: Text(AppLocalizations.of(context)?.selectClient ?? 'Выберите клиента')),
       );
       return;
     }
@@ -185,14 +185,14 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Рассрочка успешно создана')),
+          SnackBar(content: Text(AppLocalizations.of(context)?.installmentCreatedSuccess ?? 'Рассрочка успешно создана')),
         );
         context.go('/installments');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка создания рассрочки: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorCreatingInstallment ?? 'Ошибка создания рассрочки'}: $e')),
         );
       }
     } finally {
@@ -324,7 +324,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
                     children: [
                       // Section Headers
                       Text(
-                        'Основная информация',
+                        l10n?.mainInformation ?? 'Основная информация',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -398,7 +398,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
                               controller: _termController,
                               label: l10n?.term ?? 'Срок (месяцы)',
                               keyboardType: TextInputType.number,
-                              suffix: 'мес.',
+                              suffix: l10n?.monthShort ?? 'мес.',
                               validator: (value) => _validateNumber(value, l10n?.enterValidTerm ?? 'Введите срок в месяцах'),
                               onChanged: (value) => _calculateMonthlyPayment(),
                             ),
@@ -424,7 +424,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
                         keyboardType: TextInputType.number,
                         suffix: '₽',
                         readOnly: true,
-                        validator: (value) => _validateNumber(value, l10n?.enterValidMonthlyPayment ?? 'Ежемесячный платеж должен быть больше 0'),
+                        validator: (value) => _validateNumber(value, l10n?.validateMonthlyPayment ?? 'Ежемесячный платеж должен быть больше 0'),
                       ),
                       const SizedBox(height: 26),
                       // Dates Section Header
@@ -470,11 +470,12 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   }
 
   Widget _buildClientDropdown() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Клиент',
+          l10n.client,
           style: TextStyle(
             color: AppTheme.textSecondary,
             fontSize: 14,
@@ -498,7 +499,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Нет доступных клиентов',
+                l10n.noClientsAvailable,
                 style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 14,
@@ -514,7 +515,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
               _clients.map((client) => MapEntry(client, client.fullName)),
             ),
             onChanged: (client) => setState(() => _selectedClient = client),
-            hint: 'Пусто',
+            hint: l10n.empty,
             width: double.infinity,
             height: 44,
             showSearch: true,
@@ -523,7 +524,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 16),
             child: Text(
-              'Выберите клиента',
+              l10n.selectClient,
               style: TextStyle(
                 color: AppTheme.errorColor,
                 fontSize: 12,
@@ -536,11 +537,12 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   }
 
   Widget _buildInvestorDropdown() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Инвестор (необязательно)',
+          l10n.investorOptional,
           style: TextStyle(
             color: AppTheme.textSecondary,
             fontSize: 14,
@@ -564,7 +566,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Нет доступных инвесторов',
+                l10n.noInvestorsAvailable,
                 style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 14,
@@ -580,7 +582,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
               _investors.map((investor) => MapEntry(investor, investor.fullName)),
             ),
             onChanged: (investor) => setState(() => _selectedInvestor = investor),
-            hint: 'Без инвестора',
+            hint: l10n.withoutInvestor,
             width: double.infinity, 
             height: 44,
             showSearch: true,
@@ -698,8 +700,8 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
         ),
         child: Text(
           value != null
-              ? '${value!.day.toString().padLeft(2, '0')}.${value!.month.toString().padLeft(2, '0')}.${value!.year}'
-              : 'Выберите дату',
+              ? '${value.day.toString().padLeft(2, '0')}.${value.month.toString().padLeft(2, '0')}.${value.year}'
+              : AppLocalizations.of(context)?.selectDate ?? 'Выберите дату',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,

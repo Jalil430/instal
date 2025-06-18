@@ -24,6 +24,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadDbPath();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadLanguage();
+  }
+
+  void _loadLanguage() {
+    final locale = AppLocalizations.of(context)?.locale;
+    if (locale != null) {
+      if (_selectedLanguage != locale.languageCode) {
+        setState(() {
+          _selectedLanguage = locale.languageCode;
+        });
+      }
+    }
+  }
+
   Future<void> _loadDbPath() async {
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, 'instal.db');
@@ -33,7 +50,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _changeLanguage(String langCode) {
-    setState(() => _selectedLanguage = langCode);
     final locale = Locale(langCode);
     final localeSetter = LocaleSetter.of(context);
     localeSetter?.setLocale(locale);
@@ -91,14 +107,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Row(
                     children: [
                       _LanguageOption(
-                        label: 'Русский',
+                        label: AppLocalizations.of(context)?.languageRussian ?? 'Русский',
                         value: 'ru',
                         groupValue: _selectedLanguage,
                         onChanged: _changeLanguage,
                       ),
                       const SizedBox(width: 24),
                       _LanguageOption(
-                        label: 'English',
+                        label: AppLocalizations.of(context)?.languageEnglish ?? 'English',
                         value: 'en',
                         groupValue: _selectedLanguage,
                         onChanged: _changeLanguage,
@@ -108,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 32),
                   // Database Path Section
                   Text(
-                    'Локальная база данных',
+                    AppLocalizations.of(context)?.localDatabase ?? 'Локальная база данных',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -127,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 8),
                         CustomButton(
                           onPressed: _openDbFolder,
-                          text: 'Открыть папку',
+                          text: AppLocalizations.of(context)?.openFolder ?? 'Открыть папку',
                           icon: Icons.folder_open,
                           showIcon: true,
                         ),

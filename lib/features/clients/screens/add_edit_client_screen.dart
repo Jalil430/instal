@@ -72,7 +72,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Клиент не найден')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.clientNotFound ?? 'Клиент не найден')),
           );
           context.go('/clients');
         }
@@ -81,7 +81,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoading ?? 'Ошибка загрузки'}: $e')),
         );
       }
     }
@@ -118,7 +118,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Клиент успешно обновлен')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.clientUpdatedSuccess ?? 'Клиент успешно обновлен')),
           );
           context.go('/clients');
         }
@@ -139,7 +139,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Клиент успешно создан')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.clientCreatedSuccess ?? 'Клиент успешно создан')),
           );
           context.go('/clients');
         }
@@ -147,7 +147,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorSaving ?? 'Ошибка сохранения'}: $e')),
         );
       }
     } finally {
@@ -229,7 +229,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                     children: [
                       // Section Header
                       Text(
-                        'Личная информация',
+                        AppLocalizations.of(context)?.personalInformation ?? 'Личная информация',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -241,23 +241,23 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                       // Full Name
                       _buildTextField(
                         controller: _fullNameController,
-                        label: 'Полное имя',
-                        validator: (value) => value?.isEmpty == true ? 'Введите полное имя' : null,
+                        label: AppLocalizations.of(context)?.fullName ?? 'Полное имя',
+                        validator: (value) => value?.isEmpty == true ? AppLocalizations.of(context)?.enterFullName ?? 'Введите полное имя' : null,
                       ),
                       const SizedBox(height: 20),
                       
                       // Contact Number
                       _buildTextField(
                         controller: _contactNumberController,
-                        label: 'Контактный номер',
+                        label: AppLocalizations.of(context)?.contactNumber ?? 'Контактный номер',
                         keyboardType: TextInputType.phone,
-                        validator: (value) => value?.isEmpty == true ? 'Введите контактный номер' : null,
+                        validator: (value) => value?.isEmpty == true ? AppLocalizations.of(context)?.enterContactNumber ?? 'Введите контактный номер' : null,
                       ),
                       const SizedBox(height: 26),
                       
                       // Section Header
                       Text(
-                        'Документы и адрес',
+                        AppLocalizations.of(context)?.documentsAndAddress ?? 'Документы и адрес',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -269,17 +269,17 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                       // Passport Number
                       _buildTextField(
                         controller: _passportNumberController,
-                        label: 'Номер паспорта',
-                        validator: (value) => value?.isEmpty == true ? 'Введите номер паспорта' : null,
+                        label: AppLocalizations.of(context)?.passportNumber ?? 'Номер паспорта',
+                        validator: (value) => value?.isEmpty == true ? AppLocalizations.of(context)?.enterPassportNumber ?? 'Введите номер паспорта' : null,
                       ),
                       const SizedBox(height: 20),
                       
                       // Address
                       _buildTextField(
                         controller: _addressController,
-                        label: 'Адрес',
+                        label: AppLocalizations.of(context)?.address ?? 'Адрес',
                         maxLines: 3,
-                        validator: (value) => value?.isEmpty == true ? 'Введите адрес' : null,
+                        validator: (value) => value?.isEmpty == true ? AppLocalizations.of(context)?.enterAddress ?? 'Введите адрес' : null,
                       ),
                     ],
                   ),

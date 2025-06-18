@@ -76,7 +76,11 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
       _fadeController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
-      print('Error loading data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
+        );
+      }
     }
   }
 
@@ -141,7 +145,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
                           ),
                         ),
                         Text(
-                          '${_filteredAndSortedClients.length} ${l10n?.clients?.toLowerCase() ?? 'клиенты'}',
+                          '${_filteredAndSortedClients.length} ${_getClientsCountText(_filteredAndSortedClients.length)}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
@@ -165,8 +169,8 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
                       width: 200,
                       items: {
                         'creationDate': l10n?.creationDate ?? 'Дата создания',
-                        'name': 'Имени',
-                        'contact': 'Контакту',
+                        'name': l10n?.sortByName ?? 'Имени',
+                        'contact': l10n?.sortByContact ?? 'Контакту',
                       },
                       onChanged: (value) => setState(() => _sortBy = value),
                     ),
@@ -331,6 +335,17 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
         ],
       ),
     );
+  }
+
+  String _getClientsCountText(int count) {
+    final l10n = AppLocalizations.of(context)!;
+    if (count % 10 == 1 && count % 100 != 11) {
+      return l10n.client_one;
+    } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
+      return l10n.client_few;
+    } else {
+      return l10n.client_many;
+    }
   }
 
   Future<void> _deleteClient(Client client) async {

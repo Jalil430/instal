@@ -84,8 +84,8 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final currencyFormat = NumberFormat.currency(
-      locale: 'ru_RU',
-      symbol: '₽',
+      locale: l10n?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('dd.MM.yyyy');
@@ -130,7 +130,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
               initialDate: _selectedDate,
               firstDate: DateTime(2020),
               lastDate: DateTime.now().add(const Duration(days: 365)),
-              locale: const Locale('ru'),
+              locale: l10n?.locale ?? const Locale('ru'),
             );
             if (date != null) {
               setState(() => _selectedDate = date);
@@ -239,7 +239,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.error ?? 'Ошибка'}: $e')),
         );
       }
     }

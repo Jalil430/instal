@@ -75,7 +75,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Инвестор не найден')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.investorNotFound ?? 'Инвестор не найден')),
           );
           context.go('/investors');
         }
@@ -84,7 +84,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoading ?? 'Ошибка загрузки'}: $e')),
         );
       }
     }
@@ -151,7 +151,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Инвестор успешно обновлен')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.investorUpdatedSuccess ?? 'Инвестор успешно обновлен')),
           );
           context.go('/investors');
         }
@@ -172,7 +172,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Инвестор успешно создан')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.investorCreatedSuccess ?? 'Инвестор успешно создан')),
           );
           context.go('/investors');
         }
@@ -180,7 +180,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorSaving ?? 'Ошибка сохранения'}: $e')),
         );
       }
     } finally {
@@ -262,7 +262,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                     children: [
                       // Section Header
                       Text(
-                        'Основная информация',
+                        AppLocalizations.of(context)?.mainInformation ?? 'Основная информация',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -274,24 +274,24 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                       // Full Name
                       _buildTextField(
                         controller: _fullNameController,
-                        label: 'Полное имя',
-                        validator: (value) => value?.isEmpty == true ? 'Введите полное имя' : null,
+                        label: AppLocalizations.of(context)?.fullName ?? 'Полное имя',
+                        validator: (value) => value?.isEmpty == true ? AppLocalizations.of(context)?.enterFullName ?? 'Введите полное имя' : null,
                       ),
                       const SizedBox(height: 20),
                       
                       // Investment Amount
                       _buildTextField(
                         controller: _investmentAmountController,
-                        label: 'Сумма инвестиции',
+                        label: AppLocalizations.of(context)?.investmentAmount ?? 'Сумма инвестиции',
                         keyboardType: TextInputType.number,
                         suffix: '₽',
-                        validator: (value) => _validateNumber(value, 'Введите корректную сумму инвестиции'),
+                        validator: (value) => _validateNumber(value, AppLocalizations.of(context)?.enterValidInvestmentAmount ?? 'Введите корректную сумму инвестиции'),
                       ),
                       const SizedBox(height: 26),
                       
                       // Section Header
                       Text(
-                        'Распределение прибыли',
+                        AppLocalizations.of(context)?.profitDistribution ?? 'Распределение прибыли',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -306,21 +306,21 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                           Expanded(
                             child: _buildTextField(
                               controller: _investorPercentageController,
-                              label: 'Доля инвестора',
+                              label: AppLocalizations.of(context)?.investorShare ?? 'Доля инвестора',
                               keyboardType: TextInputType.number,
                               suffix: '%',
-                              validator: (value) => _validatePercentage(value, 'Введите корректную долю инвестора'),
+                              validator: (value) => _validatePercentage(value, AppLocalizations.of(context)?.enterValidInvestorShare ?? 'Введите корректную долю инвестора'),
                             ),
                           ),
                           const SizedBox(width: 20),
                           Expanded(
                             child: _buildTextField(
                               controller: _userPercentageController,
-                              label: 'Доля пользователя',
+                              label: AppLocalizations.of(context)?.userShare ?? 'Доля пользователя',
                               keyboardType: TextInputType.number,
                               suffix: '%',
                               readOnly: true,
-                              validator: (value) => _validatePercentage(value, 'Введите корректную долю пользователя'),
+                              validator: (value) => _validatePercentage(value, AppLocalizations.of(context)?.enterValidUserShare ?? 'Введите корректную долю пользователя'),
                             ),
                           ),
                         ],
@@ -343,7 +343,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Доля пользователя рассчитывается автоматически. Сумма долей должна равняться 100%.',
+                                AppLocalizations.of(context)?.userShareHelperText ?? 'Доля пользователя рассчитывается автоматически. Сумма долей должна равняться 100%.',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
@@ -438,7 +438,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
     
     // Parse and validate the percentage value
     final number = double.tryParse(value!);
-    if (number == null || number < 0 || number > 100) return 'Процент должен быть от 0 до 100';
+    if (number == null || number < 0 || number > 100) return AppLocalizations.of(context)?.percentageValidation ?? 'Процент должен быть от 0 до 100';
     
     // For read-only user percentage field, don't do sum validation if investor field is empty
     if (value == _userPercentageController.text && _investorPercentageController.text.isEmpty) {
@@ -452,7 +452,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
       final total = investorPercentage + userPercentage;
       
       if ((total - 100).abs() > 0.1) {
-        return 'Сумма долей должна равняться 100%';
+        return AppLocalizations.of(context)?.percentageSumValidation ?? 'Сумма долей должна равняться 100%';
       }
     }
     

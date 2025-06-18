@@ -16,13 +16,8 @@ class AppLocalizations {
     Locale('en'), // English - optional
   ];
 
-  // Navigation
-  String get installments => locale.languageCode == 'ru' ? 'Рассрочки' : 'Installments';
-  String get client => locale.languageCode == 'ru' ? 'Клиент' : 'Client';
-  String get clients => locale.languageCode == 'ru' ? 'Клиенты' : 'Clients';
-  String get investors => locale.languageCode == 'ru' ? 'Инвесторы' : 'Investors';
-  
-  // Common
+  // ===== General & Common =====
+  String get appTitle => 'Instal';
   String get search => locale.languageCode == 'ru' ? 'Поиск' : 'Search';
   String get add => locale.languageCode == 'ru' ? 'Добавить' : 'Add';
   String get edit => locale.languageCode == 'ru' ? 'Редактировать' : 'Edit';
@@ -34,144 +29,354 @@ class AppLocalizations {
   String get status => locale.languageCode == 'ru' ? 'Статус' : 'Status';
   String get amount => locale.languageCode == 'ru' ? 'Сумма' : 'Amount';
   String get date => locale.languageCode == 'ru' ? 'Дата' : 'Date';
-  String get month => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
-  String get months => locale.languageCode == 'ru' ? 'месяцев' : 'months';
-  
-  // Installment fields
-  String get productName => locale.languageCode == 'ru' ? 'Название товара' : 'Product Name';
-  String get cashPrice => locale.languageCode == 'ru' ? 'Цена за наличные' : 'Cash Price';
-  String get installmentPrice => locale.languageCode == 'ru' ? 'Цена в рассрочку' : 'Installment Price';
-  String get term => locale.languageCode == 'ru' ? 'Срок (месяцы)' : 'Term (Months)';
-  String get downPayment => locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
-  String get downPaymentShort => locale.languageCode == 'ru' ? 'Взнос' : 'Down';
-  String get monthlyPayment => locale.languageCode == 'ru' ? 'Ежемесячный платеж' : 'Monthly Payment';
-  String get buyingDate => locale.languageCode == 'ru' ? 'Дата покупки' : 'Buying Date';
-  String get installmentStartDate => locale.languageCode == 'ru' ? 'Дата начала рассрочки' : 'Installment Start Date';
-  String get installmentEndDate => locale.languageCode == 'ru' ? 'Дата окончания рассрочки' : 'Installment End Date';
-  String get paidAmount => locale.languageCode == 'ru' ? 'Оплачено' : 'Paid';
-  String get leftAmount => locale.languageCode == 'ru' ? 'Осталось' : 'Left';
-  String get dueDate => locale.languageCode == 'ru' ? 'Срок оплаты' : 'Due Date';
-  String get nextPayment => locale.languageCode == 'ru' ? 'Следующий платеж' : 'Next Payment';
-  
-  // Client fields
+  String get information =>
+      locale.languageCode == 'ru' ? 'Информация' : 'Information';
+  String get mainInformation =>
+      locale.languageCode == 'ru' ? 'Основная информация' : 'Main Information';
+  String get backToList =>
+      locale.languageCode == 'ru' ? 'Вернуться к списку' : 'Back to List';
+  String get notFound =>
+      locale.languageCode == 'ru' ? 'Ничего не найдено' : 'Nothing found';
+  String get unknown => locale.languageCode == 'ru' ? 'Неизвестно' : 'Unknown';
+  String get empty => locale.languageCode == 'ru' ? 'Пусто' : 'Empty';
+  String get error => locale.languageCode == 'ru' ? 'Ошибка' : 'Error';
+  String get lastUpdated =>
+      locale.languageCode == 'ru' ? 'Последнее обновление' : 'Last Updated';
+  String get noData =>
+      locale.languageCode == 'ru' ? 'Нет данных' : 'No data';
+  String get selectDate =>
+      locale.languageCode == 'ru' ? 'Выберите дату' : 'Select Date';
+
+  // ===== Navigation =====
+  String get installments =>
+      locale.languageCode == 'ru' ? 'Рассрочки' : 'Installments';
+  String get clients => locale.languageCode == 'ru' ? 'Клиенты' : 'Clients';
+  String get investors =>
+      locale.languageCode == 'ru' ? 'Инвесторы' : 'Investors';
+  String get settings => locale.languageCode == 'ru' ? 'Настройки' : 'Settings';
+
+  // ===== Plurals =====
+  String get investor_one =>
+      locale.languageCode == 'ru' ? 'инвестор' : 'investor';
+  String get investor_few =>
+      locale.languageCode == 'ru' ? 'инвестора' : 'investors';
+  String get investor_many =>
+      locale.languageCode == 'ru' ? 'инвесторов' : 'investors';
+  String get client_one => locale.languageCode == 'ru' ? 'клиент' : 'client';
+  String get client_few => locale.languageCode == 'ru' ? 'клиента' : 'clients';
+  String get client_many => locale.languageCode == 'ru' ? 'клиентов' : 'clients';
+  String get installment_one =>
+      locale.languageCode == 'ru' ? 'рассрочка' : 'installment';
+  String get installment_few =>
+      locale.languageCode == 'ru' ? 'рассрочки' : 'installments';
+  String get installment_many =>
+      locale.languageCode == 'ru' ? 'рассрочек' : 'installments';
+
+  // ===== Entities (Client, Investor, Installment) =====
+  String get client => locale.languageCode == 'ru' ? 'Клиент' : 'Client';
+  String get investor => locale.languageCode == 'ru' ? 'Инвестор' : 'Investor';
+  String get installment =>
+      locale.languageCode == 'ru' ? 'Рассрочка' : 'Installment';
+  String get product => locale.languageCode == 'ru' ? 'Товар' : 'Product';
+
+  String get clientDetails =>
+      locale.languageCode == 'ru' ? 'Детали клиента' : 'Client Details';
+  String get investorDetails =>
+      locale.languageCode == 'ru' ? 'Детали инвестора' : 'Investor Details';
+  String get installmentDetails =>
+      locale.languageCode == 'ru' ? 'Детали рассрочки' : 'Installment Details';
+
+  String get clientInstallments =>
+      locale.languageCode == 'ru' ? 'Рассрочки клиента' : 'Client Installments';
+  String get investorInstallments =>
+      locale.languageCode == 'ru' ? 'Рассрочки инвестора' : 'Investor Installments';
+
   String get fullName => locale.languageCode == 'ru' ? 'Полное имя' : 'Full Name';
-  String get contactNumber => locale.languageCode == 'ru' ? 'Контактный номер' : 'Contact Number';
-  String get passportNumber => locale.languageCode == 'ru' ? 'Номер паспорта' : 'Passport Number';
+  String get contactNumber =>
+      locale.languageCode == 'ru' ? 'Контактный номер' : 'Contact Number';
+  String get passportNumber =>
+      locale.languageCode == 'ru' ? 'Номер паспорта' : 'Passport Number';
   String get address => locale.languageCode == 'ru' ? 'Адрес' : 'Address';
-  
-  // Investor fields
-  String get investmentAmount => locale.languageCode == 'ru' ? 'Сумма инвестиций' : 'Investment Amount';
-  String get investorPercentage => locale.languageCode == 'ru' ? 'Процент инвестора' : 'Investor Percentage';
-  String get userPercentage => locale.languageCode == 'ru' ? 'Процент пользователя' : 'User Percentage';
-  
-  // Status values
+
+  String get investmentAmount =>
+      locale.languageCode == 'ru' ? 'Сумма инвестиции' : 'Investment Amount';
+  String get investorShare =>
+      locale.languageCode == 'ru' ? 'Доля инвестора' : 'Investor Share';
+  String get userShare =>
+      locale.languageCode == 'ru' ? 'Доля пользователя' : 'User Share';
+  String get profitDistribution =>
+      locale.languageCode == 'ru' ? 'Распределение прибыли' : 'Profit Distribution';
+
+  String get productName =>
+      locale.languageCode == 'ru' ? 'Название товара' : 'Product Name';
+  String get cashPrice =>
+      locale.languageCode == 'ru' ? 'Цена за наличные' : 'Cash Price';
+  String get installmentPrice =>
+      locale.languageCode == 'ru' ? 'Цена в рассрочку' : 'Installment Price';
+  String get term => locale.languageCode == 'ru' ? 'Срок' : 'Term';
+  String get termMonths =>
+      locale.languageCode == 'ru' ? 'Срок (месяцы)' : 'Term (months)';
+  String get downPayment =>
+      locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
+  String get downPaymentShort => locale.languageCode == 'ru' ? 'Взнос' : 'Down';
+  String get downPaymentFull =>
+      locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
+  String get monthlyPayment =>
+      locale.languageCode == 'ru' ? 'Ежемесячный платеж' : 'Monthly Payment';
+  String get buyingDate =>
+      locale.languageCode == 'ru' ? 'Дата покупки' : 'Buying Date';
+  String get installmentStartDate => locale.languageCode == 'ru'
+      ? 'Дата начала рассрочки'
+      : 'Installment Start Date';
+  String get installmentEndDate => locale.languageCode == 'ru'
+      ? 'Дата окончания рассрочки'
+      : 'Installment End Date';
+  String get paidAmount => locale.languageCode == 'ru' ? 'Оплачено' : 'Paid Amount';
+  String get leftAmount => locale.languageCode == 'ru' ? 'Осталось' : 'Amount Left';
+  String get dueDate => locale.languageCode == 'ru' ? 'Срок оплаты' : 'Due Date';
+  String get nextPayment =>
+      locale.languageCode == 'ru' ? 'Следующий платеж' : 'Next Payment';
+
+  // ===== Statuses =====
   String get paid => locale.languageCode == 'ru' ? 'Оплачено' : 'Paid';
-  String get upcoming => locale.languageCode == 'ru' ? 'Предстоящий' : 'Upcoming';
+  String get upcoming =>
+      locale.languageCode == 'ru' ? 'Предстоящий' : 'Upcoming';
   String get dueToPay => locale.languageCode == 'ru' ? 'К оплате' : 'Due to Pay';
   String get overdue => locale.languageCode == 'ru' ? 'Просрочено' : 'Overdue';
-  
-  // Actions
-  String get addInstallment => locale.languageCode == 'ru' ? 'Добавить рассрочку' : 'Add Installment';
-  String get addClient => locale.languageCode == 'ru' ? 'Добавить клиента' : 'Add Client';
-  String get addInvestor => locale.languageCode == 'ru' ? 'Добавить инвестора' : 'Add Investor';
-  String get editInstallment => locale.languageCode == 'ru' ? 'Редактировать рассрочку' : 'Edit Installment';
-  String get editClient => locale.languageCode == 'ru' ? 'Редактировать клиента' : 'Edit Client';
-  String get editInvestor => locale.languageCode == 'ru' ? 'Редактировать инвестора' : 'Edit Investor';
-  String get registerPayment => locale.languageCode == 'ru' ? 'Зарегистрировать платеж' : 'Register Payment';
-  String get confirm => locale.languageCode == 'ru' ? 'Подтвердить' : 'Confirm';
-  String get cancelPayment => locale.languageCode == 'ru' ? 'Отменить' : 'Cancel Payment';
-  
-  // Sort options
-  String get sortBy => locale.languageCode == 'ru' ? 'Сортировать по' : 'Sort by';
-  String get creationDate => locale.languageCode == 'ru' ? 'Дата создания' : 'Creation Date';
-  
-  // Validation messages
-  String get fieldRequired => locale.languageCode == 'ru' ? 'Это поле обязательно' : 'This field is required';
-  String get invalidNumber => locale.languageCode == 'ru' ? 'Неверный номер' : 'Invalid number';
-  String get invalidAmount => locale.languageCode == 'ru' ? 'Неверная сумма' : 'Invalid amount';
-  
-  // Dialog messages
-  String get cancelPaymentQuestion => locale.languageCode == 'ru' ? 'Отменить оплату этого платежа?' : 'Cancel payment for this installment?';
 
-  // Delete confirmations
+  // ===== Actions & Buttons =====
+  String get addInstallment =>
+      locale.languageCode == 'ru' ? 'Добавить рассрочку' : 'Add Installment';
+  String get addClient =>
+      locale.languageCode == 'ru' ? 'Добавить клиента' : 'Add Client';
+  String get addInvestor =>
+      locale.languageCode == 'ru' ? 'Добавить инвестора' : 'Add Investor';
+  String get editInstallment => locale.languageCode == 'ru'
+      ? 'Редактировать рассрочку'
+      : 'Edit Installment';
+  String get editClient =>
+      locale.languageCode == 'ru' ? 'Редактировать клиента' : 'Edit Client';
+  String get editInvestor =>
+      locale.languageCode == 'ru' ? 'Редактировать инвестора' : 'Edit Investor';
+  String get registerPayment =>
+      locale.languageCode == 'ru' ? 'Зарегистрировать платеж' : 'Register Payment';
+  String get confirm =>
+      locale.languageCode == 'ru' ? 'Подтвердить' : 'Confirm';
+  String get cancelPayment =>
+      locale.languageCode == 'ru' ? 'Отменить платеж' : 'Cancel Payment';
+  String get openFolder =>
+      locale.languageCode == 'ru' ? 'Открыть папку' : 'Open Folder';
+  String get select => locale.languageCode == 'ru' ? 'Выбрать' : 'Select';
+  String get deleteAction => locale.languageCode == 'ru' ? 'Удалить' : 'Delete';
+
+  String get clientUpdatedSuccess => locale.languageCode == 'ru'
+      ? 'Клиент успешно обновлен'
+      : 'Client updated successfully';
+  String get clientCreatedSuccess => locale.languageCode == 'ru'
+      ? 'Клиент успешно создан'
+      : 'Client created successfully';
+  String get personalInformation =>
+      locale.languageCode == 'ru' ? 'Личная информация' : 'Personal Information';
+  String get documentsAndAddress =>
+      locale.languageCode == 'ru' ? 'Документы и адрес' : 'Documents & Address';
+
+  String get installmentNotFound =>
+      locale.languageCode == 'ru' ? 'Рассрочка не найдена' : 'Installment not found';
+  String get noInstallments =>
+      locale.languageCode == 'ru' ? 'Нет рассрочек' : 'No installments';
+  String get installmentCreatedSuccess => locale.languageCode == 'ru'
+      ? 'Рассрочка успешно создана'
+      : 'Installment created successfully';
+  String get withoutInvestor =>
+      locale.languageCode == 'ru' ? 'Без инвестора' : 'Without Investor';
+  String get noInvestorsAvailable => locale.languageCode == 'ru'
+      ? 'Нет доступных инвесторов'
+      : 'No investors available';
+
+  String get userShareHelperText => locale.languageCode == 'ru'
+      ? 'Доля пользователя рассчитывается автоматически. Сумма долей должна равняться 100%.'
+      : 'User share is calculated automatically. The sum of shares must equal 100%.';
+
+  // ===== Sort Options =====
+  String get sortBy => locale.languageCode == 'ru' ? 'Сортировать по' : 'Sort by';
+  String get creationDate =>
+      locale.languageCode == 'ru' ? 'Дата создания' : 'Creation Date';
+  String get sortByName =>
+      locale.languageCode == 'ru' ? 'Имени' : 'Name';
+  String get sortByInvestment =>
+      locale.languageCode == 'ru' ? 'Инвестиции' : 'Investment';
+  String get sortByContact =>
+      locale.languageCode == 'ru' ? 'Контакту' : 'Contact';
+
+  // ===== Validation Messages =====
+  String get fieldRequired =>
+      locale.languageCode == 'ru' ? 'Это поле обязательно' : 'This field is required';
+  String get invalidNumber =>
+      locale.languageCode == 'ru' ? 'Неверный номер' : 'Invalid number';
+  String get invalidAmount =>
+      locale.languageCode == 'ru' ? 'Неверная сумма' : 'Invalid amount';
+  String get enterFullName =>
+      locale.languageCode == 'ru' ? 'Введите полное имя' : 'Enter full name';
+  String get enterValidInvestmentAmount => locale.languageCode == 'ru'
+      ? 'Введите корректную сумму инвестиции'
+      : 'Enter a valid investment amount';
+  String get enterValidInvestorShare => locale.languageCode == 'ru'
+      ? 'Введите корректную долю инвестора'
+      : 'Enter a valid investor share';
+  String get enterValidUserShare => locale.languageCode == 'ru'
+      ? 'Введите корректную долю пользователя'
+      : 'Enter a valid user share';
+  String get percentageValidation => locale.languageCode == 'ru'
+      ? 'Процент должен быть от 0 до 100'
+      : 'Percentage must be between 0 and 100';
+  String get percentageSumValidation => locale.languageCode == 'ru'
+      ? 'Сумма долей должна равняться 100%'
+      : 'The sum of shares must be 100%';
+  String get enterContactNumber =>
+      locale.languageCode == 'ru' ? 'Введите контактный номер' : 'Enter contact number';
+  String get enterPassportNumber =>
+      locale.languageCode == 'ru' ? 'Введите номер паспорта' : 'Enter passport number';
+  String get enterAddress =>
+      locale.languageCode == 'ru' ? 'Введите адрес' : 'Enter address';
+  String get enterProductName =>
+      locale.languageCode == 'ru' ? 'Введите название товара' : 'Enter product name';
+  String get enterValidPrice =>
+      locale.languageCode == 'ru' ? 'Введите корректную цену' : 'Enter a valid price';
+  String get enterValidTerm =>
+      locale.languageCode == 'ru' ? 'Введите срок в месяцах' : 'Enter a valid term in months';
+  String get enterValidDownPayment => locale.languageCode == 'ru'
+      ? 'Введите сумму первоначального взноса'
+      : 'Enter a valid down payment amount';
+  String get validateMonthlyPayment => locale.languageCode == 'ru'
+      ? 'Ежемесячный платеж должен быть больше 0'
+      : 'Monthly payment must be greater than 0';
+  String get selectClientError =>
+      locale.languageCode == 'ru' ? 'Выберите клиента' : 'Please select a client';
+
+  // ===== Dialogs & Banners =====
+  String get errorLoading =>
+      locale.languageCode == 'ru' ? 'Ошибка загрузки' : 'Error loading';
+  String get errorLoadingData =>
+      locale.languageCode == 'ru' ? 'Ошибка загрузки данных' : 'Error loading data';
+  String get errorSaving =>
+      locale.languageCode == 'ru' ? 'Ошибка сохранения' : 'Error saving';
+  String get errorDeleting =>
+      locale.languageCode == 'ru' ? 'Ошибка удаления' : 'Error deleting';
+  String get errorCreatingInstallment => locale.languageCode == 'ru'
+      ? 'Ошибка создания рассрочки'
+      : 'Error creating installment';
+
+  String get cancelPaymentQuestion => locale.languageCode == 'ru'
+      ? 'Отменить оплату этого платежа?'
+      : 'Cancel payment for this installment?';
+
   String deleteInvestorConfirmation(String name) => locale.languageCode == 'ru'
       ? 'Вы уверены, что хотите удалить инвестора "$name"?'
       : 'Are you sure you want to delete investor "$name"?';
-  String get deleteInvestorTitle => locale.languageCode == 'ru' ? 'Удалить инвестора' : 'Delete Investor';
-  String get investorDeleted => locale.languageCode == 'ru' ? 'Инвестор удален' : 'Investor deleted';
-  String investorDeleteError(Object e) => locale.languageCode == 'ru'
-      ? 'Ошибка удаления: $e'
-      : 'Delete error: $e';
+  String get deleteInvestorTitle =>
+      locale.languageCode == 'ru' ? 'Удалить инвестора' : 'Delete Investor';
+  String get investorDeleted =>
+      locale.languageCode == 'ru' ? 'Инвестор удален' : 'Investor deleted';
+  String investorDeleteError(Object e) =>
+      locale.languageCode == 'ru' ? 'Ошибка удаления инвестора: $e' : 'Error deleting investor: $e';
+  String get investorNotFound =>
+      locale.languageCode == 'ru' ? 'Инвестор не найден' : 'Investor not found';
+  String get investorUpdatedSuccess => locale.languageCode == 'ru'
+      ? 'Инвестор успешно обновлен'
+      : 'Investor updated successfully';
+  String get investorCreatedSuccess => locale.languageCode == 'ru'
+      ? 'Инвестор успешно создан'
+      : 'Investor created successfully';
 
   String deleteClientConfirmation(String name) => locale.languageCode == 'ru'
       ? 'Вы уверены, что хотите удалить клиента "$name"?'
       : 'Are you sure you want to delete client "$name"?';
-  String get deleteClientTitle => locale.languageCode == 'ru' ? 'Удалить клиента' : 'Delete Client';
-  String get clientDeleted => locale.languageCode == 'ru' ? 'Клиент удален' : 'Client deleted';
-  String clientDeleteError(Object e) => locale.languageCode == 'ru'
-      ? 'Ошибка удаления: $e'
-      : 'Delete error: $e';
+  String get deleteClientTitle =>
+      locale.languageCode == 'ru' ? 'Удалить клиента' : 'Delete Client';
+  String get clientDeleted =>
+      locale.languageCode == 'ru' ? 'Клиент удален' : 'Client deleted';
+  String clientDeleteError(Object e) =>
+      locale.languageCode == 'ru' ? 'Ошибка удаления клиента: $e' : 'Error deleting client: $e';
+  String get clientNotFound =>
+      locale.languageCode == 'ru' ? 'Клиент не найден' : 'Client not found';
 
   // Table headers and section headers
-  String get fullNameHeader => locale.languageCode == 'ru' ? 'ПОЛНОЕ ИМЯ' : 'FULL NAME';
-  String get investmentAmountHeader => locale.languageCode == 'ru' ? 'СУММА ИНВЕСТИЦИИ' : 'INVESTMENT AMOUNT';
-  String get investorShareHeader => locale.languageCode == 'ru' ? 'ДОЛЯ ИНВЕСТОРА' : 'INVESTOR SHARE';
-  String get userShareHeader => locale.languageCode == 'ru' ? 'ДОЛЯ ПОЛЬЗОВАТЕЛЯ' : 'USER SHARE';
-  String get creationDateHeader => locale.languageCode == 'ru' ? 'ДАТА СОЗДАНИЯ' : 'CREATION DATE';
-  String get contactNumberHeader => locale.languageCode == 'ru' ? 'КОНТАКТНЫЙ НОМЕР' : 'CONTACT NUMBER';
-  String get passportNumberHeader => locale.languageCode == 'ru' ? 'НОМЕР ПАСПОРТА' : 'PASSPORT NUMBER';
+  String get fullNameHeader =>
+      locale.languageCode == 'ru' ? 'ПОЛНОЕ ИМЯ' : 'FULL NAME';
+  String get investmentAmountHeader =>
+      locale.languageCode == 'ru' ? 'СУММА ИНВЕСТИЦИИ' : 'INVESTMENT AMOUNT';
+  String get investorShareHeader =>
+      locale.languageCode == 'ru' ? 'ДОЛЯ ИНВЕСТОРА' : 'INVESTOR SHARE';
+  String get userShareHeader =>
+      locale.languageCode == 'ru' ? 'ДОЛЯ ПОЛЬЗОВАТЕЛЯ' : 'USER SHARE';
+  String get creationDateHeader =>
+      locale.languageCode == 'ru' ? 'ДАТА СОЗДАНИЯ' : 'CREATION DATE';
+  String get contactNumberHeader =>
+      locale.languageCode == 'ru' ? 'КОНТАКТНЫЙ НОМЕР' : 'CONTACT NUMBER';
+  String get passportNumberHeader =>
+      locale.languageCode == 'ru' ? 'НОМЕР ПАСПОРТА' : 'PASSPORT NUMBER';
   String get addressHeader => locale.languageCode == 'ru' ? 'АДРЕС' : 'ADDRESS';
-  String get productNameHeader => locale.languageCode == 'ru' ? 'ТОВАР' : 'PRODUCT';
+  String get productNameHeader =>
+      locale.languageCode == 'ru' ? 'ТОВАР' : 'PRODUCT';
   String get amountHeader => locale.languageCode == 'ru' ? 'СУММА' : 'AMOUNT';
   String get termHeader => locale.languageCode == 'ru' ? 'СРОК' : 'TERM';
-  String get buyingDateHeader => locale.languageCode == 'ru' ? 'ДАТА ПОКУПКИ' : 'BUYING DATE';
-  String get scheduleHeader => locale.languageCode == 'ru' ? 'График платежей' : 'Payment Schedule';
-  String get financialInfoHeader => locale.languageCode == 'ru' ? 'Финансовая информация' : 'Financial Information';
+  String get buyingDateHeader =>
+      locale.languageCode == 'ru' ? 'ДАТА ПОКУПКИ' : 'BUYING DATE';
+  String get dateHeader => locale.languageCode == 'ru' ? 'ДАТА' : 'DATE';
+  String get scheduleHeader =>
+      locale.languageCode == 'ru' ? 'График платежей' : 'Payment Schedule';
+  String get financialInfoHeader =>
+      locale.languageCode == 'ru' ? 'Финансовая информация' : 'Financial Information';
   String get datesHeader => locale.languageCode == 'ru' ? 'Сроки и даты' : 'Dates';
-  String get noPayments => locale.languageCode == 'ru' ? 'Нет платежей' : 'No payments';
-  String get noClientsAvailable => locale.languageCode == 'ru' ? 'Нет доступных клиентов' : 'No clients available';
-  String get empty => locale.languageCode == 'ru' ? 'Пусто' : 'Empty';
-  String get selectClient => locale.languageCode == 'ru' ? 'Выберите клиента' : 'Select a client';
-  String get investorOptional => locale.languageCode == 'ru' ? 'Инвестор (необязательно)' : 'Investor (optional)';
-  String get notFound => locale.languageCode == 'ru' ? 'Ничего не найдено' : 'Nothing found';
-  String get nextPaymentHeader => locale.languageCode == 'ru' ? 'СЛЕДУЮЩИЙ ПЛАТЕЖ' : 'NEXT PAYMENT';
-  String get paymentHeader => locale.languageCode == 'ru' ? 'ПЛАТЕЖ' : 'PAYMENT';
+  String get noPayments =>
+      locale.languageCode == 'ru' ? 'Нет платежей' : 'No payments';
+  String get noClientsAvailable =>
+      locale.languageCode == 'ru' ? 'Нет доступных клиентов' : 'No clients available';
+  String get selectClient =>
+      locale.languageCode == 'ru' ? 'Выберите клиента' : 'Select a client';
+  String get investorOptional =>
+      locale.languageCode == 'ru' ? 'Инвестор (необязательно)' : 'Investor (optional)';
+  String get nextPaymentHeader =>
+      locale.languageCode == 'ru' ? 'СЛЕДУЮЩИЙ ПЛАТЕЖ' : 'NEXT PAYMENT';
+  String get paymentHeader =>
+      locale.languageCode == 'ru' ? 'ПЛАТЕЖ' : 'PAYMENT';
   String get statusHeader => locale.languageCode == 'ru' ? 'СТАТУС' : 'STATUS';
 
-  // Dialogs and validation
-  String get deleteInstallmentTitle => locale.languageCode == 'ru' ? 'Удалить рассрочку' : 'Delete Installment';
-  String get deleteInstallmentConfirmation => locale.languageCode == 'ru' ? 'Вы уверены, что хотите удалить рассрочку?' : 'Are you sure you want to delete this installment?';
-  String get installmentDeleted => locale.languageCode == 'ru' ? 'Рассрочка удалена' : 'Installment deleted';
-  String installmentDeleteError(Object e) => locale.languageCode == 'ru' ? 'Ошибка удаления: $e' : 'Delete error: $e';
+  String get deleteInstallmentTitle =>
+      locale.languageCode == 'ru' ? 'Удалить рассрочку' : 'Delete Installment';
+  String get deleteInstallmentConfirmation => locale.languageCode == 'ru'
+      ? 'Вы уверены, что хотите удалить рассрочку?'
+      : 'Are you sure you want to delete this installment?';
+  String get installmentDeleted =>
+      locale.languageCode == 'ru' ? 'Рассрочка удалена' : 'Installment deleted';
+  String installmentDeleteError(Object e) =>
+      locale.languageCode == 'ru' ? 'Ошибка удаления: $e' : 'Delete error: $e';
 
-  // Validation
-  String get enterProductName => locale.languageCode == 'ru' ? 'Введите название товара' : 'Enter product name';
-  String get enterValidPrice => locale.languageCode == 'ru' ? 'Введите корректную цену' : 'Enter a valid price';
-  String get enterValidTerm => locale.languageCode == 'ru' ? 'Введите срок в месяцах' : 'Enter a valid term in months';
-  String get enterValidDownPayment => locale.languageCode == 'ru' ? 'Введите сумму первоначального взноса' : 'Enter a valid down payment amount';
-  String get enterValidMonthlyPayment => locale.languageCode == 'ru' ? 'Ежемесячный платеж должен быть больше 0' : 'Monthly payment must be greater than 0';
-
-  // Settings and navigation
-  String get settings => locale.languageCode == 'ru' ? 'Настройки' : 'Settings';
+  // Settings
   String get language => locale.languageCode == 'ru' ? 'Язык' : 'Language';
+  String get languageRussian => locale.languageCode == 'ru' ? 'Русский' : 'Russian';
+  String get languageEnglish => locale.languageCode == 'ru' ? 'English' : 'English';
   String get theme => locale.languageCode == 'ru' ? 'Тема' : 'Theme';
-  String get darkTheme => locale.languageCode == 'ru' ? 'Темная тема' : 'Dark Theme';
-  String get notifications => locale.languageCode == 'ru' ? 'Уведомления' : 'Notifications';
-  String get enableNotifications => locale.languageCode == 'ru' ? 'Включить уведомления' : 'Enable notifications';
+  String get darkTheme =>
+      locale.languageCode == 'ru' ? 'Темная тема' : 'Dark Theme';
+  String get notifications =>
+      locale.languageCode == 'ru' ? 'Уведомления' : 'Notifications';
+  String get enableNotifications => locale.languageCode == 'ru'
+      ? 'Включить уведомления'
+      : 'Enable notifications';
+  String get localDatabase =>
+      locale.languageCode == 'ru' ? 'Локальная база данных' : 'Local Database';
 
   // Month/term labels
+  String get month => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
+  String get months => locale.languageCode == 'ru' ? 'месяцев' : 'months';
   String get monthShort => locale.languageCode == 'ru' ? 'мес.' : 'mo.';
   String get monthLabel => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
   String get monthsLabel => locale.languageCode == 'ru' ? 'месяцев' : 'months';
-  String get downPaymentLabel => locale.languageCode == 'ru' ? 'Взнос' : 'Down';
-  String get downPaymentFull => locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
-
-  // Context menu actions
-  String get select => locale.languageCode == 'ru' ? 'Выбрать' : 'Select';
-  String get deleteAction => locale.languageCode == 'ru' ? 'Удалить' : 'Delete';
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -186,4 +391,4 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
-} 
+}

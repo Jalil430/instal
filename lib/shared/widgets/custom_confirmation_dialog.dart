@@ -102,18 +102,19 @@ Future<bool?> showCustomConfirmationDialog({
   required BuildContext context,
   required String title,
   required String content,
-  String confirmText = 'Удалить',
-  String cancelText = 'Отмена',
+  String? confirmText,
+  String? cancelText,
   Color confirmColor = AppTheme.errorColor,
   IconData confirmIcon = Icons.keyboard_return_rounded,
 }) {
+  final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (context) => CustomConfirmationDialog(
       title: title,
       content: content,
-      confirmText: confirmText,
-      cancelText: cancelText,
+      confirmText: confirmText ?? l10n.delete,
+      cancelText: cancelText ?? l10n.cancel,
       confirmColor: confirmColor,
       confirmIcon: confirmIcon,
     ),

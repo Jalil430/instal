@@ -163,7 +163,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  'Детали рассрочки',
+                  l10n?.installmentDetails ?? 'Детали рассрочки',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -177,15 +177,18 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
                   onPressed: () async {
                     final confirmed = await showCustomConfirmationDialog(
                       context: context,
-                      title: 'Удалить рассрочку',
-                      content: 'Вы уверены, что хотите удалить рассрочку?',
+                      title: l10n?.deleteInstallmentTitle ?? 'Удалить рассрочку',
+                      content: l10n?.deleteInstallmentConfirmation ??
+                          'Вы уверены, что хотите удалить рассрочку?',
                     );
                     if (confirmed == true) {
                       try {
                         await _installmentRepository.deleteInstallment(_installment!.id);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Рассрочка удалена')),
+                            SnackBar(
+                                content: Text(l10n?.installmentDeleted ??
+                                    'Рассрочка удалена')),
                           );
                           context.go('/installments');
                         }
@@ -214,7 +217,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
                 children: [
                   // Information section
                   Text(
-                    'Информация',
+                    l10n?.information ?? 'Информация',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -222,10 +225,12 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildInfoRow(l10n?.productNameHeader ?? 'ТОВАР', _installment!.productName),
+                  _buildInfoRow(l10n?.product ?? 'Товар', _installment!.productName),
                   _buildInfoRow(l10n?.client ?? 'Клиент', _client?.fullName ?? 'Неизвестно'),
-                  if (_investor != null) _buildInfoRow(l10n?.investors ?? 'Инвестор', _investor!.fullName),
-                  _buildInfoRow(l10n?.cashPrice ?? 'Цена без рассрочки', currencyFormat.format(_installment!.cashPrice)),
+                  if (_investor != null)
+                    _buildInfoRow(l10n?.investor ?? 'Инвестор', _investor!.fullName),
+                  _buildInfoRow(
+                      l10n?.cashPrice ?? 'Цена без рассрочки', currencyFormat.format(_installment!.cashPrice)),
                   _buildInfoRow(l10n?.installmentPrice ?? 'Цена в рассрочку', currencyFormat.format(_installment!.installmentPrice)),
                   _buildInfoRow(l10n?.term ?? 'Срок', '${_installment!.termMonths} ${l10n?.monthsLabel ?? 'месяцев'}'),
                   _buildInfoRow(l10n?.downPaymentFull ?? 'Первоначальный взнос', currencyFormat.format(_installment!.downPayment)),
@@ -322,7 +327,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
             child: Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Text(
-                l10n?.date ?? 'ДАТА',
+                l10n?.dateHeader ?? 'ДАТА',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: AppTheme.textSecondary,
                       fontWeight: FontWeight.w400,

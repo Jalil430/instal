@@ -102,32 +102,36 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       _fadeController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
-      // Handle error
-      print('Error loading data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
+        );
+      }
     }
   }
 
   String _getOverallStatus(List<InstallmentPayment> payments) {
+    final l10n = AppLocalizations.of(context)!;
     // Determine overall status based on payments
     bool hasOverdue = false;
     bool hasDueToPay = false;
     bool hasUpcoming = false;
     
     for (final payment in payments) {
-      if (payment.status == 'просрочено') {
+      if (payment.status == l10n.overdue) {
         hasOverdue = true;
         break;
-      } else if (payment.status == 'к оплате') {
+      } else if (payment.status == l10n.dueToPay) {
         hasDueToPay = true;
-      } else if (payment.status == 'предстоящий') {
+      } else if (payment.status == l10n.upcoming) {
         hasUpcoming = true;
       }
     }
     
-    if (hasOverdue) return 'просрочено';
-    if (hasDueToPay) return 'к оплате';
-    if (hasUpcoming) return 'предстоящий';
-    return 'оплачено';
+    if (hasOverdue) return l10n.overdue;
+    if (hasDueToPay) return l10n.dueToPay;
+    if (hasUpcoming) return l10n.upcoming;
+    return l10n.paid;
   }
 
   List<Installment> get _filteredAndSortedInstallments {
@@ -154,10 +158,10 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           
           // Define priority order for statuses
           final statusPriority = {
-            'просрочено': 0,    // Highest priority (most urgent)
-            'к оплате': 1,      // Second priority
-            'предстоящий': 2,   // Third priority
-            'оплачено': 3,      // Lowest priority (completed)
+            AppLocalizations.of(context)!.overdue: 0,    // Highest priority (most urgent)
+            AppLocalizations.of(context)!.dueToPay: 1,      // Second priority
+            AppLocalizations.of(context)!.upcoming: 2,   // Third priority
+            AppLocalizations.of(context)!.paid: 3,      // Lowest priority (completed)
           };
           
           final priorityA = statusPriority[statusA] ?? 4;
@@ -238,7 +242,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                     CustomSearchBar(
                       value: _searchQuery,
                       onChanged: (value) => setState(() => _searchQuery = value),
-                      hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.installments ?? 'рассрочки').toLowerCase()}...',
+                      hintText: '${l10n?.search ?? 'Поиск'} ${_getItemsText(0)}...',
                       width: 320,
                     ),
                     const SizedBox(width: 16),
@@ -436,7 +440,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                     itemBuilder: (context, index) {
                                       final installment = _filteredAndSortedInstallments[index];
                                       final payments = _installmentPayments[installment.id] ?? [];
-                                      final clientName = _clientNames[installment.clientId] ?? 'Unknown';
+                                      final clientName = _clientNames[installment.clientId] ?? AppLocalizations.of(context)?.unknown ?? 'Unknown';
                                       double paidAmount = 0;
                                       InstallmentPayment? nextPayment;
                                       for (final payment in payments) {
@@ -486,12 +490,13 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   }
 
   String _getItemsText(int count) {
+    final l10n = AppLocalizations.of(context)!;
     if (count % 10 == 1 && count % 100 != 11) {
-      return 'рассрочка';
+      return l10n.installment_one;
     } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
-      return 'рассрочки';
+      return l10n.installment_few;
     } else {
-      return 'рассрочек';
+      return l10n.installment_many;
     }
   }
 
