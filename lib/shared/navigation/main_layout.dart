@@ -89,6 +89,12 @@ class _MainLayoutState extends State<MainLayout> {
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
+                  icon: Icons.analytics_outlined,
+                  label: l10n?.analytics ?? 'Аналитика',
+                  route: '/analytics',
+                  currentRoute: currentRoute,
+                ),
+                _buildNavItem(
                   icon: Icons.person_outline, // Keep clients icon
                   label: l10n?.clients ?? 'Клиенты',
                   route: '/clients',

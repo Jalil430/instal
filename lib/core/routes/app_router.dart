@@ -11,6 +11,7 @@ import '../../features/investors/screens/investors_list_screen.dart';
 import '../../features/investors/screens/investor_details_screen.dart';
 import '../../features/investors/screens/add_edit_investor_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/analytics/screens/analytics_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -29,6 +30,13 @@ class AppRouter {
         name: 'installments',
         pageBuilder: (context, state) => MaterialPage(
           child: MainLayout(child: const InstallmentsListScreen()),
+        ),
+      ),
+      GoRoute(
+        path: '/analytics',
+        name: 'analytics',
+        pageBuilder: (context, state) => const MaterialPage(
+          child: MainLayout(child: AnalyticsScreen()),
         ),
       ),
       GoRoute(

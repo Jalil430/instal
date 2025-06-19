@@ -54,6 +54,7 @@ class AppLocalizations {
   String get investors =>
       locale.languageCode == 'ru' ? 'Инвесторы' : 'Investors';
   String get settings => locale.languageCode == 'ru' ? 'Настройки' : 'Settings';
+  String get analytics => locale.languageCode == 'ru' ? 'Аналитика' : 'Analytics';
 
   // ===== Plurals =====
   String get investor_one =>
@@ -248,8 +249,8 @@ class AppLocalizations {
       ? 'Введите сумму первоначального взноса'
       : 'Enter a valid down payment amount';
   String get validateMonthlyPayment => locale.languageCode == 'ru'
-      ? 'Ежемесячный платеж должен быть больше 0'
-      : 'Monthly payment must be greater than 0';
+      ? 'Введите сумму ежемесячного платежа'
+      : 'Enter a valid monthly payment amount';
   String get selectClientError =>
       locale.languageCode == 'ru' ? 'Выберите клиента' : 'Please select a client';
 
@@ -373,6 +374,16 @@ class AppLocalizations {
   String get monthShort => locale.languageCode == 'ru' ? 'мес.' : 'mo.';
   String get monthLabel => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
   String get monthsLabel => locale.languageCode == 'ru' ? 'месяцев' : 'months';
+
+  // ===== Analytics Screen =====
+  String get totalPortfolio => locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
+  String get totalReceived => locale.languageCode == 'ru' ? 'Всего получено' : 'Total Received';
+  String get totalOutstanding => locale.languageCode == 'ru' ? 'Остаток долга' : 'Total Outstanding';
+  String get activeInstallments => locale.languageCode == 'ru' ? 'Активные рассрочки' : 'Active Installments';
+  String get completedInstallments => locale.languageCode == 'ru' ? 'Завершенные рассрочки' : 'Completed Installments';
+  String get overdueInstallments => locale.languageCode == 'ru' ? 'Просроченные рассрочки' : 'Overdue Installments';
+  String get installmentStatus => locale.languageCode == 'ru' ? 'Статус рассрочек' : 'Installment Status';
+  String get productPopularity => locale.languageCode == 'ru' ? 'Популярность товаров' : 'Product Popularity';
 }
 
 class _AppLocalizationsDelegate
