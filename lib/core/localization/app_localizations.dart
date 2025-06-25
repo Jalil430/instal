@@ -384,6 +384,59 @@ class AppLocalizations {
   String get overdueInstallments => locale.languageCode == 'ru' ? 'Просроченные рассрочки' : 'Overdue Installments';
   String get installmentStatus => locale.languageCode == 'ru' ? 'Статус рассрочек' : 'Installment Status';
   String get productPopularity => locale.languageCode == 'ru' ? 'Популярность товаров' : 'Product Popularity';
+
+  String get totalSales => locale.languageCode == 'ru' ? 'Общие продажи' : 'Total Sales';
+  String get lastWeek => locale.languageCode == 'ru' ? 'Прошлая неделя' : 'Last Week';
+  String get lastMonth => locale.languageCode == 'ru' ? 'Прошлый месяц' : 'Last Month';
+  
+  String get keyMetrics => locale.languageCode == 'ru' ? 'Ключевые метрики' : 'Key Metrics';
+
+  String get totalRevenue => locale.languageCode == 'ru' ? 'Общая выручка' : 'Total Revenue';
+  String get totalVisitors => locale.languageCode == 'ru' ? 'Всего посетителей' : 'Total Visitors';
+  String get totalTransactions => locale.languageCode == 'ru' ? 'Всего транзакций' : 'Total Transactions';
+  String get totalProducts => locale.languageCode == 'ru' ? 'Всего товаров' : 'Total Products';
+  String get vsPreview28days => locale.languageCode == 'ru' ? ' за предыдущие 28 дней' : ' vs previous 28 days';
+
+  String get averageInstallmentAmount => locale.languageCode == 'ru' ? 'Средняя сумма рассрочки' : 'Average Installment Amount';
+  String get averageOverdueDays => locale.languageCode == 'ru' ? 'Средний срок просрочки' : 'Average Overdue Days';
+  String get mostCommonProduct => locale.languageCode == 'ru' ? 'Самый частый товар' : 'Most Common Product';
+  String get highestRiskClient => locale.languageCode == 'ru' ? 'Самый рискованный клиент' : 'Highest Risk Client';
+
+  String get pending => locale.languageCode == 'ru' ? 'В ожидании' : 'Pending';
+  String get canceled => locale.languageCode == 'ru' ? 'Отменено' : 'Canceled';
+  
+  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Платежи за неделю' : 'Payments This Week';
+  String get averagePerDay => locale.languageCode == 'ru' ? 'В среднем за день' : 'Average per day';
+  String get comparedToLastWeek => locale.languageCode == 'ru' ? 'с прошлой недели' : 'vs last week';
+
+  // Weekdays
+  String get dayMon => locale.languageCode == 'ru' ? 'Пн' : 'Mon';
+  String get dayTue => locale.languageCode == 'ru' ? 'Вт' : 'Tue';
+  String get dayWed => locale.languageCode == 'ru' ? 'Ср' : 'Wed';
+  String get dayThu => locale.languageCode == 'ru' ? 'Чт' : 'Thu';
+  String get dayFri => locale.languageCode == 'ru' ? 'Пт' : 'Fri';
+  String get daySat => locale.languageCode == 'ru' ? 'Сб' : 'Sat';
+  String get daySun => locale.languageCode == 'ru' ? 'Вс' : 'Sun';
+
+  String installmentsCount(int count) {
+    if (locale.languageCode == 'ru') {
+      if (count % 10 == 1 && count % 100 != 11) return '$count рассрочка';
+      if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) return '$count рассрочки';
+      return '$count рассрочек';
+    }
+    return '$count installments';
+  }
+
+  /// Subtitle for the analytics screen
+  String get analyticsSubtitle => locale.languageCode == 'ru' ? 'Обзор ключевых метрик' : 'Overview of key metrics';
+
+  /// A text indicating a value has been copied
+  String get copied => locale.languageCode == 'ru' ? 'Скопировано' : 'Copied';
+
+  String daysShort(int days) {
+    final suffix = locale.languageCode == 'ru' ? 'д' : 'd';
+    return '${days.abs()}$suffix';
+  }
 }
 
 class _AppLocalizationsDelegate

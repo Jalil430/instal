@@ -14,7 +14,6 @@ import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
 import '../../clients/data/datasources/client_local_datasource.dart';
 import '../../../shared/database/database_helper.dart';
-import 'package:intl/intl.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 
@@ -33,7 +32,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   List<Installment> _installments = [];
   Map<String, String> _clientNames = {};
   Map<String, List<InstallmentPayment>> _installmentPayments = {};
-  Map<String, bool> _expandedStates = {}; // Track expansion state by installment ID
+  final Map<String, bool> _expandedStates = {}; // Track expansion state by installment ID
   bool _isLoading = true;
   
   late AnimationController _fadeController;
@@ -110,30 +109,6 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     }
   }
 
-  String _getOverallStatus(List<InstallmentPayment> payments) {
-    final l10n = AppLocalizations.of(context)!;
-    // Determine overall status based on payments
-    bool hasOverdue = false;
-    bool hasDueToPay = false;
-    bool hasUpcoming = false;
-    
-    for (final payment in payments) {
-      if (payment.status == l10n.overdue) {
-        hasOverdue = true;
-        break;
-      } else if (payment.status == l10n.dueToPay) {
-        hasDueToPay = true;
-      } else if (payment.status == l10n.upcoming) {
-        hasUpcoming = true;
-      }
-    }
-    
-    if (hasOverdue) return l10n.overdue;
-    if (hasDueToPay) return l10n.dueToPay;
-    if (hasUpcoming) return l10n.upcoming;
-    return l10n.paid;
-  }
-
   List<Installment> get _filteredAndSortedInstallments {
     var filtered = _installments.where((installment) {
       if (_searchQuery.isEmpty) return true;
@@ -153,15 +128,15 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           final paymentsA = _installmentPayments[a.id] ?? [];
           final paymentsB = _installmentPayments[b.id] ?? [];
           
-          final statusA = _getOverallStatus(paymentsA);
-          final statusB = _getOverallStatus(paymentsB);
+          final statusA = InstallmentListItem.getOverallStatus(context, paymentsA);
+          final statusB = InstallmentListItem.getOverallStatus(context, paymentsB);
           
           // Define priority order for statuses
           final statusPriority = {
-            AppLocalizations.of(context)!.overdue: 0,    // Highest priority (most urgent)
-            AppLocalizations.of(context)!.dueToPay: 1,      // Second priority
-            AppLocalizations.of(context)!.upcoming: 2,   // Third priority
-            AppLocalizations.of(context)!.paid: 3,      // Lowest priority (completed)
+            'просрочено': 0,    // Highest priority (most urgent)
+            'к оплате': 1,      // Second priority
+            'предстоящий': 2,   // Third priority
+            'оплачено': 3,      // Lowest priority (completed)
           };
           
           final priorityA = statusPriority[statusA] ?? 4;

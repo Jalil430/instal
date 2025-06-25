@@ -89,12 +89,6 @@ class _MainLayoutState extends State<MainLayout> {
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
-                  icon: Icons.analytics_outlined,
-                  label: l10n?.analytics ?? 'Аналитика',
-                  route: '/analytics',
-                  currentRoute: currentRoute,
-                ),
-                _buildNavItem(
                   icon: Icons.person_outline, // Keep clients icon
                   label: l10n?.clients ?? 'Клиенты',
                   route: '/clients',
@@ -104,6 +98,12 @@ class _MainLayoutState extends State<MainLayout> {
                   icon: Icons.attach_money_outlined, // Better paper-money icon for investors
                   label: l10n?.investors ?? 'Инвесторы',
                   route: '/investors',
+                  currentRoute: currentRoute,
+                ),
+                _buildNavItem(
+                  icon: Icons.analytics_outlined,
+                  label: l10n?.analytics ?? 'Аналитика',
+                  route: '/analytics',
                   currentRoute: currentRoute,
                 ),
                 const Spacer(),

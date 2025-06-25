@@ -12,6 +12,7 @@ class CustomDropdown<T> extends StatefulWidget {
   final double height;
   final IconData? icon;
   final bool showSearch;
+  final TextStyle? textStyle;
 
   const CustomDropdown({
     super.key,
@@ -23,6 +24,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.height = 40,
     this.icon,
     this.showSearch = false,
+    this.textStyle,
   });
 
   @override
@@ -71,7 +73,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                 Flexible(
                   child: Text(
                     widget.value != null ? widget.items[widget.value] ?? '' : widget.hint ?? '',
-                    style: TextStyle(
+                    style: widget.textStyle ?? TextStyle(
                       color: widget.value != null ? AppTheme.textPrimary : AppTheme.textHint,
                       fontSize: 14,
                       fontWeight: FontWeight.w400,

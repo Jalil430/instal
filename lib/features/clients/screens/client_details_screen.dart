@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
-import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/client.dart';
 import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
@@ -253,7 +252,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                               currencyFormat: currencyFormat,
                               dateFormat: dateFormat,
                             );
-                          }).toList(),
+                          }),
                       ],
                     ),
                   ),

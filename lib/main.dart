@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -75,8 +73,7 @@ class _InstalAppState extends State<InstalApp> {
 
 class LocaleSetter extends InheritedWidget {
   final Future<void> Function(Locale) setLocale;
-  const LocaleSetter({required this.setLocale, required Widget child})
-      : super(child: child);
+  const LocaleSetter({super.key, required this.setLocale, required super.child});
 
   static LocaleSetter? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<LocaleSetter>();

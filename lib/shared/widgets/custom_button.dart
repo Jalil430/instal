@@ -34,7 +34,7 @@ class CustomButton extends StatelessWidget {
     final iconWidget = Icon(icon, size: fontSize == 16 ? 20 : 18);
     final textWidget = Text(text);
     final backgroundColor = color ?? AppTheme.brightPrimaryColor;
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
       child: showIcon

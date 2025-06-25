@@ -92,6 +92,13 @@ class _ContextualDialogWrapper<T> extends StatelessWidget {
                   color: AppTheme.subtleBorderColor,
                   width: 1,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: child,
             ),

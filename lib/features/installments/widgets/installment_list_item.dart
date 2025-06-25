@@ -44,6 +44,40 @@ class InstallmentListItem extends StatefulWidget {
     this.onSelect,
   });
 
+  static String getOverallStatus(
+    BuildContext context,
+    List<InstallmentPayment> payments,
+  ) {
+    // NOTE: These status strings MUST match the values returned by
+    // `InstallmentPayment.status` to ensure correct logic.
+    const statusOverdue = 'просрочено';
+    const statusPaid = 'оплачено';
+    const statusUpcoming = 'предстоящий';
+
+    // If no payments, return a default status.
+    if (payments.isEmpty) return statusUpcoming;
+
+    // First, check for any overdue payments, as this has the highest priority.
+    if (payments.any((p) => p.status == statusOverdue)) {
+      return statusOverdue;
+    }
+
+    // Filter out paid payments to find the next one.
+    final unpaidPayments =
+        payments.where((p) => p.status != statusPaid).toList();
+
+    // If all payments are paid, the installment is considered paid.
+    if (unpaidPayments.isEmpty) {
+      return statusPaid;
+    }
+
+    // Sort the remaining payments by due date to find the next upcoming payment.
+    unpaidPayments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    
+    // The overall status is determined by the status of the next unpaid payment.
+    return unpaidPayments.first.status;
+  }
+
   @override
   State<InstallmentListItem> createState() => _InstallmentListItemState();
 }
@@ -51,7 +85,7 @@ class InstallmentListItem extends StatefulWidget {
 class _InstallmentListItemState extends State<InstallmentListItem> with TickerProviderStateMixin {
   bool _isHovered = false;
   bool _isClientNameHovered = false;
-  bool _isArrowHovered = false;
+  final bool _isArrowHovered = false;
   bool _isNextPaymentHovered = false;
   
   late AnimationController _hoverController;
@@ -76,31 +110,64 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
     super.dispose();
   }
 
-  String _getOverallStatus() {
+  Widget _buildDueDateDetails(BuildContext context, InstallmentPayment nextPayment) {
     final l10n = AppLocalizations.of(context)!;
-    // If no payments, return default
-    if (widget.payments.isEmpty) return l10n.upcoming;
     
-    // First check for overdue payments (highest priority)
-    bool hasOverdue = widget.payments.any((payment) => payment.status == l10n.overdue);
-    if (hasOverdue) return l10n.overdue;
+    // Find the first overdue payment. If none, use the next upcoming payment.
+    final relevantPayment = widget.payments.firstWhere(
+      (p) => p.status == 'просрочено',
+      orElse: () => nextPayment,
+    );
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDate = relevantPayment.dueDate;
+    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final daysDifference = due.difference(today).inDays;
+
+    String? text;
+    Color? color;
     
-    // Get the next unpaid payment (by due date) to determine the most relevant status
-    final unpaidPayments = widget.payments
-        .where((payment) => payment.status != l10n.paid)
-        .toList();
-    
-    if (unpaidPayments.isEmpty) {
-      // All payments are paid
-      return l10n.paid;
+    if (relevantPayment.status == 'просрочено' && daysDifference < 0) {
+      text = l10n.daysShort(daysDifference);
+      color = AppTheme.errorColor;
+    } else if (relevantPayment.status == 'предстоящий' && daysDifference > 0) {
+      text = l10n.daysShort(daysDifference);
+      color = AppTheme.pendingColor;
     }
-    
-    // Sort unpaid payments by due date to get the next one
-    unpaidPayments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
-    final nextPayment = unpaidPayments.first;
-    
-    // Return the status of the next payment that needs attention
-    return nextPayment.status;
+
+    if (text != null) {
+      return Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildOverdueCount(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final overduePayments = widget.payments.where((p) => p.status == 'просрочено').toList();
+    final overallStatus = InstallmentListItem.getOverallStatus(context, widget.payments);
+
+    if (overallStatus == 'просрочено' && overduePayments.length > 1) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 8.0),
+        child: Text(
+          overduePayments.length.toString(),
+          style: const TextStyle(
+            color: AppTheme.errorColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   void _handleNextPaymentRegistration(Offset position) {
@@ -256,38 +323,50 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                             child: Text(
                               currencyFormat.format(widget.leftAmount),
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 14,
                                     fontWeight: FontWeight.w400,
+                                    fontSize: 14,
                                   ),
                               textAlign: TextAlign.start,
                             ),
                           ),
                         ),
-                        // Due Date - Plain text
+                        // Next Due Date - Plain text
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.only(right: 16),
-                            child: Text(
-                              dateFormat.format(nextDueDate),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                              textAlign: TextAlign.start,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  dateFormat.format(nextDueDate),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 14,
+                                      ),
+                                ),
+                                const SizedBox(width: 3),
+                                if (widget.nextPayment != null)
+                                  _buildDueDateDetails(context, widget.nextPayment!),
+                              ],
                             ),
                           ),
                         ),
                         // Status
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Container(
-                              width: 120, // Fixed width for consistency
-                              alignment: Alignment.centerLeft,
-                              child: CustomStatusBadge(
-                                status: _getOverallStatus(),
-                                width: 110,
-                              ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CustomStatusBadge(
+                                  status: InstallmentListItem.getOverallStatus(
+                                    context,
+                                    widget.payments,
+                                  ),
+                                  width: 110,
+                                ),
+                                _buildOverdueCount(context),
+                              ],
                             ),
                           ),
                         ),

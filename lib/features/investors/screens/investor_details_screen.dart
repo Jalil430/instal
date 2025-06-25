@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
-import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/investor.dart';
 import '../domain/repositories/investor_repository.dart';
 import '../data/repositories/investor_repository_impl.dart';
@@ -255,7 +254,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
                               currencyFormat: currencyFormat,
                               dateFormat: dateFormat,
                             );
-                          }).toList(),
+                          }),
                       ],
                     ),
                   ),
