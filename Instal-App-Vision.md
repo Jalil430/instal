@@ -2,7 +2,7 @@ This is a file that should give you understanding of our app Instal.
 
 Instal - is an app for tracking islamic installments.
 
-Design - Very modern, compact (for big screens/desktop), informative, simplistic and professional.
+Design - Very modern, compact (for big screens/desktop), informative, simplistic and professional. Should be a little bit colorful here and there and catchy.
 
 Flutter - mac, windows, linux.
 Yandex for auth and database. (FOr now just local database, we will implement this in the future)

@@ -1,6 +1,6 @@
-# instal
+# instal_app
 
-Islamic installment tracking app
+A new Flutter project.
 
 ## Getting Started
 

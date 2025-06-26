@@ -5,26 +5,21 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:instal/main.dart';
+import 'package:instal_app/main.dart';
+import 'package:instal_app/core/di/injection_container.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App loads and shows installments page', (WidgetTester tester) async {
+    // Initialize dependency injection for testing
+    final injectionContainer = InjectionContainer();
+    injectionContainer.init();
+    
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(InstalApp(injectionContainer: injectionContainer));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that the app loads and shows the installments page
+    expect(find.text('Рассрочки'), findsOneWidget);
+    expect(find.text('Рассрочки не найдены'), findsOneWidget);
   });
 }
