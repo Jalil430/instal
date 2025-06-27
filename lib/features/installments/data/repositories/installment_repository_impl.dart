@@ -98,4 +98,10 @@ class InstallmentRepositoryImpl implements InstallmentRepository {
     final paymentModels = await _localDataSource.getDuePayments(userId);
     return paymentModels.cast<InstallmentPayment>();
   }
+
+  @override
+  Future<List<InstallmentPayment>> getAllPayments(String userId) async {
+    final paymentModels = await _localDataSource.getAllPayments(userId);
+    return paymentModels.cast<InstallmentPayment>();
+  }
 } 

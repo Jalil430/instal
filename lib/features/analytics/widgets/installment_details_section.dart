@@ -1,63 +1,32 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/analytics_card.dart';
+import 'package:instal_app/features/analytics/domain/entities/analytics_data.dart';
+import 'package:instal_app/features/analytics/widgets/detail_row.dart';
+import 'package:intl/intl.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../shared/widgets/analytics_card.dart';
 
 class InstallmentDetailsSection extends StatelessWidget {
-  const InstallmentDetailsSection({super.key});
+  final InstallmentDetailsData data;
+
+  const InstallmentDetailsSection({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final currencyFormatter =
+        NumberFormat.currency(locale: 'ru_RU', symbol: '₽', decimalDigits: 2);
     return AnalyticsCard(
-      title: l10n.details,
-      child: ListView(
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        children: [
-          _DetailRow(label: l10n.activeInstallments, value: '128'),
-          _DetailRow(label: l10n.overdueInstallments, value: '15'),
-          _DetailRow(label: l10n.averageInstallmentAmount, value: '\$450.75'),
-          _DetailRow(label: l10n.totalPortfolio, value: '\$57,696.00'),
-          _DetailRow(label: l10n.averageOverdueDays, value: '22 days'),
-          _DetailRow(label: l10n.mostCommonProduct, value: 'iPhone 15 Pro'),
-          _DetailRow(label: l10n.highestRiskClient, value: 'A. Volkov'),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DetailRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
+      title: l10n.portfolioDetails,
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w400,
-
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          DetailRow(label: l10n.activeInstallments, value: data.activeInstallments.toString()),
+          DetailRow(label: l10n.overdueInstallments, value: data.overdueInstallments.toString()),
+          DetailRow(label: l10n.averageInstallmentValue, value: currencyFormatter.format(data.averageInstallmentValue)),
+          DetailRow(label: l10n.averageTerm, value: '${data.averageTerm.toStringAsFixed(1)} ${l10n.months}'),
+          DetailRow(label: l10n.topProduct, value: data.topProduct),
+          DetailRow(
+              label: l10n.upcomingRevenue30Days, value: currencyFormatter.format(data.upcomingRevenue30Days)),
         ],
       ),
     );

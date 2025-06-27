@@ -1,55 +1,51 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:instal_app/features/analytics/domain/entities/analytics_data.dart';
+import 'package:instal_app/features/analytics/widgets/status_indicator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/analytics_card.dart';
 import '../../../core/localization/app_localizations.dart';
 
-class InstallmentStatusSection extends StatefulWidget {
-  const InstallmentStatusSection({super.key});
+class InstallmentStatusSection extends StatelessWidget {
+  final InstallmentStatusData data;
 
-  @override
-  State<InstallmentStatusSection> createState() =>
-      _InstallmentStatusSectionState();
-}
-
-class _InstallmentStatusSectionState extends State<InstallmentStatusSection> {
-  int? _touchedIndex;
+  const InstallmentStatusSection({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // Data is now ordered by urgency for the legend.
+    final total = data.overdueCount + data.dueToPayCount + data.upcomingCount + data.paidCount;
+
     final statusData = [
       {
         'status': l10n.overdue,
-        'value': 15.0,
-        'count': 40,
+        'value': total > 0 ? (data.overdueCount / total) * 100 : 0.0,
+        'count': data.overdueCount,
         'color': AppTheme.errorColor
       },
       {
         'status': l10n.dueToPay,
-        'value': 10.0,
-        'count': 25,
+        'value': total > 0 ? (data.dueToPayCount / total) * 100 : 0.0,
+        'count': data.dueToPayCount,
         'color': AppTheme.warningColor
       },
       {
         'status': l10n.upcoming,
-        'value': 30.0,
-        'count': 80,
+        'value': total > 0 ? (data.upcomingCount / total) * 100 : 0.0,
+        'count': data.upcomingCount,
         'color': AppTheme.pendingColor
       },
       {
         'status': l10n.paid,
-        'value': 45.0,
-        'count': 120,
+        'value': total > 0 ? (data.paidCount / total) * 100 : 0.0,
+        'count': data.paidCount,
         'color': AppTheme.successColor
       },
     ];
 
-    // Find the most urgent status with active installments to display in the center.
     final dataForCenter = statusData.firstWhere(
       (d) => (d['count'] as int) > 0,
-      orElse: () => statusData.last, // Default to 'paid' if all else is 0.
+      orElse: () => statusData.last,
     );
     final centerPercentage = (dataForCenter['value'] as double).toInt();
     final centerLabel = dataForCenter['status'] as String;
@@ -59,7 +55,6 @@ class _InstallmentStatusSectionState extends State<InstallmentStatusSection> {
       title: l10n.installmentStatus,
       child: Row(
         children: [
-          // Legend
           Expanded(
             flex: 1,
             child: Column(
@@ -67,7 +62,7 @@ class _InstallmentStatusSectionState extends State<InstallmentStatusSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: statusData.map((data) {
                 final count = data['count'] as int;
-                return _StatusIndicator(
+                return StatusIndicator(
                   color: data['color'] as Color,
                   text:
                       '${data['status']} (${(data['value'] as double).toInt()}%)',
@@ -76,7 +71,6 @@ class _InstallmentStatusSectionState extends State<InstallmentStatusSection> {
               }).toList(),
             ),
           ),
-          // Donut Chart
           Expanded(
             flex: 2,
             child: Stack(
@@ -84,31 +78,15 @@ class _InstallmentStatusSectionState extends State<InstallmentStatusSection> {
               children: [
                 PieChart(
                   PieChartData(
-                    pieTouchData: PieTouchData(
-                      touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                        setState(() {
-                          if (!event.isInterestedForInteractions ||
-                              pieTouchResponse == null ||
-                              pieTouchResponse.touchedSection == null) {
-                            _touchedIndex = -1;
-                            return;
-                          }
-                          _touchedIndex = pieTouchResponse
-                              .touchedSection!.touchedSectionIndex;
-                        });
-                      },
-                    ),
                     sectionsSpace: 0,
                     centerSpaceRadius: 60,
                     sections: List.generate(statusData.length, (i) {
-                      final isTouched = i == _touchedIndex;
-                      final radius = isTouched ? 35.0 : 30.0;
                       final data = statusData[i];
                       return PieChartSectionData(
                         color: data['color'] as Color,
                         value: data['value'] as double,
                         title: '',
-                        radius: radius,
+                        radius: 30.0,
                       );
                     }),
                   ),
@@ -141,78 +119,6 @@ class _InstallmentStatusSectionState extends State<InstallmentStatusSection> {
                 )
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusIndicator extends StatelessWidget {
-  final Color color;
-  final String text;
-  final String countText;
-
-  const _StatusIndicator({
-    required this.color,
-    required this.text,
-    required this.countText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final statusText = text.substring(0, text.indexOf('(') - 1);
-    final percentageText = text.substring(text.indexOf('('));
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: color,
-                width: 1.5,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                    fontFamily: 'Inter',
-                  ),
-                  children: [
-                    TextSpan(text: '$statusText '),
-                    TextSpan(
-                      text: percentageText,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                countText,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ],
           ),
         ],
       ),

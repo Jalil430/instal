@@ -21,6 +21,7 @@ abstract class InstallmentLocalDataSource {
   Future<void> deletePayment(String id);
   Future<List<InstallmentPaymentModel>> getOverduePayments(String userId);
   Future<List<InstallmentPaymentModel>> getDuePayments(String userId);
+  Future<List<InstallmentPaymentModel>> getAllPayments(String userId);
 }
 
 class InstallmentLocalDataSourceImpl implements InstallmentLocalDataSource {
@@ -235,6 +236,20 @@ class InstallmentLocalDataSourceImpl implements InstallmentLocalDataSource {
       WHERE i.user_id = ? AND ip.is_paid = 0 AND ip.due_date <= ?
       ORDER BY ip.due_date ASC
     ''', [userId, now.millisecondsSinceEpoch]);
+
+    return List.generate(maps.length, (i) {
+      return InstallmentPaymentModel.fromMap(maps[i]);
+    });
+  }
+
+  @override
+  Future<List<InstallmentPaymentModel>> getAllPayments(String userId) async {
+    final db = await _databaseHelper.database;
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT ip.* FROM installment_payments ip
+      INNER JOIN installments i ON ip.installment_id = i.id
+      WHERE i.user_id = ?
+    ''', [userId]);
 
     return List.generate(maps.length, (i) {
       return InstallmentPaymentModel.fromMap(maps[i]);

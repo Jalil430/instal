@@ -1,71 +1,42 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../../shared/widgets/analytics_card.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/localization/app_localizations.dart';
+import 'package:instal_app/features/analytics/domain/entities/analytics_data.dart';
 import 'package:intl/intl.dart';
 
-class TotalSalesSection extends StatefulWidget {
-  const TotalSalesSection({super.key});
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/analytics_card.dart';
+import 'dart:math';
 
-  @override
-  State<TotalSalesSection> createState() => _TotalSalesSectionState();
-}
+class TotalSalesSection extends StatelessWidget {
+  final TotalSalesData data;
 
-class _TotalSalesSectionState extends State<TotalSalesSection> {
-  late List<double> _chartData;
-  late double _averageSales;
-  late double _lastWeekAverageSales;
-  late double _percentageChange;
-  late int _currentDayIndex;
-  int? _hoveredIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _chartData = _getWeeklyData(isCurrentWeek: true);
-    final lastWeekData = _getWeeklyData(isCurrentWeek: false);
-
-    _averageSales = _chartData.isNotEmpty ? _chartData.reduce((a, b) => a + b) / _chartData.length : 0;
-    _lastWeekAverageSales = lastWeekData.isNotEmpty ? lastWeekData.reduce((a, b) => a + b) / lastWeekData.length : 0;
-    
-    _percentageChange = _lastWeekAverageSales > 0
-        ? ((_averageSales - _lastWeekAverageSales) / _lastWeekAverageSales) * 100
-        : 0;
-
-    // Monday is 1 and Sunday is 7. We need an index from 0 to 6.
-    _currentDayIndex = DateTime.now().weekday - 1;
-  }
-
-  List<double> _getWeeklyData({bool isCurrentWeek = true}) {
-    // Generates random data for 7 days of the week
-    // A simple way to get different (but deterministic) data for current/last week
-    final seed = isCurrentWeek ? 1 : 2;
-    return List.generate(7, (i) => (Random(seed * (i+1)).nextDouble() * 45000) + 10000);
-  }
+  const TotalSalesSection({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final currencyFormatter = NumberFormat.currency(locale: 'ru_RU', symbol: '₽');
+    final currencyFormatter =
+        NumberFormat.currency(locale: 'ru_RU', symbol: '₽');
+    final chartData = data.weeklySales;
+    final averageSales = data.averageSales;
 
     return AnalyticsCard(
-      title: l10n.paymentsThisWeek, // Title updated as requested
-      header: _buildHeader(l10n, currencyFormatter), // Header now shows average sales
+      title: l10n.paymentsThisWeek,
+      header: _buildHeader(l10n, currencyFormatter, averageSales, data.percentageChange),
       child: SizedBox(
-        height: 300, 
+        height: 300,
         child: Padding(
-          padding: const EdgeInsets.only(top: 8.0), // Reduced spacing
+          padding: const EdgeInsets.only(top: 8.0),
           child: BarChart(
             BarChartData(
-              maxY: _chartData.reduce(max) * 1.2, // Dynamic maxY
-              barTouchData: _barTouchData(),
-              titlesData: _titlesData(),
+              maxY: chartData.reduce(max) * 1.2,
+              barTouchData: _barTouchData(currencyFormatter),
+              titlesData: _titlesData(l10n),
               borderData: FlBorderData(show: false),
               gridData: const FlGridData(show: false),
               alignment: BarChartAlignment.spaceAround,
-              barGroups: _barGroups(),
+              barGroups: _barGroups(chartData),
             ),
           ),
         ),
@@ -73,14 +44,21 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
     );
   }
 
-  Widget _buildHeader(AppLocalizations l10n, NumberFormat currencyFormatter) {
-    final isPositive = _percentageChange >= 0;
-    
+  Widget _buildHeader(AppLocalizations l10n, NumberFormat currencyFormatter,
+      double averageSales, double? percentageChange) {
+    final hasChange = percentageChange != null;
+    final isPositive = hasChange && percentageChange! >= 0;
+    final changeText = hasChange
+        ? '${percentageChange.toStringAsFixed(1)}%'
+        : '— %';
+    final color = hasChange
+        ? (isPositive ? AppTheme.successColor : AppTheme.errorColor)
+        : AppTheme.textSecondary;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Average per day metric in one line
         Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -94,7 +72,7 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
               ),
             ),
             Text(
-              currencyFormatter.format(_averageSales),
+              currencyFormatter.format(averageSales),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -102,26 +80,26 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
             ),
           ],
         ),
-        const SizedBox(width: 8), // Reduced spacing
-        // Compact comparison metric, styled like key_metrics_section
+        const SizedBox(width: 8),
         Padding(
-          padding: const EdgeInsets.only(top: 4.0), // Move percentage down
+          padding: const EdgeInsets.only(top: 4.0),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                color: isPositive ? AppTheme.successColor : AppTheme.errorColor,
-                size: 14,
-              ),
+              if (hasChange)
+                Icon(
+                  isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                  color: color,
+                  size: 14,
+                ),
               const SizedBox(width: 4),
               Text(
-                '${_percentageChange.toStringAsFixed(1)}%',
+                changeText,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: isPositive ? AppTheme.successColor : AppTheme.errorColor,
+                  color: color,
                 ),
               ),
             ],
@@ -131,14 +109,13 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
     );
   }
 
-  BarTouchData _barTouchData() => BarTouchData(
+  BarTouchData _barTouchData(NumberFormat currencyFormatter) => BarTouchData(
         touchTooltipData: BarTouchTooltipData(
           getTooltipColor: (group) => AppTheme.sidebarBackground,
           tooltipRoundedRadius: 8,
           tooltipPadding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
           tooltipMargin: 8,
           getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            final currencyFormatter = NumberFormat.currency(locale: 'ru_RU', symbol: '₽');
             return BarTooltipItem(
               currencyFormatter.format(rod.toY),
               const TextStyle(
@@ -150,60 +127,52 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
             );
           },
         ),
-        touchCallback: (FlTouchEvent event, BarTouchResponse? response) {
-          setState(() {
-            if (event.isInterestedForInteractions && response?.spot != null) {
-              _hoveredIndex = response!.spot!.touchedBarGroupIndex;
-            } else {
-              _hoveredIndex = null;
-            }
-          });
-        },
       );
 
-  FlTitlesData _titlesData() => FlTitlesData(
+  FlTitlesData _titlesData(AppLocalizations l10n) => FlTitlesData(
         show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
-            getTitlesWidget: _bottomTitles,
+            getTitlesWidget: (value, meta) =>
+                _bottomTitles(value, meta, l10n),
           ),
         ),
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 40,
-            getTitlesWidget: _leftTitles,
+            getTitlesWidget: (value, meta) => _leftTitles(value, meta, l10n),
           ),
         ),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       );
 
-  List<BarChartGroupData> _barGroups() {
+  List<BarChartGroupData> _barGroups(List<double> chartData) {
+    final currentDayIndex = DateTime.now().weekday - 1;
     return List.generate(7, (index) {
       return BarChartGroupData(
         x: index,
         barRods: [
           BarChartRodData(
-            toY: _chartData[index],
-            color: index == _currentDayIndex
-                ? AppTheme.primaryColor // Use theme's primary color
-                : AppTheme.primaryColor.withOpacity(0.3), // Lighter shade for other days
+            toY: chartData[index],
+            color: index == currentDayIndex
+                ? AppTheme.primaryColor
+                : AppTheme.primaryColor.withOpacity(0.3),
             width: 16,
-            borderRadius: BorderRadius.circular(8), // More rounded corners
+            borderRadius: BorderRadius.circular(8),
           )
         ],
-        showingTooltipIndicators: _hoveredIndex == index ? [0] : [],
       );
     });
   }
 
-  Widget _leftTitles(double value, TitleMeta meta) {
-    if (value == meta.max) return Container(); // Hide the top label
+  Widget _leftTitles(double value, TitleMeta meta, AppLocalizations l10n) {
+    if (value == meta.max) return Container();
 
-    final l10n = AppLocalizations.of(context)!;
     final isRussian = l10n.locale.languageCode == 'ru';
     final thousandsSuffix = isRussian ? 'т' : 'k';
 
@@ -213,7 +182,7 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
     } else if (value >= 1000) {
       text = '${(value / 1000).toStringAsFixed(0)}$thousandsSuffix';
     } else {
-      text = value.toStringAsFixed(0);
+      return Container();
     }
     return SideTitleWidget(
       axisSide: meta.axisSide,
@@ -226,10 +195,8 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
     );
   }
 
-  Widget _bottomTitles(double value, TitleMeta meta) {
-    final l10n = AppLocalizations.of(context)!;
-    
-    // Day titles for the current week
+  Widget _bottomTitles(
+      double value, TitleMeta meta, AppLocalizations l10n) {
     final titles = [
       l10n.dayMon,
       l10n.dayTue,
@@ -240,19 +207,17 @@ class _TotalSalesSectionState extends State<TotalSalesSection> {
       l10n.daySun,
     ];
 
-    final Widget text = Text(
-      titles[value.toInt()],
-      style: const TextStyle(
-        color: AppTheme.textSecondary,
-        fontWeight: FontWeight.w500,
-        fontSize: 12,
-      ),
-    );
-
     return SideTitleWidget(
       axisSide: meta.axisSide,
       space: 10,
-      child: text,
+      child: Text(
+        titles[value.toInt()],
+        style: const TextStyle(
+          color: AppTheme.textSecondary,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 } 

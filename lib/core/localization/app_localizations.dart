@@ -117,6 +117,7 @@ class AppLocalizations {
   String get term => locale.languageCode == 'ru' ? 'Срок' : 'Term';
   String get termMonths =>
       locale.languageCode == 'ru' ? 'Срок (месяцы)' : 'Term (months)';
+  String get months => locale.languageCode == 'ru' ? 'мес.' : 'months';
   String get downPayment =>
       locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
   String get downPaymentShort => locale.languageCode == 'ru' ? 'Взнос' : 'Down';
@@ -370,44 +371,9 @@ class AppLocalizations {
 
   // Month/term labels
   String get month => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
-  String get months => locale.languageCode == 'ru' ? 'месяцев' : 'months';
   String get monthShort => locale.languageCode == 'ru' ? 'мес.' : 'mo.';
   String get monthLabel => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
   String get monthsLabel => locale.languageCode == 'ru' ? 'месяцев' : 'months';
-
-  // ===== Analytics Screen =====
-  String get totalPortfolio => locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
-  String get totalReceived => locale.languageCode == 'ru' ? 'Всего получено' : 'Total Received';
-  String get totalOutstanding => locale.languageCode == 'ru' ? 'Остаток долга' : 'Total Outstanding';
-  String get activeInstallments => locale.languageCode == 'ru' ? 'Активные рассрочки' : 'Active Installments';
-  String get completedInstallments => locale.languageCode == 'ru' ? 'Завершенные рассрочки' : 'Completed Installments';
-  String get overdueInstallments => locale.languageCode == 'ru' ? 'Просроченные рассрочки' : 'Overdue Installments';
-  String get installmentStatus => locale.languageCode == 'ru' ? 'Статус рассрочек' : 'Installment Status';
-  String get productPopularity => locale.languageCode == 'ru' ? 'Популярность товаров' : 'Product Popularity';
-
-  String get totalSales => locale.languageCode == 'ru' ? 'Общие продажи' : 'Total Sales';
-  String get lastWeek => locale.languageCode == 'ru' ? 'Прошлая неделя' : 'Last Week';
-  String get lastMonth => locale.languageCode == 'ru' ? 'Прошлый месяц' : 'Last Month';
-  
-  String get keyMetrics => locale.languageCode == 'ru' ? 'Ключевые метрики' : 'Key Metrics';
-
-  String get totalRevenue => locale.languageCode == 'ru' ? 'Общая выручка' : 'Total Revenue';
-  String get totalVisitors => locale.languageCode == 'ru' ? 'Всего посетителей' : 'Total Visitors';
-  String get totalTransactions => locale.languageCode == 'ru' ? 'Всего транзакций' : 'Total Transactions';
-  String get totalProducts => locale.languageCode == 'ru' ? 'Всего товаров' : 'Total Products';
-  String get vsPreview28days => locale.languageCode == 'ru' ? ' за предыдущие 28 дней' : ' vs previous 28 days';
-
-  String get averageInstallmentAmount => locale.languageCode == 'ru' ? 'Средняя сумма рассрочки' : 'Average Installment Amount';
-  String get averageOverdueDays => locale.languageCode == 'ru' ? 'Средний срок просрочки' : 'Average Overdue Days';
-  String get mostCommonProduct => locale.languageCode == 'ru' ? 'Самый частый товар' : 'Most Common Product';
-  String get highestRiskClient => locale.languageCode == 'ru' ? 'Самый рискованный клиент' : 'Highest Risk Client';
-
-  String get pending => locale.languageCode == 'ru' ? 'В ожидании' : 'Pending';
-  String get canceled => locale.languageCode == 'ru' ? 'Отменено' : 'Canceled';
-  
-  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Платежи за неделю' : 'Payments This Week';
-  String get averagePerDay => locale.languageCode == 'ru' ? 'В среднем за день' : 'Average per day';
-  String get comparedToLastWeek => locale.languageCode == 'ru' ? 'с прошлой недели' : 'vs last week';
 
   // Weekdays
   String get dayMon => locale.languageCode == 'ru' ? 'Пн' : 'Mon';
@@ -437,6 +403,23 @@ class AppLocalizations {
     final suffix = locale.languageCode == 'ru' ? 'д' : 'd';
     return '${days.abs()}$suffix';
   }
+
+  // ===== Analytics =====
+  String get totalRevenue => locale.languageCode == 'ru' ? 'Общая выручка' : 'Total Revenue';
+  String get newInstallments => locale.languageCode == 'ru' ? 'Новые рассрочки' : 'New Installments';
+  String get outstandingPortfolio => locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
+  String get overdueDebt => locale.languageCode == 'ru' ? 'Сумма просрочки' : 'Overdue Debt';
+  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Платежи за неделю' : 'Payments this Week';
+  String get installmentStatus => locale.languageCode == 'ru' ? 'Статус рассрочек' : 'Installment Status';
+  String get activeInstallments => locale.languageCode == 'ru' ? 'Активные рассрочки' : 'Active Installments';
+  String get overdueInstallments => locale.languageCode == 'ru' ? 'Просроченные рассрочки' : 'Overdue Installments';
+  String get averagePerDay => locale.languageCode == 'ru' ? 'В среднем за день' : 'Average per day';
+  String get vsPreview28days => locale.languageCode == 'ru' ? 'за предыдущие 28 дней' : 'vs. previous 28 days';
+  String get portfolioDetails => locale.languageCode == 'ru' ? 'Детали портфеля' : 'Portfolio Details';
+  String get averageInstallmentValue => locale.languageCode == 'ru' ? 'Средний чек' : 'Average Installment Value';
+  String get averageTerm => locale.languageCode == 'ru' ? 'Средний срок' : 'Average Term';
+  String get topProduct => locale.languageCode == 'ru' ? 'Самый популярный товар' : 'Top Product';
+  String get upcomingRevenue30Days => locale.languageCode == 'ru' ? 'Ожидаемые платежи (30 дней)' : 'Upcoming Revenue (30 days)';
 }
 
 class _AppLocalizationsDelegate
