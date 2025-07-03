@@ -16,7 +16,7 @@ class AnalyticsRepository {
     return AnalyticsData(
       keyMetrics: _calculateKeyMetrics(installments, payments),
       totalSales: _calculateTotalSales(payments),
-      installmentStatus: _calculateInstallmentStatus(payments),
+      installmentStatus: _calculateInstallmentStatus(installments, payments),
       installmentDetails: _calculateInstallmentDetails(installments, payments),
     );
   }
@@ -139,20 +139,28 @@ class AnalyticsRepository {
     );
   }
 
-  InstallmentStatusData _calculateInstallmentStatus(List<InstallmentPayment> payments) {
+  InstallmentStatusData _calculateInstallmentStatus(List<Installment> installments, List<InstallmentPayment> allPayments) {
     int overdueCount = 0;
     int dueToPayCount = 0;
     int upcomingCount = 0;
     int paidCount = 0;
 
-    for (final p in payments) {
-      if (p.isPaid) {
-        paidCount++;
-      } else if (p.isOverdue) {
+    for (final installment in installments) {
+      final installmentPayments = allPayments.where((p) => p.installmentId == installment.id).toList();
+      if (installmentPayments.isEmpty) continue;
+
+      final isOverdue = installmentPayments.any((p) => p.isOverdue);
+      final allPaid = installmentPayments.every((p) => p.isPaid);
+      final isDue = installmentPayments.any((p) => p.isDue);
+
+      if (isOverdue) {
         overdueCount++;
-      } else if (p.isDue) {
+      } else if (allPaid) {
+        paidCount++;
+      } else if (isDue) {
         dueToPayCount++;
-      } else if (p.isUpcoming) {
+      } else {
+        // If not overdue, not all paid, and not due, it must be upcoming
         upcomingCount++;
       }
     }
