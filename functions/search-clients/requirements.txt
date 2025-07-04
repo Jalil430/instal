@@ -1,0 +1,2 @@
+yandexcloud==0.328.0
+ydb[yc]==3.8.1 
