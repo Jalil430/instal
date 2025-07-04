@@ -9,6 +9,10 @@
 05edf99238bc0c342aa0cc48be2363ffcebbbf15b7d0eaca4f31dbd6a03d30be
 ```
 
+## YDB Connection Details
+- **Endpoint**: `grpcs://ydb.serverless.yandexcloud.net:2135`
+- **Database**: `/ru-central1/b1gf1hpknipc1oe40ebv/etni7p01mkofdmh58rp3`
+
 ## Rate Limits
 - **POST /clients**: 10 requests per minute
 - **GET /clients/{id}**: 30 requests per minute

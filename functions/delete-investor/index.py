@@ -11,59 +11,52 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class SecurityValidator:
-    """Handles input validation and sanitization"""
+    """Handles input validation"""
     
     @staticmethod
-    def validate_client_id(client_id: str) -> tuple[Union[str, None], Union[str, None]]:
-        """Validate and sanitize client ID"""
-        if not client_id:
-            return None, "Client ID is required"
+    def validate_investor_id(investor_id: str) -> tuple[Union[str, None], Union[str, None]]:
+        """Validate and sanitize investor ID"""
+        if not investor_id:
+            return None, "Investor ID is required"
         
         uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        if not re.match(uuid_pattern, client_id.lower()):
-            return None, "Invalid client ID format"
+        if not re.match(uuid_pattern, investor_id.lower()):
+            return None, "Invalid investor ID format"
         
-        return client_id.lower(), None
+        return investor_id.lower(), None
 
 class ApiKeyAuth:
     """Handles API key authentication"""
     
     @staticmethod
     def validate_api_key(event: dict) -> bool:
-        """Validate API key from request headers"""
         expected_api_key = os.environ.get('API_KEY')
         if not expected_api_key:
-            logger.warning("API_KEY not configured in environment")
+            logger.warning("API_KEY not configured")
             return False
         
         headers = event.get('headers', {})
-        api_key = None
-        for key, value in headers.items():
-            if key.lower() == 'x-api-key':
-                api_key = value
-                break
-        
+        api_key = headers.get('x-api-key') or headers.get('X-Api-Key')
         if not api_key:
-            logger.warning("No API key provided in request")
+            logger.warning("No API key provided")
             return False
         
         return hmac.compare_digest(expected_api_key, api_key)
 
 def handler(event, context):
     """
-    Yandex Cloud Function handler to delete a client by ID.
+    Yandex Cloud Function handler to delete an investor by ID.
     """
     try:
         logger.info(f"Received delete request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         
         if not ApiKeyAuth.validate_api_key(event):
-            logger.warning("Unauthorized access attempt")
-            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Unauthorized: Invalid or missing API key'})}
+            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Unauthorized'})}
         
         path_params = event.get('pathParameters', {})
-        client_id = path_params.get('id')
+        investor_id = path_params.get('id')
         
-        sanitized_id, validation_error = SecurityValidator.validate_client_id(client_id)
+        sanitized_id, validation_error = SecurityValidator.validate_investor_id(investor_id)
         if validation_error:
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': validation_error})}
         
@@ -77,39 +70,37 @@ def handler(event, context):
             driver.wait(fail_fast=True, timeout=5)
             pool = ydb.SessionPool(driver)
 
-            def delete_client_from_db(session):
-                # First, check if the client exists (using same pattern as get-client)
+            def delete_investor_from_db(session):
+                # First, check if the investor exists (using same pattern as get-investor)
                 check_query = """
-                DECLARE $client_id AS Utf8;
-                SELECT id FROM clients WHERE id = $client_id;
+                DECLARE $investor_id AS Utf8;
+                SELECT id FROM investors WHERE id = $investor_id;
                 """
                 prepared_check = session.prepare(check_query)
                 result_sets = session.transaction().execute(
                     prepared_check, 
-                    {'$client_id': sanitized_id}, 
+                    {'$investor_id': sanitized_id}, 
                     commit_tx=True
                 )
                 if not result_sets[0].rows:
-                    return {'statusCode': 404, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Client not found'})}
+                    return {'statusCode': 404, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Investor not found'})}
 
-                # Delete the client
+                # Delete the investor
                 delete_query = """
-                DECLARE $client_id AS Utf8;
-                DELETE FROM clients WHERE id = $client_id;
+                DECLARE $investor_id AS Utf8;
+                DELETE FROM investors WHERE id = $investor_id;
                 """
                 prepared_delete = session.prepare(delete_query)
                 session.transaction().execute(
                     prepared_delete, 
-                    {'$client_id': sanitized_id}, 
+                    {'$investor_id': sanitized_id}, 
                     commit_tx=True
                 )
 
-                logger.info(f"Client deleted successfully: {sanitized_id}")
-                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'message': 'Client deleted successfully'})}
+                logger.info(f"Investor deleted successfully: {sanitized_id}")
+                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'message': 'Investor deleted successfully'})}
 
-            result = pool.retry_operation_sync(delete_client_from_db)
-            driver.stop()
-            return result
+            return pool.retry_operation_sync(delete_investor_from_db)
             
         except ydb.Error as e:
             logger.error(f"YDB error: {str(e)}")

@@ -154,48 +154,50 @@ def handler(event, context):
             pool = ydb.SessionPool(driver)
             
             def update_client_in_db(session):
-                # First, check if the client exists
-                check_query = "DECLARE $client_id AS Utf8; SELECT id FROM clients WHERE id = $client_id;"
+                # First, check if the client exists (using same pattern as get-client)
+                check_query = """
+                DECLARE $client_id AS Utf8;
+                SELECT id FROM clients WHERE id = $client_id;
+                """
                 prepared_check = session.prepare(check_query)
-                result_sets = session.transaction().execute(prepared_check, {'$client_id': sanitized_id}, commit_tx=True)
+                result_sets = session.transaction().execute(
+                    prepared_check, 
+                    {'$client_id': sanitized_id}, 
+                    commit_tx=True
+                )
                 if not result_sets[0].rows:
                     return {'statusCode': 404, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Client not found'})}
 
-                # Dynamically build the UPDATE query
-                update_parts = []
-                params = {'$id': sanitized_id}
-                declarations = ['DECLARE $id AS Utf8;', 'DECLARE $updated_at AS Timestamp;']
-                
-                # YDB types for declaration
-                ydb_types = {
-                    'user_id': 'Utf8',
-                    'full_name': 'Utf8',
-                    'contact_number': 'Utf8',
-                    'passport_number': 'Utf8',
-                    'address': 'Utf8?',
-                }
+                # Build a simple UPDATE query for the provided field(s)
+                if not sanitized_data:
+                    return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'No fields to update'})}
 
-                for key, value in sanitized_data.items():
-                    update_parts.append(f"{key} = ${key}")
-                    params[f'${key}'] = value
-                    declarations.append(f"DECLARE ${key} AS {ydb_types[key]};")
-                
-                params['$updated_at'] = datetime.utcnow()
-                update_parts.append('updated_at = $updated_at')
-
-                update_query_str = f"""
-                {' '.join(declarations)}
-                UPDATE clients SET {', '.join(update_parts)} WHERE id = $id;
-                """
-                
-                session.transaction().execute(
-                    update_query_str,
-                    params,
-                    commit_tx=True
-                )
-                
-                logger.info(f"Client updated successfully: {sanitized_id}")
-                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'message': 'Client updated successfully'})}
+                # For now, let's handle just full_name to test
+                if 'full_name' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $full_name AS Utf8;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET full_name = $full_name, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$full_name': sanitized_data['full_name'],
+                            '$updated_at': int(datetime.utcnow().timestamp() * 1000000)
+                        },
+                        commit_tx=True
+                    )
+                    
+                    logger.info(f"Client updated successfully: {sanitized_id}")
+                    return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'message': 'Client updated successfully'})}
+                else:
+                    return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'No supported fields to update'})}
 
             result = pool.retry_operation_sync(update_client_in_db)
             driver.stop()

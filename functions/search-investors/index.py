@@ -32,7 +32,7 @@ def handler(event, context):
             return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Unauthorized'})}
         
         query_params = event.get('queryStringParameters', {}) or {}
-        searchable_fields = ['full_name', 'passport_number', 'contact_number', 'user_id', 'address']
+        searchable_fields = ['full_name', 'user_id']
         
         search_criteria = {k: v for k, v in query_params.items() if k in searchable_fields and v}
         if not search_criteria:
@@ -48,7 +48,7 @@ def handler(event, context):
             driver.wait(fail_fast=True, timeout=5)
             pool = ydb.SessionPool(driver)
 
-            def search_clients_in_db(session):
+            def search_investors_in_db(session):
                 # Build the query conditions
                 conditions = []
                 params = {}
@@ -64,8 +64,8 @@ def handler(event, context):
                 
                 query = f"""
                 {declares}
-                SELECT id, user_id, full_name, contact_number, passport_number, address, created_at, updated_at
-                FROM clients
+                SELECT id, user_id, full_name, investment_amount, investor_percentage, user_percentage, created_at, updated_at
+                FROM investors
                 WHERE {where_clause};
                 """
                 
@@ -76,25 +76,25 @@ def handler(event, context):
                     commit_tx=True
                 )
                 
-                clients = []
+                investors = []
                 for row in result_sets[0].rows:
                     def convert_timestamp(ts):
                         if ts is None: return None
-                        return datetime.fromtimestamp(ts / 1000000).isoformat() if isinstance(ts, int) else (ts.isoformat() if hasattr(ts, 'isoformat') else str(ts))
+                        return datetime.fromtimestamp(ts / 1000000).isoformat() if isinstance(ts, int) else ts.isoformat()
 
-                    clients.append({
+                    investors.append({
                         'id': row.id, 'user_id': row.user_id, 'full_name': row.full_name,
-                        'contact_number': row.contact_number, 'passport_number': row.passport_number,
-                        'address': row.address, 'created_at': convert_timestamp(row.created_at),
+                        'investment_amount': float(row.investment_amount),
+                        'investor_percentage': float(row.investor_percentage),
+                        'user_percentage': float(row.user_percentage),
+                        'created_at': convert_timestamp(row.created_at),
                         'updated_at': convert_timestamp(row.updated_at)
                     })
                 
-                logger.info(f"Found {len(clients)} clients matching criteria.")
-                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(clients)}
+                logger.info(f"Found {len(investors)} investors matching criteria.")
+                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(investors)}
 
-            result = pool.retry_operation_sync(search_clients_in_db)
-            driver.stop()
-            return result
+            return pool.retry_operation_sync(search_investors_in_db)
             
         except ydb.Error as e:
             logger.error(f"YDB error: {str(e)}")

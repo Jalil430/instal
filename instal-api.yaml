@@ -9,219 +9,200 @@ paths:
   /clients:
     post:
       summary: Create a new client
-      description: Creates a new client with validated input data
-      security:
-        - apiKey: []
+      operationId: create-client
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4e607k429lt9lqo0dkj
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
-      x-yc-apigateway-rate-limits:
-        - action: DENY
-          rate: 10
-          unit: minute
-      requestBody:
-        description: Client details
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - user_id
-                - full_name
-                - contact_number
-                - passport_number
-              properties:
-                user_id:
-                  type: string
-                  minLength: 1
-                  maxLength: 50
-                  pattern: "^[a-zA-Z0-9_-]+$"
-                  description: Unique user identifier
-                full_name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                  pattern: "^[a-zA-ZÀ-ÿ\\s\\'-]+$"
-                  description: Full name of the client
-                contact_number:
-                  type: string
-                  minLength: 10
-                  maxLength: 20
-                  pattern: "^\\+?[1-9]\\d{1,14}$"
-                  description: Contact phone number
-                passport_number:
-                  type: string
-                  minLength: 6
-                  maxLength: 20
-                  pattern: "^[A-Z0-9]+$"
-                  description: Passport number (uppercase letters and numbers)
-                address:
-                  type: string
-                  maxLength: 255
-                  pattern: "^[a-zA-ZÀ-ÿ0-9\\s\\.,\\'-]*$"
-                  description: Address (optional)
-      responses:
-        '201':
-          description: Client created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    description: Unique client ID
-        '400':
-          description: Invalid input data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  details:
-                    type: array
-                    items:
-                      type: string
-        '401':
-          description: Unauthorized - Invalid or missing API key
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '409':
-          description: Client with passport number already exists
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '429':
-          description: Rate limit exceeded
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+    get:
+      summary: List all clients
+      operationId: list-clients
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2hioa9nvq86e1fhtv
+        service_account_id: ajevsnimu8g62t29vlad
+  /clients/search:
+    get:
+      summary: Search for clients
+      operationId: search-clients
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e46icm3kuqf5mshnbq
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
   /clients/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       summary: Get a client by ID
-      description: Retrieves client information by ID with proper validation
-      security:
-        - apiKey: []
+      operationId: get-client
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4e8b3od95f0h2fiernq
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
-      x-yc-apigateway-rate-limits:
-        - action: DENY
-          rate: 30
-          unit: minute
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-            pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-          description: Client ID (UUID format)
-      responses:
-        '200':
-          description: Client retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  user_id:
-                    type: string
-                  full_name:
-                    type: string
-                  contact_number:
-                    type: string
-                  passport_number:
-                    type: string
-                  address:
-                    type: string
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
-        '400':
-          description: Invalid client ID format
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '401':
-          description: Unauthorized - Invalid or missing API key
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '404':
-          description: Client not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '429':
-          description: Rate limit exceeded
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-
+    put:
+      summary: Update a client
+      operationId: update-client
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4egqldupji1j6a52h1v
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    delete:
+      summary: Delete a client
+      operationId: delete-client
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4emvjk3b8bslg8tnibd
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /investors:
+    post:
+      summary: Create a new investor
+      operationId: create-investor
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ej2auh8nuqd4ug07b4
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    get:
+      summary: List all investors
+      operationId: list-investors
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e30o3lml4ur152tei1
+        service_account_id: ajevsnimu8g62t29vlad
+  /investors/search:
+    get:
+      summary: Search for investors
+      operationId: search-investors
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4edkrcgp4spbhlhoirn
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /investors/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get an investor by ID
+      operationId: get-investor
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ehnha81dhv1t61vb5h
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    put:
+      summary: Update an investor
+      operationId: update-investor
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ekneiud8r8kmlv5gfp
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    delete:
+      summary: Delete an investor
+      operationId: delete-investor
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e3j9imqjagflipespv
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /installments:
+    post:
+      summary: Create a new installment
+      operationId: create-installment
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ejin4kah34cvt6mbt8
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    get:
+      summary: List all installments
+      operationId: list-installments
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eji2a3n3b9kmgvkcni
+        service_account_id: ajevsnimu8g62t29vlad
+  /installments/search:
+    get:
+      summary: Search for installments
+      operationId: search-installments
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4edfrgpjcc1ohgj6efo
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /installments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get an installment by ID
+      operationId: get-installment
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4etn874nnro96omhmdk
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    put:
+      summary: Update an installment
+      operationId: update-installment
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eq95tgg9cms7uehhp5
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    delete:
+      summary: Delete an installment
+      operationId: delete-installment
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e6t65nb39k5dksq7s7
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /installment-payments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      summary: Update an installment payment
+      operationId: update-installment-payment
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ec86pvqoqla7ck2qv7
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
 components:
   securitySchemes:
     apiKey:
       type: apiKey
       in: header
       name: X-API-Key
-      description: API key for authentication
-
 x-yc-apigateway-cors:
   origin:
     - '*'
   methods:
     - GET
     - POST
+    - PUT
+    - DELETE
     - OPTIONS
   headers:
     - Content-Type
