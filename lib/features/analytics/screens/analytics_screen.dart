@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:instal_app/features/analytics/data/repositories/analytics_repository.dart';
 import 'package:instal_app/features/analytics/domain/entities/analytics_data.dart';
 import 'package:instal_app/features/analytics/domain/usecases/get_analytics_data.dart';
-import 'package:instal_app/features/installments/data/datasources/installment_local_datasource.dart';
+import 'package:instal_app/features/installments/data/datasources/installment_remote_datasource.dart';
 import 'package:instal_app/features/installments/data/repositories/installment_repository_impl.dart';
-import 'package:instal_app/shared/database/database_helper.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/api/cache_service.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../widgets/total_sales_section.dart';
 import '../widgets/key_metrics_section.dart';
 import '../widgets/installment_details_section.dart';
@@ -22,17 +23,47 @@ class AnalyticsScreen extends StatefulWidget {
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   late Future<AnalyticsData> _analyticsDataFuture;
   late GetAnalyticsData _getAnalyticsData;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    final db = DatabaseHelper.instance;
+    _initializeAnalytics();
+  }
+
+  void _initializeAnalytics() {
     final installmentRepository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(db),
+      InstallmentRemoteDataSourceImpl(),
     );
     final analyticsRepository = AnalyticsRepository(installmentRepository);
     _getAnalyticsData = GetAnalyticsData(analyticsRepository);
     _analyticsDataFuture = _getAnalyticsData('user123');
+  }
+
+  Future<void> _refreshAnalytics() async {
+    if (_isRefreshing) return; // Prevent multiple refresh calls
+    
+    setState(() => _isRefreshing = true);
+    
+    try {
+      // Clear analytics cache to force fresh data
+      final cache = CacheService();
+      cache.remove(CacheService.analyticsKey('user123'));
+      
+      // Reload data
+      final newFuture = _getAnalyticsData('user123');
+      setState(() {
+        _analyticsDataFuture = newFuture;
+      });
+      
+      // Wait for completion to stop the refresh indicator
+      await newFuture;
+    } catch (e) {
+      // Handle error silently or show snackbar
+      print('Error refreshing analytics: $e');
+    } finally {
+      setState(() => _isRefreshing = false);
+    }
   }
 
   @override
@@ -65,7 +96,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ],
                 ),
                 const Spacer(),
-                // TODO: Add dropdowns or other actions here if needed
+                // Refresh button
+                CustomIconButton(
+                  icon: Icons.refresh_rounded,
+                  onPressed: _refreshAnalytics,
+                  size: 36,
+                  animate: _isRefreshing,
+                  rotation: _isRefreshing ? 1.0 : 0.0,
+                  animationDuration: const Duration(milliseconds: 1000),
+                  interactive: !_isRefreshing,
+                ),
               ],
             ),
           ),
@@ -78,7 +118,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Error: ${snapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _refreshAnalytics,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
                 } else if (!snapshot.hasData) {
                   return const Center(child: Text('No data available'));
                 }

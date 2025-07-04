@@ -7,12 +7,11 @@ import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/investor.dart';
 import '../domain/repositories/investor_repository.dart';
 import '../data/repositories/investor_repository_impl.dart';
-import '../data/datasources/investor_local_datasource.dart';
+import '../data/datasources/investor_remote_datasource.dart';
 import '../../installments/domain/entities/installment.dart';
 import '../../installments/domain/repositories/installment_repository.dart';
 import '../../installments/data/repositories/installment_repository_impl.dart';
-import '../../installments/data/datasources/installment_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../../installments/data/datasources/installment_remote_datasource.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../shared/widgets/custom_button.dart';
 
@@ -44,12 +43,11 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
   }
 
   void _initializeRepositories() {
-    final db = DatabaseHelper.instance;
     _investorRepository = InvestorRepositoryImpl(
-      InvestorLocalDataSourceImpl(db),
+      InvestorRemoteDataSourceImpl(),
     );
     _installmentRepository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(db),
+      InstallmentRemoteDataSourceImpl(),
     );
   }
 

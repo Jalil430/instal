@@ -29,35 +29,35 @@ class SecurityValidator:
                 'type': str,
                 'min_length': 1,
                 'max_length': 50,
-                'pattern': r'^[a-zA-Z0-9_-]+$'
+                'pattern': r'^[a-zA-Z0-9_-]+$'  # Keep this restricted for system IDs
             },
             'full_name': {
                 'required': True,
                 'type': str,
                 'min_length': 1,
                 'max_length': 100,
-                'pattern': r'^[a-zA-ZÀ-ÿ\s\'-]+$'
+                # No pattern restriction - allow any Unicode characters
             },
             'contact_number': {
                 'required': True,
                 'type': str,
-                'min_length': 10,
-                'max_length': 20,
-                'pattern': r'^\+?[1-9]\d{1,14}$'
+                'min_length': 1,
+                'max_length': 50,
+                # No pattern restriction - allow any format
             },
             'passport_number': {
                 'required': True,
                 'type': str,
-                'min_length': 6,
-                'max_length': 20,
-                'pattern': r'^[A-Z0-9]+$'
+                'min_length': 1,
+                'max_length': 50,
+                # No pattern restriction - allow any format/script
             },
             'address': {
                 'required': False,
                 'type': str,
                 'min_length': 0,
-                'max_length': 255,
-                'pattern': r'^[a-zA-ZÀ-ÿ0-9\s\.,\'-]*$'
+                'max_length': 500,
+                # No pattern restriction - allow any Unicode characters
             }
         }
         
@@ -88,18 +88,13 @@ class SecurityValidator:
                 errors.append(f'{field} must be no more than {rules["max_length"]} characters')
                 continue
             
-            # Pattern validation
-            if rules['pattern'] and not re.match(rules['pattern'], value):
+            # Pattern validation (only if pattern is defined)
+            if rules.get('pattern') and not re.match(rules['pattern'], value):
                 errors.append(f'{field} contains invalid characters')
                 continue
             
-            # Sanitize (trim whitespace, normalize case for certain fields)
+            # Sanitize (trim whitespace only, preserve Unicode characters)
             sanitized_value = value.strip()
-            if field == 'passport_number':
-                sanitized_value = sanitized_value.upper()
-            elif field == 'contact_number':
-                # Normalize phone number format
-                sanitized_value = re.sub(r'[^\d+]', '', sanitized_value)
             
             sanitized[field] = sanitized_value
         
@@ -152,8 +147,20 @@ def handler(event, context):
         
         # 2. Parse and validate request body
         try:
-            body = json.loads(event.get('body', '{}'))
-        except json.JSONDecodeError:
+            raw_body = event.get('body', '{}')
+            
+            # Check if the body is Base64 encoded (common with Yandex Cloud Functions)
+            try:
+                # Try to decode as Base64 first
+                import base64
+                decoded_body = base64.b64decode(raw_body).decode('utf-8')
+                body = json.loads(decoded_body)
+            except Exception:
+                # If Base64 decoding fails, try parsing as plain JSON
+                body = json.loads(raw_body)
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {e}")
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json'},

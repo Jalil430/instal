@@ -5,8 +5,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../domain/entities/client.dart';
 import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
-import '../data/datasources/client_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../data/datasources/client_remote_datasource.dart';
 import '../../../shared/widgets/custom_search_bar.dart';
 import '../../../shared/widgets/custom_dropdown.dart';
 import '../../../shared/widgets/custom_button.dart';
@@ -53,9 +52,8 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   }
 
   void _initializeRepository() {
-    final db = DatabaseHelper.instance;
     _clientRepository = ClientRepositoryImpl(
-      ClientLocalDataSourceImpl(db),
+      ClientRemoteDataSourceImpl(),
     );
   }
 
@@ -65,7 +63,12 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
       // TODO: Replace with actual user ID from auth
       const userId = 'user123';
       
-      final clients = await _clientRepository.getAllClients(userId);
+      // Try to load from cache first for immediate UI update
+      final clientRepository = ClientRepositoryImpl(
+        ClientRemoteDataSourceImpl(),
+      );
+      
+      final clients = await clientRepository.getAllClients(userId);
       
       setState(() {
         _clients = clients;

@@ -22,10 +22,12 @@ class CreateInstallment {
   }) async {
     final installmentId = DateTime.now().millisecondsSinceEpoch.toString();
     
-    // Calculate installment end date
+    // Calculate installment end date (date of last monthly payment)
+    final monthlyPaymentsCount = downPayment > 0 ? termMonths - 1 : termMonths;
+    final monthsToAdd = monthlyPaymentsCount - 1;
     final installmentEndDate = DateTime(
       installmentStartDate.year,
-      installmentStartDate.month + termMonths,
+      installmentStartDate.month + monthsToAdd,
       installmentStartDate.day,
     );
 
@@ -91,10 +93,22 @@ class CreateInstallment {
     }
 
     // Create monthly payments
-    for (int i = 1; i <= termMonths; i++) {
+    // Correct logic: if there's a down payment, it counts as part of the term
+    final monthlyPaymentsCount = downPayment > 0 ? termMonths - 1 : termMonths;
+    
+    for (int i = 1; i <= monthlyPaymentsCount; i++) {
+      // Monthly payment 1: Always due on installment start date (monthsToAdd = 0)
+      // Monthly payment 2: Due 1 month after installment start date (monthsToAdd = 1)
+      // Monthly payment 3: Due 2 months after installment start date (monthsToAdd = 2)
+      // Down payment does NOT affect monthly payment timing
+      final monthsToAdd = i - 1;
+      final totalMonths = installmentStartDate.month + monthsToAdd;
+      final year = installmentStartDate.year + (totalMonths - 1) ~/ 12;
+      final month = (totalMonths - 1) % 12 + 1;
+      
       final dueDate = DateTime(
-        installmentStartDate.year,
-        installmentStartDate.month + i - 1,
+        year,
+        month,
         installmentStartDate.day,
       );
       

@@ -35,7 +35,7 @@ class SecurityValidator:
         
         validation_rules = {
             'user_id': {'type': str, 'min_length': 1, 'max_length': 50, 'pattern': r'^[a-zA-Z0-9_-]+$'},
-            'full_name': {'type': str, 'min_length': 1, 'max_length': 100, 'pattern': r'^[a-zA-ZÀ-ÿ\s\'-]+$'},
+            'full_name': {'type': str, 'min_length': 1, 'max_length': 100},  # No pattern restriction
             'investment_amount': {'type': (int, float)},
             'investor_percentage': {'type': (int, float)},
             'user_percentage': {'type': (int, float)},
@@ -61,11 +61,16 @@ class SecurityValidator:
             if 'max_length' in rules and len(value) > rules['max_length']:
                 errors.append(f'{field} must be no more than {rules["max_length"]} characters')
 
-            if 'pattern' in rules and isinstance(value, str) and not re.match(rules['pattern'], value):
+            # Pattern validation (only if pattern is defined)
+            if rules.get('pattern') and isinstance(value, str) and not re.match(rules['pattern'], value):
                 errors.append(f'{field} contains invalid characters')
                 continue
             
-            sanitized[field] = value
+            # Sanitize string fields (trim whitespace only, preserve Unicode characters)
+            if isinstance(value, str):
+                sanitized[field] = value.strip()
+            else:
+                sanitized[field] = value
         
         return sanitized, errors
 
@@ -105,7 +110,17 @@ def handler(event, context):
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': validation_error})}
         
         try:
-            body = json.loads(event.get('body', '{}'))
+            raw_body = event.get('body', '{}')
+            
+            # Check if the body is Base64 encoded (common with Yandex Cloud Functions)
+            try:
+                # Try to decode as Base64 first
+                import base64
+                decoded_body = base64.b64decode(raw_body).decode('utf-8')
+                body = json.loads(decoded_body)
+            except Exception:
+                # If Base64 decoding fails, try parsing as plain JSON
+                body = json.loads(raw_body)
         except json.JSONDecodeError:
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Invalid JSON'})}
         

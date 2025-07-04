@@ -4,7 +4,7 @@ class Client {
   final String fullName;
   final String contactNumber;
   final String passportNumber;
-  final String address;
+  final String? address;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -14,7 +14,7 @@ class Client {
     required this.fullName,
     required this.contactNumber,
     required this.passportNumber,
-    required this.address,
+    this.address,
     required this.createdAt,
     required this.updatedAt,
   });

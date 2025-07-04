@@ -6,8 +6,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../domain/entities/client.dart';
 import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
-import '../data/datasources/client_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../data/datasources/client_remote_datasource.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
 import '../../../shared/widgets/custom_button.dart';
 
@@ -50,9 +49,8 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
   }
 
   void _initializeRepository() {
-    final db = DatabaseHelper.instance;
     _clientRepository = ClientRepositoryImpl(
-      ClientLocalDataSourceImpl(db),
+      ClientRemoteDataSourceImpl(),
     );
   }
 
@@ -66,7 +64,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
           _fullNameController.text = client.fullName;
           _contactNumberController.text = client.contactNumber;
           _passportNumberController.text = client.passportNumber;
-          _addressController.text = client.address;
+          _addressController.text = client.address ?? '';
           _isLoading = false;
         });
       } else {
@@ -110,7 +108,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
           fullName: _fullNameController.text,
           contactNumber: _contactNumberController.text,
           passportNumber: _passportNumberController.text,
-          address: _addressController.text,
+          address: _addressController.text.trim().isEmpty ? null : _addressController.text,
           updatedAt: DateTime.now(),
         );
         
@@ -130,7 +128,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
           fullName: _fullNameController.text,
           contactNumber: _contactNumberController.text,
           passportNumber: _passportNumberController.text,
-          address: _addressController.text,
+          address: _addressController.text.trim().isEmpty ? null : _addressController.text,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -277,9 +275,8 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
                       // Address
                       _buildTextField(
                         controller: _addressController,
-                        label: AppLocalizations.of(context)?.address ?? 'Адрес',
+                        label: AppLocalizations.of(context)?.address ?? 'Адрес (необязательно)',
                         maxLines: 3,
-                        validator: (value) => value?.isEmpty == true ? AppLocalizations.of(context)?.enterAddress ?? 'Введите адрес' : null,
                       ),
                     ],
                   ),

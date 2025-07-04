@@ -8,17 +8,16 @@ import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
-import '../data/datasources/installment_local_datasource.dart';
+import '../data/datasources/installment_remote_datasource.dart';
 import '../../clients/domain/entities/client.dart';
 import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
-import '../../clients/data/datasources/client_local_datasource.dart';
+import '../../clients/data/datasources/client_remote_datasource.dart';
 import '../../investors/domain/entities/investor.dart';
 import '../../investors/domain/repositories/investor_repository.dart';
 import '../../investors/data/repositories/investor_repository_impl.dart';
-import '../../investors/data/datasources/investor_local_datasource.dart';
+import '../../investors/data/datasources/investor_remote_datasource.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
-import '../../../shared/database/database_helper.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_dropdown.dart';
 
@@ -71,15 +70,14 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   }
 
   void _initializeRepositories() {
-    final db = DatabaseHelper.instance;
     _installmentRepository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(db),
+      InstallmentRemoteDataSourceImpl(),
     );
     _clientRepository = ClientRepositoryImpl(
-      ClientLocalDataSourceImpl(db),
+      ClientRemoteDataSourceImpl(),
     );
     _investorRepository = InvestorRepositoryImpl(
-      InvestorLocalDataSourceImpl(db),
+      InvestorRemoteDataSourceImpl(),
     );
   }
 
@@ -154,10 +152,18 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     try {
       const userId = 'user123'; // TODO: Replace with actual user ID
       
-      // Calculate installment end date
+      // Calculate installment end date (date of last monthly payment)
       final startDate = _installmentStartDate!;
       final term = int.parse(_termController.text);
-      final endDate = DateTime(startDate.year, startDate.month + term, startDate.day);
+      final downPayment = double.parse(_downPaymentController.text);
+      
+      // Calculate number of monthly payments
+      final monthlyPaymentsCount = downPayment > 0 ? term - 1 : term;
+      
+      // End date is the date of the last monthly payment
+      // Last monthly payment is due at: start + (monthlyPaymentsCount - 1) months
+      final monthsToAdd = monthlyPaymentsCount - 1;
+      final endDate = DateTime(startDate.year, startDate.month + monthsToAdd, startDate.day);
       
       // Create installment
       final installment = Installment(
@@ -178,10 +184,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
         updatedAt: DateTime.now(),
       );
       
-      final installmentId = await _installmentRepository.createInstallment(installment);
-      
-      // Create payment schedule
-      await _createPaymentSchedule(installmentId, installment);
+      await _installmentRepository.createInstallment(installment);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,56 +203,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     }
   }
 
-  Future<void> _createPaymentSchedule(String installmentId, Installment installment) async {
-    final payments = <InstallmentPayment>[];
-    int paymentCount = 0;
-    
-    // Down payment (payment number 0)
-    if (installment.downPayment > 0) {
-      payments.add(InstallmentPayment(
-        id: const Uuid().v4(),
-        installmentId: installmentId,
-        paymentNumber: 0,
-        dueDate: installment.downPaymentDate,
-        expectedAmount: installment.downPayment,
-        isPaid: false,
-        paidDate: null,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ));
-      
-      // Increment payment count if there's a down payment
-      paymentCount++;
-    }
-    
-    // Monthly payments - adjust for down payment so total number of payments equals term
-    final monthlyPaymentsCount = installment.termMonths - (installment.downPayment > 0 ? 1 : 0);
-    
-    for (int i = 1; i <= monthlyPaymentsCount; i++) {
-      final dueDate = DateTime(
-        installment.installmentStartDate.year,
-        installment.installmentStartDate.month + i - 1,
-        installment.installmentStartDate.day,
-      );
-      
-      payments.add(InstallmentPayment(
-        id: const Uuid().v4(),
-        installmentId: installmentId,
-        paymentNumber: i,
-        dueDate: dueDate,
-        expectedAmount: installment.monthlyPayment,
-        isPaid: false,
-        paidDate: null,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ));
-    }
-    
-    // Save all payments
-    for (final payment in payments) {
-      await _installmentRepository.createPayment(payment);
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {

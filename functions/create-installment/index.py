@@ -41,7 +41,17 @@ def handler(event, context):
             return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Unauthorized'})}
         
         try:
-            body = json.loads(event.get('body', '{}'))
+            raw_body = event.get('body', '{}')
+            
+            # Check if the body is Base64 encoded (common with Yandex Cloud Functions)
+            try:
+                # Try to decode as Base64 first
+                import base64
+                decoded_body = base64.b64decode(raw_body).decode('utf-8')
+                body = json.loads(decoded_body)
+            except Exception:
+                # If Base64 decoding fails, try parsing as plain JSON
+                body = json.loads(raw_body)
         except json.JSONDecodeError:
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Invalid JSON in request body'})}
 
@@ -196,10 +206,20 @@ def handler(event, context):
                 term_months = int(body['term_months'])
                 monthly_payment = Decimal(str(body['monthly_payment']))
                 
-                for i in range(1, term_months + 1):
+                # Correct logic: if there's a down payment, it counts as part of the term
+                # So for 6-month term with down payment: 1 down payment + 5 monthly payments = 6 total
+                monthly_payments_count = term_months - 1 if body['down_payment'] > 0 else term_months
+                
+                for i in range(1, monthly_payments_count + 1):
                     # Calculate due date for each monthly payment
-                    year = installment_start_date.year + (installment_start_date.month + i - 1) // 12
-                    month = (installment_start_date.month + i - 1) % 12 + 1
+                    # Monthly payment 1: Always due on installment start date (months_to_add = 0)
+                    # Monthly payment 2: Due 1 month after installment start date (months_to_add = 1)
+                    # Monthly payment 3: Due 2 months after installment start date (months_to_add = 2)
+                    # Down payment does NOT affect monthly payment timing
+                    months_to_add = i - 1
+                    total_months = installment_start_date.month + months_to_add
+                    year = installment_start_date.year + (total_months - 1) // 12
+                    month = (total_months - 1) % 12 + 1
                     
                     # To determine the day, we need to know the number of days in the target month
                     last_day_of_month = calendar.monthrange(year, month)[1]

@@ -20,8 +20,8 @@ class InvestorModel extends Investor {
       investmentAmount: map['investment_amount'] as double,
       investorPercentage: map['investor_percentage'] as double,
       userPercentage: map['user_percentage'] as double,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
+      createdAt: _parseDateTime(map['created_at']),
+      updatedAt: _parseDateTime(map['updated_at']),
     );
   }
 
@@ -49,6 +49,29 @@ class InvestorModel extends Investor {
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
+  }
+
+  // For API requests, we need to format data properly
+  Map<String, dynamic> toApiMap() {
+    return {
+      'user_id': userId,
+      'full_name': fullName,
+      'investment_amount': investmentAmount,
+      'investor_percentage': investorPercentage,
+      'user_percentage': userPercentage,
+    };
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is int) {
+      // Local database format (milliseconds since epoch)
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is String) {
+      // API format (ISO string)
+      return DateTime.parse(value);
+    } else {
+      throw ArgumentError('Invalid datetime format: $value');
+    }
   }
 
   @override

@@ -7,7 +7,7 @@ class ClientModel extends Client {
     required super.fullName,
     required super.contactNumber,
     required super.passportNumber,
-    required super.address,
+    super.address,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -19,9 +19,9 @@ class ClientModel extends Client {
       fullName: map['full_name'] as String,
       contactNumber: map['contact_number'] as String,
       passportNumber: map['passport_number'] as String,
-      address: map['address'] as String,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
+      address: map['address'] as String?,
+      createdAt: _parseDateTime(map['created_at']),
+      updatedAt: _parseDateTime(map['updated_at']),
     );
   }
 
@@ -39,16 +39,50 @@ class ClientModel extends Client {
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'id': id,
       'user_id': userId,
       'full_name': fullName,
       'contact_number': contactNumber,
       'passport_number': passportNumber,
-      'address': address,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
+    
+    if (address != null) {
+      map['address'] = address!;
+    }
+    
+    return map;
+  }
+
+  // For API requests, we need to format data properly
+  Map<String, dynamic> toApiMap() {
+    final map = {
+      'user_id': userId,
+      'full_name': fullName,
+      'contact_number': contactNumber,
+      'passport_number': passportNumber,
+    };
+    
+    if (address != null) {
+      // Replace newlines with spaces to prevent JSON parsing issues
+      map['address'] = address!.replaceAll('\n', ' ').replaceAll('\r', ' ');
+    }
+    
+    return map;
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is int) {
+      // Local database format (milliseconds since epoch)
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is String) {
+      // API format (ISO string)
+      return DateTime.parse(value);
+    } else {
+      throw ArgumentError('Invalid datetime format: $value');
+    }
   }
 
   @override

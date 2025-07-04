@@ -5,8 +5,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../domain/entities/investor.dart';
 import '../domain/repositories/investor_repository.dart';
 import '../data/repositories/investor_repository_impl.dart';
-import '../data/datasources/investor_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../data/datasources/investor_remote_datasource.dart';
 import '../../../shared/widgets/custom_search_bar.dart';
 import '../../../shared/widgets/custom_dropdown.dart';
 import '../../../shared/widgets/custom_button.dart';
@@ -53,9 +52,8 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
   }
 
   void _initializeRepository() {
-    final db = DatabaseHelper.instance;
     _investorRepository = InvestorRepositoryImpl(
-      InvestorLocalDataSourceImpl(db),
+      InvestorRemoteDataSourceImpl(),
     );
   }
 

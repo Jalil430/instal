@@ -8,16 +8,15 @@ import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
-import '../data/datasources/installment_local_datasource.dart';
+import '../data/datasources/installment_remote_datasource.dart';
 import '../../clients/domain/entities/client.dart';
 import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
-import '../../clients/data/datasources/client_local_datasource.dart';
+import '../../clients/data/datasources/client_remote_datasource.dart';
 import '../../investors/domain/entities/investor.dart';
 import '../../investors/domain/repositories/investor_repository.dart';
 import '../../investors/data/repositories/investor_repository_impl.dart';
-import '../../investors/data/datasources/investor_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../../investors/data/datasources/investor_remote_datasource.dart';
 import '../widgets/installment_payment_item.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 
@@ -52,15 +51,14 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
   }
 
   void _initializeRepositories() {
-    final db = DatabaseHelper.instance;
     _installmentRepository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(db),
+      InstallmentRemoteDataSourceImpl(),
     );
     _clientRepository = ClientRepositoryImpl(
-      ClientLocalDataSourceImpl(db),
+      ClientRemoteDataSourceImpl(),
     );
     _investorRepository = InvestorRepositoryImpl(
-      InvestorLocalDataSourceImpl(db),
+      InvestorRemoteDataSourceImpl(),
     );
   }
 

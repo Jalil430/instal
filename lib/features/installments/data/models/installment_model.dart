@@ -31,11 +31,11 @@ class InstallmentModel extends Installment {
       termMonths: map['term_months'] as int,
       downPayment: map['down_payment'] as double,
       monthlyPayment: map['monthly_payment'] as double,
-      downPaymentDate: DateTime.fromMillisecondsSinceEpoch(map['down_payment_date'] as int),
-      installmentStartDate: DateTime.fromMillisecondsSinceEpoch(map['installment_start_date'] as int),
-      installmentEndDate: DateTime.fromMillisecondsSinceEpoch(map['installment_end_date'] as int),
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
+      downPaymentDate: _parseDate(map['down_payment_date']),
+      installmentStartDate: _parseDate(map['installment_start_date']),
+      installmentEndDate: _parseDate(map['installment_end_date']),
+      createdAt: _parseDateTime(map['created_at']),
+      updatedAt: _parseDateTime(map['updated_at']),
     );
   }
 
@@ -77,6 +77,52 @@ class InstallmentModel extends Installment {
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
+  }
+
+  // For API requests, we need to format data properly
+  Map<String, dynamic> toApiMap() {
+    return {
+      'user_id': userId,
+      'client_id': clientId,
+      'investor_id': investorId,
+      'product_name': productName,
+      'cash_price': cashPrice,
+      'installment_price': installmentPrice,
+      'term_months': termMonths,
+      'down_payment': downPayment,
+      'monthly_payment': monthlyPayment,
+      'down_payment_date': _formatDate(downPaymentDate),
+      'installment_start_date': _formatDate(installmentStartDate),
+      'installment_end_date': _formatDate(installmentEndDate),
+    };
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is int) {
+      // Local database format (milliseconds since epoch)
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is String) {
+      // API format (ISO string)
+      return DateTime.parse(value);
+    } else {
+      throw ArgumentError('Invalid datetime format: $value');
+    }
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is int) {
+      // Local database format (milliseconds since epoch)
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is String) {
+      // API format (YYYY-MM-DD)
+      return DateTime.parse(value);
+    } else {
+      throw ArgumentError('Invalid date format: $value');
+    }
+  }
+
+  static String _formatDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   @override

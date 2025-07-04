@@ -7,12 +7,11 @@ import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/client.dart';
 import '../domain/repositories/client_repository.dart';
 import '../data/repositories/client_repository_impl.dart';
-import '../data/datasources/client_local_datasource.dart';
+import '../data/datasources/client_remote_datasource.dart';
 import '../../installments/domain/entities/installment.dart';
 import '../../installments/domain/repositories/installment_repository.dart';
 import '../../installments/data/repositories/installment_repository_impl.dart';
-import '../../installments/data/datasources/installment_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../../installments/data/datasources/installment_remote_datasource.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../shared/widgets/custom_button.dart';
 
@@ -44,12 +43,11 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
   }
 
   void _initializeRepositories() {
-    final db = DatabaseHelper.instance;
     _clientRepository = ClientRepositoryImpl(
-      ClientLocalDataSourceImpl(db),
+      ClientRemoteDataSourceImpl(),
     );
     _installmentRepository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(db),
+      InstallmentRemoteDataSourceImpl(),
     );
   }
 
@@ -202,7 +200,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   _buildInfoRow(AppLocalizations.of(context)?.fullName ?? 'Полное имя', _client!.fullName),
                   _buildInfoRow(AppLocalizations.of(context)?.contactNumber ?? 'Контактный номер', _client!.contactNumber),
                   _buildInfoRow(AppLocalizations.of(context)?.passportNumber ?? 'Номер паспорта', _client!.passportNumber),
-                  _buildInfoRow(AppLocalizations.of(context)?.address ?? 'Адрес', _client!.address),
+                  _buildInfoRow(AppLocalizations.of(context)?.address ?? 'Адрес', _client!.address ?? 'Не указан'),
                   _buildInfoRow(AppLocalizations.of(context)?.creationDate ?? 'Дата создания', dateFormat.format(_client!.createdAt)),
 
                   const SizedBox(height: 20),

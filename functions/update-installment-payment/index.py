@@ -41,7 +41,17 @@ def handler(event, context):
         
         # Parse request body
         try:
-            body = json.loads(event['body'])
+            raw_body = event.get('body', '{}')
+            
+            # Check if the body is Base64 encoded (common with Yandex Cloud Functions)
+            try:
+                # Try to decode as Base64 first
+                import base64
+                decoded_body = base64.b64decode(raw_body).decode('utf-8')
+                body = json.loads(decoded_body)
+            except Exception:
+                # If Base64 decoding fails, try parsing as plain JSON
+                body = json.loads(raw_body)
         except json.JSONDecodeError:
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Invalid JSON in request body'})}
         

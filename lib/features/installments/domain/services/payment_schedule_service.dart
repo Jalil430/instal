@@ -24,11 +24,25 @@ class PaymentScheduleService {
       ));
     }
 
-    // Generate monthly payments (payment numbers 1 to termMonths)
-    for (int i = 1; i <= installment.termMonths; i++) {
+    // Generate monthly payments
+    // Correct logic: if there's a down payment, it counts as part of the term
+    // So for 6-month term with down payment: 1 down payment + 5 monthly payments = 6 total
+    final monthlyPaymentsCount = installment.downPayment > 0 
+        ? installment.termMonths - 1 
+        : installment.termMonths;
+    
+    for (int i = 1; i <= monthlyPaymentsCount; i++) {
+      // Monthly payment 1: Always due on installment start date (monthsToAdd = 0)
+      // Monthly payment 2: Due 1 month after installment start date (monthsToAdd = 1)
+      // Down payment does NOT affect monthly payment timing
+      final monthsToAdd = i - 1;
+      final totalMonths = installment.installmentStartDate.month + monthsToAdd;
+      final year = installment.installmentStartDate.year + (totalMonths - 1) ~/ 12;
+      final month = (totalMonths - 1) % 12 + 1;
+      
       final dueDate = DateTime(
-        installment.installmentStartDate.year,
-        installment.installmentStartDate.month + i - 1,
+        year,
+        month,
         installment.installmentStartDate.day,
       );
 
@@ -47,11 +61,22 @@ class PaymentScheduleService {
     return payments;
   }
 
-  /// Calculate installment end date based on start date and term
-  static DateTime calculateInstallmentEndDate(DateTime startDate, int termMonths) {
+  /// Calculate installment end date based on start date, term, and down payment
+  static DateTime calculateInstallmentEndDate(
+    DateTime startDate, 
+    int termMonths, 
+    {double downPayment = 0}
+  ) {
+    // Calculate number of monthly payments
+    final monthlyPaymentsCount = downPayment > 0 ? termMonths - 1 : termMonths;
+    
+    // End date is the date of the last monthly payment
+    // Last monthly payment is due at: start + (monthlyPaymentsCount - 1) months
+    final monthsToAdd = monthlyPaymentsCount - 1;
+    
     return DateTime(
       startDate.year,
-      startDate.month + termMonths,
+      startDate.month + monthsToAdd,
       startDate.day,
     );
   }
@@ -99,7 +124,10 @@ class PaymentScheduleService {
 
   /// Calculate total expected payment amount
   static double calculateTotalExpectedAmount(Installment installment) {
-    return installment.downPayment + (installment.monthlyPayment * installment.termMonths);
+    final monthlyPaymentsCount = installment.downPayment > 0 
+        ? installment.termMonths - 1 
+        : installment.termMonths;
+    return installment.downPayment + (installment.monthlyPayment * monthlyPaymentsCount);
   }
 
   /// Check if payment amounts are consistent

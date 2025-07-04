@@ -3,22 +3,53 @@ import 'package:instal_app/features/analytics/domain/entities/analytics_data.dar
 import 'package:instal_app/features/installments/domain/entities/installment.dart';
 import 'package:instal_app/features/installments/domain/entities/installment_payment.dart';
 import 'package:instal_app/features/installments/domain/repositories/installment_repository.dart';
+import '../../../../core/api/cache_service.dart';
 
 class AnalyticsRepository {
   final InstallmentRepository _installmentRepository;
+  final CacheService _cache = CacheService();
 
   AnalyticsRepository(this._installmentRepository);
 
   Future<AnalyticsData> getAnalyticsData(String userId) async {
-    final installments = await _installmentRepository.getAllInstallments(userId);
-    final payments = await _installmentRepository.getAllPayments(userId);
+    // Check cache first
+    final cacheKey = CacheService.analyticsKey(userId);
+    final cachedAnalytics = _cache.get<AnalyticsData>(cacheKey);
+    if (cachedAnalytics != null) {
+      return cachedAnalytics;
+    }
 
-    return AnalyticsData(
+    // Load installments and all payments in parallel for better performance
+    final installmentsFuture = _installmentRepository.getAllInstallments(userId);
+    
+    // Instead of using getAllPayments (which is inefficient), 
+    // we'll collect payments from installments in parallel
+    final installments = await installmentsFuture;
+    
+    // Get all payments for all installments in parallel
+    final paymentsFutures = installments.map((installment) async {
+      try {
+        return await _installmentRepository.getPaymentsByInstallmentId(installment.id);
+      } catch (e) {
+        // If individual installment fails, return empty list to avoid breaking the entire analytics
+        return <InstallmentPayment>[];
+      }
+    });
+    
+    final allPaymentsLists = await Future.wait(paymentsFutures);
+    final payments = allPaymentsLists.expand((list) => list).toList();
+
+    final analyticsData = AnalyticsData(
       keyMetrics: _calculateKeyMetrics(installments, payments),
       totalSales: _calculateTotalSales(payments),
       installmentStatus: _calculateInstallmentStatus(installments, payments),
       installmentDetails: _calculateInstallmentDetails(installments, payments),
     );
+
+    // Cache the result for 1 minute (analytics change frequently)
+    _cache.set(cacheKey, analyticsData, duration: const Duration(minutes: 1));
+
+    return analyticsData;
   }
 
   KeyMetricsData _calculateKeyMetrics(List<Installment> installments, List<InstallmentPayment> payments) {

@@ -9,13 +9,13 @@ import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
-import '../data/datasources/installment_local_datasource.dart';
+import '../data/datasources/installment_remote_datasource.dart';
 import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
-import '../../clients/data/datasources/client_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../../clients/data/datasources/client_remote_datasource.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
+import '../../../core/api/cache_service.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
@@ -60,23 +60,52 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   }
 
   void _initializeRepositories() {
-    final db = DatabaseHelper.instance;
     _installmentRepository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(db),
+      InstallmentRemoteDataSourceImpl(),
     );
     _clientRepository = ClientRepositoryImpl(
-      ClientLocalDataSourceImpl(db),
+      ClientRemoteDataSourceImpl(),
     );
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+    
+    // Performance measurement
+    final stopwatch = Stopwatch()..start();
+    
     try {
       // TODO: Replace with actual user ID from auth
       const userId = 'user123';
       
+      // Get all installments first
       final installments = await _installmentRepository.getAllInstallments(userId);
-      final clients = await _clientRepository.getAllClients(userId);
+      
+      // Get all clients in parallel
+      final clientsFuture = _clientRepository.getAllClients(userId);
+      
+      // Get all payments for all installments in parallel (batch operation)
+      final paymentsMap = <String, List<InstallmentPayment>>{};
+      
+      // Instead of sequential calls, make parallel calls for all installments
+      final paymentsFutures = installments.map((installment) async {
+        try {
+          final payments = await _installmentRepository.getPaymentsByInstallmentId(installment.id);
+          return MapEntry(installment.id, payments);
+        } catch (e) {
+          // If individual installment fails, return empty payments to avoid breaking the entire list
+          return MapEntry(installment.id, <InstallmentPayment>[]);
+        }
+      });
+      
+      // Wait for all payments to load in parallel
+      final paymentsEntries = await Future.wait(paymentsFutures);
+      for (final entry in paymentsEntries) {
+        paymentsMap[entry.key] = entry.value;
+      }
+      
+      // Wait for clients to load
+      final clients = await clientsFuture;
       
       // Create client name map
       final clientNames = <String, String>{};
@@ -84,23 +113,70 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         clientNames[client.id] = client.fullName;
       }
       
-      // Load payments for each installment
-      final installmentPayments = <String, List<InstallmentPayment>>{};
-      for (final installment in installments) {
-        final payments = await _installmentRepository.getPaymentsByInstallmentId(installment.id);
-        installmentPayments[installment.id] = payments;
+      setState(() {
+        _installments = installments;
+        _clientNames = clientNames;
+        _installmentPayments = paymentsMap;
+        _isLoading = false;
+      });
+      
+      _fadeController.forward();
+      
+      // Performance logging
+      stopwatch.stop();
+      print('🚀 Installments loaded in ${stopwatch.elapsedMilliseconds}ms (${installments.length} installments, ${paymentsMap.values.fold(0, (sum, payments) => sum + payments.length)} payments)');
+      
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _refreshData() async {
+    // Refresh without showing loading spinner - use cached data while loading
+    try {
+      const userId = 'user123';
+      
+      // Get all installments first
+      final installments = await _installmentRepository.getAllInstallments(userId);
+      
+      // Get all clients in parallel
+      final clientsFuture = _clientRepository.getAllClients(userId);
+      
+      // Get all payments for all installments in parallel
+      final paymentsMap = <String, List<InstallmentPayment>>{};
+      
+      final paymentsFutures = installments.map((installment) async {
+        try {
+          final payments = await _installmentRepository.getPaymentsByInstallmentId(installment.id);
+          return MapEntry(installment.id, payments);
+        } catch (e) {
+          return MapEntry(installment.id, <InstallmentPayment>[]);
+        }
+      });
+      
+      final paymentsEntries = await Future.wait(paymentsFutures);
+      for (final entry in paymentsEntries) {
+        paymentsMap[entry.key] = entry.value;
+      }
+      
+      final clients = await clientsFuture;
+      
+      final clientNames = <String, String>{};
+      for (final client in clients) {
+        clientNames[client.id] = client.fullName;
       }
       
       setState(() {
         _installments = installments;
         _clientNames = clientNames;
-        _installmentPayments = installmentPayments;
-        _isLoading = false;
+        _installmentPayments = paymentsMap;
       });
-      
-      _fadeController.forward();
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
@@ -484,15 +560,45 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     );
     if (confirmed == true) {
       try {
+        // Clear cache to ensure fresh data after deletion
+        final cache = CacheService();
+        cache.remove(CacheService.installmentsKey('user123'));
+        cache.remove(CacheService.analyticsKey('user123'));
+        cache.remove(CacheService.installmentKey(installment.id));
+        cache.remove(CacheService.paymentsKey(installment.id));
+        
+        // Delete from server
         await _installmentRepository.deleteInstallment(installment.id);
+        
+        // Immediately remove from local state to update UI
+        setState(() {
+          _installments.removeWhere((i) => i.id == installment.id);
+          _installmentPayments.remove(installment.id);
+          _expandedStates.remove(installment.id);
+        });
+        
+        // Also reload data from server to ensure consistency
         _loadData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n?.installmentDeleted ?? 'Рассрочка удалена')),
-        );
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n?.installmentDeleted ?? 'Рассрочка удалена'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n?.installmentDeleteError(e) ?? 'Ошибка удаления: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n?.installmentDeleteError(e) ?? 'Ошибка удаления: $e'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+          // Reload data on error to ensure UI consistency
+          _loadData();
+        }
       }
     }
   }

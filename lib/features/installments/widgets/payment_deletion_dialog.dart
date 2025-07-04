@@ -7,8 +7,7 @@ import '../../../shared/widgets/custom_contextual_dialog.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
-import '../data/datasources/installment_local_datasource.dart';
-import '../../../shared/database/database_helper.dart';
+import '../data/datasources/installment_remote_datasource.dart';
 import '../../../shared/widgets/custom_button.dart';
 
 class PaymentDeletionDialog {
@@ -76,7 +75,7 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
   void initState() {
     super.initState();
     _repository = InstallmentRepositoryImpl(
-      InstallmentLocalDataSourceImpl(DatabaseHelper.instance),
+      InstallmentRemoteDataSourceImpl(),
     );
   }
 
@@ -127,7 +126,7 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
           decoration: BoxDecoration(
             color: AppTheme.errorColor.withOpacity(0.05),
             border: Border.all(color: AppTheme.errorColor.withOpacity(0.2)),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             l10n?.cancelPaymentQuestion ?? 'Отменить оплату этого платежа?',
@@ -150,7 +149,7 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: Text(
@@ -167,12 +166,33 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
             Expanded(
               flex: 2,
               child: _isLoading
-                  ? SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ? Container(
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Обработка...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : CustomButton(
@@ -195,21 +215,32 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
   }
 
   Future<void> _handleDeletion() async {
+    if (_isLoading) return; // Prevent multiple calls
+    
     setState(() => _isLoading = true);
 
     try {
+      // Add a small delay to ensure UI updates before the API call
+      await Future.delayed(const Duration(milliseconds: 50));
+      
       final updatedPayment = widget.payment.copyWith(
         isPaid: false,
         paidDate: null,
       );
       
       await _repository.updatePayment(updatedPayment);
-      Navigator.of(context).pop(true); // Return true to indicate success
-    } catch (e) {
-      setState(() => _isLoading = false);
+      
       if (mounted) {
+        Navigator.of(context).pop(true); // Return true to indicate success
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)?.error ?? 'Ошибка'}: $e')),
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)?.error ?? 'Ошибка'}: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }

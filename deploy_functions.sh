@@ -42,14 +42,35 @@ if [ "$1" ]; then
     echo "Deploying single function: $1"
     deploy_function "$1"
 else
-    # Deploy all fixed installment functions
-    echo "Deploying fixed installment functions..."
+    # Deploy all functions
+    echo "Deploying all functions..."
+    
+    # Client functions
+    echo "Deploying client functions..."
+    deploy_function "create-client"
+    deploy_function "get-client"
+    deploy_function "update-client"
+    deploy_function "delete-client"
+    deploy_function "list-clients"
+    deploy_function "search-clients"
+    
+    # Installment functions
+    echo "Deploying installment functions..."
     deploy_function "create-installment"
     deploy_function "get-installment"
+    deploy_function "update-installment-payment"
     deploy_function "delete-installment"
     deploy_function "list-installments"
     deploy_function "search-installments"
-    deploy_function "update-installment-payment"
+    
+    # Investor functions
+    echo "Deploying investor functions..."
+    deploy_function "create-investor"
+    deploy_function "get-investor"
+    deploy_function "update-investor"
+    deploy_function "delete-investor"
+    deploy_function "list-investors"
+    deploy_function "search-investors"
 fi
 
 echo "Deployment complete!" 

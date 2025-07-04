@@ -146,7 +146,7 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                         onEnter: (_) => setState(() => _isAddressHovered = true),
                         onExit: (_) => setState(() => _isAddressHovered = false),
                         child: Tooltip(
-                          message: widget.client.address,
+                          message: widget.client.address ?? 'Не указан',
                           waitDuration: const Duration(milliseconds: 500),
                           showDuration: const Duration(seconds: 3),
                           decoration: BoxDecoration(
@@ -159,10 +159,11 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                           ),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
+                              final address = widget.client.address ?? 'Не указан';
                               // Calculate how many characters can fit
                               final TextPainter textPainter = TextPainter(
                                 text: TextSpan(
-                                  text: widget.client.address,
+                                  text: address,
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontSize: 14, 
                                     fontWeight: FontWeight.w400,
@@ -174,7 +175,7 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                               
                               // Always show one line with ellipsis
                               return Text(
-                                widget.client.address,
+                                address,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,

@@ -40,16 +40,20 @@ class SecurityValidator:
                 'type': str, 'min_length': 1, 'max_length': 50, 'pattern': r'^[a-zA-Z0-9_-]+$'
             },
             'full_name': {
-                'type': str, 'min_length': 1, 'max_length': 100, 'pattern': r'^[a-zA-ZÀ-ÿ\s\'-]+$'
+                'type': str, 'min_length': 1, 'max_length': 100
+                # No pattern restriction - allow any Unicode characters
             },
             'contact_number': {
-                'type': str, 'min_length': 10, 'max_length': 20, 'pattern': r'^\+?[1-9]\d{1,14}$'
+                'type': str, 'min_length': 1, 'max_length': 50
+                # No pattern restriction - allow any format
             },
             'passport_number': {
-                'type': str, 'min_length': 6, 'max_length': 20, 'pattern': r'^[A-Z0-9]+$'
+                'type': str, 'min_length': 1, 'max_length': 50
+                # No pattern restriction - allow any format/script
             },
             'address': {
-                'type': str, 'min_length': 0, 'max_length': 255, 'pattern': r'^[a-zA-ZÀ-ÿ0-9\s\.,\'-]*$'
+                'type': str, 'min_length': 0, 'max_length': 500
+                # No pattern restriction - allow any Unicode characters
             }
         }
         
@@ -75,15 +79,13 @@ class SecurityValidator:
                 errors.append(f'{field} must be no more than {rules["max_length"]} characters')
                 continue
             
-            if rules['pattern'] and not re.match(rules['pattern'], value):
+            # Pattern validation (only if pattern is defined)
+            if rules.get('pattern') and not re.match(rules['pattern'], value):
                 errors.append(f'{field} contains invalid characters')
                 continue
             
+            # Sanitize (trim whitespace only, preserve Unicode characters)
             sanitized_value = value.strip()
-            if field == 'passport_number':
-                sanitized_value = sanitized_value.upper()
-            elif field == 'contact_number':
-                sanitized_value = re.sub(r'[^\d+]', '', sanitized_value)
             
             sanitized[field] = sanitized_value
         
@@ -132,7 +134,17 @@ def handler(event, context):
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': validation_error})}
         
         try:
-            body = json.loads(event.get('body', '{}'))
+            raw_body = event.get('body', '{}')
+            
+            # Check if the body is Base64 encoded (common with Yandex Cloud Functions)
+            try:
+                # Try to decode as Base64 first
+                import base64
+                decoded_body = base64.b64decode(raw_body).decode('utf-8')
+                body = json.loads(decoded_body)
+            except Exception:
+                # If Base64 decoding fails, try parsing as plain JSON
+                body = json.loads(raw_body)
         except json.JSONDecodeError:
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Invalid JSON in request body'})}
         
@@ -168,11 +180,13 @@ def handler(event, context):
                 if not result_sets[0].rows:
                     return {'statusCode': 404, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Client not found'})}
 
-                # Build a simple UPDATE query for the provided field(s)
+                # Build UPDATE query for the provided field(s)
                 if not sanitized_data:
                     return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'No fields to update'})}
 
-                # For now, let's handle just full_name to test
+                # Handle each field separately with individual queries for simplicity
+                current_time = datetime.utcnow()
+                
                 if 'full_name' in sanitized_data:
                     update_query = """
                     DECLARE $client_id AS Utf8;
@@ -182,22 +196,79 @@ def handler(event, context):
                     SET full_name = $full_name, updated_at = $updated_at 
                     WHERE id = $client_id;
                     """
-                    
                     prepared_update = session.prepare(update_query)
                     session.transaction().execute(
                         prepared_update,
                         {
                             '$client_id': sanitized_id,
                             '$full_name': sanitized_data['full_name'],
-                            '$updated_at': int(datetime.utcnow().timestamp() * 1000000)
+                            '$updated_at': current_time
                         },
                         commit_tx=True
                     )
-                    
-                    logger.info(f"Client updated successfully: {sanitized_id}")
-                    return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'message': 'Client updated successfully'})}
-                else:
-                    return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'No supported fields to update'})}
+                
+                if 'contact_number' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $contact_number AS Utf8;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET contact_number = $contact_number, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$contact_number': sanitized_data['contact_number'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+                
+                if 'passport_number' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $passport_number AS Utf8;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET passport_number = $passport_number, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$passport_number': sanitized_data['passport_number'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+                
+                if 'address' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $address AS Utf8?;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET address = $address, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$address': sanitized_data['address'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+                
+                logger.info(f"Client updated successfully: {sanitized_id}")
+                return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'message': 'Client updated successfully'})}
 
             result = pool.retry_operation_sync(update_client_in_db)
             driver.stop()
