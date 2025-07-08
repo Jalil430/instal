@@ -21,12 +21,12 @@ class KeyMetricsData {
   final int newInstallments;
   final double? newInstallmentsChange;
   final List<FlSpot> newInstallmentsChartData;
-  final double outstandingPortfolio;
-  final double? outstandingPortfolioChange;
-  final List<FlSpot> outstandingPortfolioChartData;
-  final double overdueDebt;
-  final double? overdueDebtChange;
-  final List<FlSpot> overdueDebtChartData;
+  final double collectionRate;
+  final double? collectionRateChange;
+  final List<FlSpot> collectionRateChartData;
+  final double portfolioGrowth;
+  final double? portfolioGrowthChange;
+  final List<FlSpot> portfolioGrowthChartData;
 
   KeyMetricsData({
     required this.totalRevenue,
@@ -35,12 +35,12 @@ class KeyMetricsData {
     required this.newInstallments,
     this.newInstallmentsChange,
     required this.newInstallmentsChartData,
-    required this.outstandingPortfolio,
-    this.outstandingPortfolioChange,
-    required this.outstandingPortfolioChartData,
-    required this.overdueDebt,
-    this.overdueDebtChange,
-    required this.overdueDebtChartData,
+    required this.collectionRate,
+    this.collectionRateChange,
+    required this.collectionRateChartData,
+    required this.portfolioGrowth,
+    this.portfolioGrowthChange,
+    required this.portfolioGrowthChartData,
   });
 }
 
@@ -72,18 +72,20 @@ class InstallmentStatusData {
 
 class InstallmentDetailsData {
   final int activeInstallments;
-  final int overdueInstallments;
+  final double totalPortfolio;
+  final double totalOverdue;
   final double averageInstallmentValue;
   final double averageTerm;
-  final String topProduct;
+  final double totalInstallmentValue;
   final double upcomingRevenue30Days;
 
   InstallmentDetailsData({
     required this.activeInstallments,
-    required this.overdueInstallments,
+    required this.totalPortfolio,
+    required this.totalOverdue,
     required this.averageInstallmentValue,
     required this.averageTerm,
-    required this.topProduct,
+    required this.totalInstallmentValue,
     required this.upcomingRevenue30Days,
   });
 } 

@@ -407,14 +407,16 @@ class AppLocalizations {
   // ===== Analytics =====
   String get totalRevenue => locale.languageCode == 'ru' ? 'Общая выручка' : 'Total Revenue';
   String get newInstallments => locale.languageCode == 'ru' ? 'Новые рассрочки' : 'New Installments';
-  String get outstandingPortfolio => locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
-  String get overdueDebt => locale.languageCode == 'ru' ? 'Сумма просрочки' : 'Overdue Debt';
-  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Платежи за неделю' : 'Payments this Week';
+  String get collectionRate => locale.languageCode == 'ru' ? 'Эффективность сборов' : 'Collection Rate';
+  String get portfolioGrowth => locale.languageCode == 'ru' ? 'Рост портфеля' : 'Portfolio Growth';
+  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Выручка за неделю' : 'Revenue this Week';
   String get installmentStatus => locale.languageCode == 'ru' ? 'Статус рассрочек' : 'Installment Status';
   String get activeInstallments => locale.languageCode == 'ru' ? 'Активные рассрочки' : 'Active Installments';
-  String get overdueInstallments => locale.languageCode == 'ru' ? 'Просроченные рассрочки' : 'Overdue Installments';
+  String get totalPortfolio => locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
+  String get totalOverdue => locale.languageCode == 'ru' ? 'Общая просрочка' : 'Total Overdue';
+  String get totalInstallmentValue => locale.languageCode == 'ru' ? 'Общий объем бизнеса' : 'Total Business Volume';
   String get averagePerDay => locale.languageCode == 'ru' ? 'В среднем за день' : 'Average per day';
-  String get vsPreview28days => locale.languageCode == 'ru' ? 'за предыдущие 28 дней' : 'vs. previous 28 days';
+  String get vsPreview28days => locale.languageCode == 'ru' ? 'с предыдущих 28 дней' : 'from previous 28 days';
   String get portfolioDetails => locale.languageCode == 'ru' ? 'Детали портфеля' : 'Portfolio Details';
   String get averageInstallmentValue => locale.languageCode == 'ru' ? 'Средний чек' : 'Average Installment Value';
   String get averageTerm => locale.languageCode == 'ru' ? 'Средний срок' : 'Average Term';

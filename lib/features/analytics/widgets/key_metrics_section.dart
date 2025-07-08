@@ -59,10 +59,10 @@ class KeyMetricsSection extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: MetricItem(
-                      title: l10n.outstandingPortfolio,
-                      value: currencyFormatter.format(data.outstandingPortfolio),
-                      change: data.outstandingPortfolioChange,
-                      chartData: data.outstandingPortfolioChartData,
+                      title: l10n.collectionRate,
+                      value: '${data.collectionRate.toStringAsFixed(1)}%',
+                      change: data.collectionRateChange,
+                      chartData: data.collectionRateChartData,
                     ),
                   ),
                 ),
@@ -71,11 +71,10 @@ class KeyMetricsSection extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: MetricItem(
-                      title: l10n.overdueDebt,
-                      value: currencyFormatter.format(data.overdueDebt),
-                      change: data.overdueDebtChange,
-                      higherIsBetter: false,
-                      chartData: data.overdueDebtChartData,
+                      title: l10n.portfolioGrowth,
+                      value: currencyFormatter.format(data.portfolioGrowth),
+                      change: data.portfolioGrowthChange,
+                      chartData: data.portfolioGrowthChartData,
                     ),
                   ),
                 ),

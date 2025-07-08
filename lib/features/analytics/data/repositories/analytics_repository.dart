@@ -71,21 +71,29 @@ class AnalyticsRepository {
     final previousNewInstallments = installments.where((i) => i.createdAt.isAfter(previous28DaysStart) && i.createdAt.isBefore(last28DaysStart)).length;
     final newInstallmentsChange = previousNewInstallments == 0 ? null : ((currentNewInstallments - previousNewInstallments) / previousNewInstallments.toDouble()) * 100;
 
-    // Snapshot metrics (approximated for change)
-    final outstandingPortfolio = payments.where((p) => !p.isPaid).fold<double>(0, (sum, p) => sum + p.expectedAmount);
-    final overdueDebt = payments.where((p) => p.isOverdue).fold<double>(0, (sum, p) => sum + p.expectedAmount);
-
-    final paidInLast28Days = payments.where((p) => p.isPaid && p.paidDate!.isAfter(last28DaysStart)).fold<double>(0, (sum, p) => sum + p.expectedAmount);
-    final newInstallmentValueInLast28Days = installments.where((i) => i.createdAt.isAfter(last28DaysStart)).fold<double>(0, (sum, i) => sum + i.installmentPrice);
+    // Collection Rate - percentage of due payments that were collected
+    final currentDuePayments = payments.where((p) => p.dueDate.isAfter(last28DaysStart) && p.dueDate.isBefore(now)).toList();
+    final currentCollectedFromDue = currentDuePayments.where((p) => p.isPaid).fold<double>(0, (sum, p) => sum + p.expectedAmount);
+    final currentTotalDue = currentDuePayments.fold<double>(0, (sum, p) => sum + p.expectedAmount);
+    final currentCollectionRate = currentTotalDue > 0 ? (currentCollectedFromDue / currentTotalDue) * 100 : 0.0;
     
-    final outstandingPortfolio28DaysAgo = outstandingPortfolio + paidInLast28Days - newInstallmentValueInLast28Days;
-    final portfolioChange = outstandingPortfolio28DaysAgo == 0 ? null : ((outstandingPortfolio - outstandingPortfolio28DaysAgo) / outstandingPortfolio28DaysAgo) * 100;
-    
-    // For overdue debt, the approximation is more complex. Let's simplify and show the change in new overdue debt.
-    final newOverdueLast28 = payments.where((p) => !p.isPaid && p.dueDate.isAfter(last28DaysStart)).fold<double>(0, (sum, p) => sum + p.expectedAmount);
-    final newOverduePrevious28 = payments.where((p) => !p.isPaid && p.dueDate.isAfter(previous28DaysStart) && p.dueDate.isBefore(last28DaysStart)).fold<double>(0, (sum, p) => sum + p.expectedAmount);
-    final overdueDebtChange = newOverduePrevious28 == 0 ? null : ((newOverdueLast28 - newOverduePrevious28) / newOverduePrevious28) * 100;
+    final previousDuePayments = payments.where((p) => p.dueDate.isAfter(previous28DaysStart) && p.dueDate.isBefore(last28DaysStart)).toList();
+    final previousCollectedFromDue = previousDuePayments.where((p) => p.isPaid).fold<double>(0, (sum, p) => sum + p.expectedAmount);
+    final previousTotalDue = previousDuePayments.fold<double>(0, (sum, p) => sum + p.expectedAmount);
+    final previousCollectionRate = previousTotalDue > 0 ? (previousCollectedFromDue / previousTotalDue) * 100 : 0.0;
+    final collectionRateChange = previousCollectionRate > 0 ? ((currentCollectionRate - previousCollectionRate) / previousCollectionRate) * 100 : null;
 
+    // Portfolio Growth - new business value minus collections in the period
+    final currentNewBusinessValue = installments
+        .where((i) => i.createdAt.isAfter(last28DaysStart))
+        .fold<double>(0, (sum, i) => sum + i.installmentPrice);
+    final currentPortfolioGrowth = currentNewBusinessValue - currentRevenue;
+    
+    final previousNewBusinessValue = installments
+        .where((i) => i.createdAt.isAfter(previous28DaysStart) && i.createdAt.isBefore(last28DaysStart))
+        .fold<double>(0, (sum, i) => sum + i.installmentPrice);
+    final previousPortfolioGrowth = previousNewBusinessValue - previousRevenue;
+    final portfolioGrowthChange = previousPortfolioGrowth != 0 ? ((currentPortfolioGrowth - previousPortfolioGrowth) / previousPortfolioGrowth.abs()) * 100 : null;
 
     return KeyMetricsData(
       totalRevenue: currentRevenue,
@@ -94,12 +102,12 @@ class AnalyticsRepository {
       newInstallments: currentNewInstallments,
       newInstallmentsChange: newInstallmentsChange,
       newInstallmentsChartData: _generateChartData(installments.map((i) => MapEntry(i.createdAt, 1.0)).toList()),
-      outstandingPortfolio: outstandingPortfolio,
-      outstandingPortfolioChange: portfolioChange,
-      outstandingPortfolioChartData: _generateChartData(installments.map((i) => MapEntry(i.createdAt, i.installmentPrice)).toList()),
-      overdueDebt: overdueDebt,
-      overdueDebtChange: overdueDebtChange,
-      overdueDebtChartData: _generateChartData(payments.where((p) => p.isOverdue).map((p) => MapEntry(p.dueDate, p.expectedAmount)).toList()),
+      collectionRate: currentCollectionRate,
+      collectionRateChange: collectionRateChange,
+      collectionRateChartData: _generateCollectionRateChartData(payments),
+      portfolioGrowth: currentPortfolioGrowth,
+      portfolioGrowthChange: portfolioGrowthChange,
+      portfolioGrowthChartData: _generatePortfolioGrowthChartData(installments, payments),
     );
   }
 
@@ -127,6 +135,72 @@ class AnalyticsRepository {
       // Normalize to a 0-10 scale for the chart
       final normalizedValue = maxValue == 0 ? 0.0 : (value / maxValue) * 10;
       return FlSpot(index.toDouble(), normalizedValue);
+    });
+  }
+
+  List<FlSpot> _generateCollectionRateChartData(List<InstallmentPayment> payments) {
+    final now = DateTime.now();
+    final last28DaysStart = now.subtract(const Duration(days: 28));
+    
+    return List.generate(28, (index) {
+      final dayDate = last28DaysStart.add(Duration(days: index));
+      final nextDay = dayDate.add(const Duration(days: 1));
+      
+      // Get payments due on this specific day
+      final dueOnDay = payments.where((p) => 
+        p.dueDate.isAfter(dayDate.subtract(const Duration(days: 1))) && 
+        p.dueDate.isBefore(nextDay)
+      ).toList();
+      
+      if (dueOnDay.isEmpty) {
+        return FlSpot(index.toDouble(), 0.0); // No payments due = 0 on chart
+      }
+      
+      final totalDue = dueOnDay.fold<double>(0, (sum, p) => sum + p.expectedAmount);
+      final collected = dueOnDay.where((p) => p.isPaid).fold<double>(0, (sum, p) => sum + p.expectedAmount);
+      final collectionRate = totalDue > 0 ? (collected / totalDue) * 100 : 0.0;
+      
+      // Normalize to 0-10 scale (collection rate is already 0-100%)
+      final normalizedValue = collectionRate / 10; // 100% = 10, 50% = 5, etc.
+      return FlSpot(index.toDouble(), normalizedValue.clamp(0.0, 10.0));
+    });
+  }
+
+  List<FlSpot> _generatePortfolioGrowthChartData(List<Installment> installments, List<InstallmentPayment> payments) {
+    final now = DateTime.now();
+    final last28DaysStart = now.subtract(const Duration(days: 28));
+    final dailyGrowth = List.filled(28, 0.0);
+
+    // Add new business value for each day
+    for (final installment in installments) {
+      if (installment.createdAt.isAfter(last28DaysStart)) {
+        final dayIndex = 27 - now.difference(installment.createdAt).inDays;
+        if (dayIndex >= 0 && dayIndex < 28) {
+          dailyGrowth[dayIndex] += installment.installmentPrice;
+        }
+      }
+    }
+
+    // Subtract collections for each day
+    for (final payment in payments) {
+      if (payment.isPaid && payment.paidDate != null && payment.paidDate!.isAfter(last28DaysStart)) {
+        final dayIndex = 27 - now.difference(payment.paidDate!).inDays;
+        if (dayIndex >= 0 && dayIndex < 28) {
+          dailyGrowth[dayIndex] -= payment.expectedAmount;
+        }
+      }
+    }
+
+    // Find the maximum absolute value for normalization (same as other charts)
+    final maxAbsValue = dailyGrowth.fold<double>(0.0, (max, val) => val.abs() > max ? val.abs() : max);
+
+    return List.generate(28, (index) {
+      final value = dailyGrowth[index];
+      if (maxAbsValue == 0) return FlSpot(index.toDouble(), 0.0);
+      
+      // Normalize to 0-10 scale like other charts, using absolute value
+      final normalizedValue = (value.abs() / maxAbsValue) * 10;
+      return FlSpot(index.toDouble(), normalizedValue.clamp(0.0, 10.0));
     });
   }
 
@@ -209,9 +283,11 @@ class AnalyticsRepository {
         .where((i) => payments.any((p) => p.installmentId == i.id && !p.isPaid))
         .length;
 
-    final overdueInstallments = installments
-        .where((i) => payments.any((p) => p.installmentId == i.id && p.isOverdue))
-        .length;
+    // Total portfolio - all unpaid payments
+    final totalPortfolio = payments.where((p) => !p.isPaid).fold<double>(0, (sum, p) => sum + p.expectedAmount);
+
+    // Total overdue - all overdue payments
+    final totalOverdue = payments.where((p) => p.isOverdue).fold<double>(0, (sum, p) => sum + p.expectedAmount);
 
     final averageInstallmentValue = installments.isEmpty
         ? 0.0
@@ -221,13 +297,8 @@ class AnalyticsRepository {
         ? 0.0
         : installments.fold<double>(0, (sum, i) => sum + i.termMonths) / installments.length;
 
-    final productCounts = <String, int>{};
-    for (final i in installments) {
-      productCounts[i.productName] = (productCounts[i.productName] ?? 0) + 1;
-    }
-    final topProduct = productCounts.isEmpty
-        ? ''
-        : productCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+    // Total installment value - sum of all installment prices (total business volume)
+    final totalInstallmentValue = installments.fold<double>(0, (sum, i) => sum + i.installmentPrice);
         
     final upcomingRevenue30Days = payments
         .where((p) => !p.isPaid && p.dueDate.isAfter(DateTime.now()) && p.dueDate.isBefore(DateTime.now().add(const Duration(days: 30))))
@@ -235,10 +306,11 @@ class AnalyticsRepository {
 
     return InstallmentDetailsData(
       activeInstallments: activeInstallments,
-      overdueInstallments: overdueInstallments,
+      totalPortfolio: totalPortfolio,
+      totalOverdue: totalOverdue,
       averageInstallmentValue: averageInstallmentValue.toDouble(),
       averageTerm: averageTerm.toDouble(),
-      topProduct: topProduct,
+      totalInstallmentValue: totalInstallmentValue,
       upcomingRevenue30Days: upcomingRevenue30Days,
     );
   }
