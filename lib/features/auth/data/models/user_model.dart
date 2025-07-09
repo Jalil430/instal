@@ -15,7 +15,7 @@ class UserModel extends User {
       id: map['user_id'] ?? map['id'] ?? '',
       email: map['email'] ?? '',
       fullName: map['full_name'] ?? '',
-      phone: map['phone'],
+      phone: map['phone'] ?? '',
       createdAt: _parseDateTime(map['created_at']),
       updatedAt: _parseDateTime(map['updated_at']),
     );

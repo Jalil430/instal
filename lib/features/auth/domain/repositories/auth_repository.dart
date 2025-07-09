@@ -37,6 +37,16 @@ abstract class AuthRepository {
   /// Get current user if authenticated
   Future<User?> getCurrentUser();
 
+  /// Update user information (full name and phone only)
+  Future<User> updateUser({
+    required String userId,
+    String? fullName,
+    String? phone,
+  });
+
+  /// Get fresh user data from server
+  Future<User> getCurrentUserFromServer();
+
   /// Stream of authentication state changes
   Stream<AuthState> get authStateStream;
 } 

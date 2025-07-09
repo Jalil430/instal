@@ -2,3 +2,6 @@ auth-register=d4e4t4mv875gkg24at8a
 auth-login=d4e8jcns4qe2bkvh7rvv
 auth-refresh=d4evah37mne0rubchbl8
 auth-verify=d4ebrg3ucrog7lqe4egr
+auth-update=d4e5tijqfm1q7ikuj0c5
+auth-get-user=d4eni47g77jfmhonbhde
+ 

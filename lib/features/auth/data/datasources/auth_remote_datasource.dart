@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../../../core/api/api_client.dart';
 import '../../domain/entities/auth_state.dart';
+import '../../domain/entities/user.dart';
 import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
@@ -19,6 +20,14 @@ abstract class AuthRemoteDataSource {
   Future<AuthState> refreshToken(String refreshToken);
 
   Future<bool> verifyToken(String accessToken);
+
+  Future<User> updateUser({
+    required String userId,
+    String? fullName,
+    String? phone,
+  });
+
+  Future<User> getCurrentUserFromServer();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -92,6 +101,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (e) {
       return false;
     }
+  }
+
+  @override
+  Future<User> updateUser({
+    required String userId,
+    String? fullName,
+    String? phone,
+  }) async {
+    final requestBody = <String, dynamic>{};
+    
+    if (fullName != null) requestBody['full_name'] = fullName;
+    if (phone != null) requestBody['phone'] = phone;
+
+    final response = await ApiClient.put('/auth/user', requestBody);
+    ApiClient.handleResponse(response);
+
+    final responseData = json.decode(response.body);
+    return UserModel.fromMap(responseData);
+  }
+
+  @override
+  Future<User> getCurrentUserFromServer() async {
+    final response = await ApiClient.get('/auth/user');
+    ApiClient.handleResponse(response);
+
+    final responseData = json.decode(response.body);
+    return UserModel.fromMap(responseData);
   }
 
   AuthState _parseAuthResponse(Map<String, dynamic> responseData) {

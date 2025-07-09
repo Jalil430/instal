@@ -150,6 +150,41 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<User> updateUser({
+    required String userId,
+    String? fullName,
+    String? phone,
+  }) async {
+    try {
+      final updatedUser = await remoteDataSource.updateUser(
+        userId: userId,
+        fullName: fullName,
+        phone: phone,
+      );
+
+      // Update the current auth state with the new user info
+      final currentAuthState = await getCurrentAuthState();
+      if (currentAuthState.isAuthenticated) {
+        final updatedAuthState = currentAuthState.copyWith(user: updatedUser);
+        await saveAuthState(updatedAuthState);
+      }
+
+      return updatedUser;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<User> getCurrentUserFromServer() async {
+    try {
+      return await remoteDataSource.getCurrentUserFromServer();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
   Stream<AuthState> get authStateStream => _authStateController.stream;
 
   Future<void> _handleSuccessfulAuth(AuthState authState) async {

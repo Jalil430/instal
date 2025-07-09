@@ -5,6 +5,7 @@ import '../../domain/usecases/login_user.dart';
 import '../../domain/usecases/register_user.dart';
 import '../../domain/usecases/logout_user.dart';
 import '../../domain/usecases/get_current_user.dart';
+import '../../domain/usecases/update_user.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/datasources/auth_local_datasource.dart';
@@ -14,6 +15,7 @@ class AuthService {
   final RegisterUser _registerUser;
   final LogoutUser _logoutUser;
   final GetCurrentUser _getCurrentUser;
+  final UpdateUser _updateUser;
   final AuthRepositoryImpl _repository;
 
   AuthService({
@@ -21,11 +23,13 @@ class AuthService {
     required RegisterUser registerUser,
     required LogoutUser logoutUser,
     required GetCurrentUser getCurrentUser,
+    required UpdateUser updateUser,
     required AuthRepositoryImpl repository,
   })  : _loginUser = loginUser,
         _registerUser = registerUser,
         _logoutUser = logoutUser,
         _getCurrentUser = getCurrentUser,
+        _updateUser = updateUser,
         _repository = repository;
 
   Future<AuthState> login({
@@ -55,6 +59,22 @@ class AuthService {
 
   Future<User?> getCurrentUser() async {
     return await _getCurrentUser();
+  }
+
+  Future<User> getCurrentUserFromServer() async {
+    return await _repository.getCurrentUserFromServer();
+  }
+
+  Future<User> updateUser({
+    required String userId,
+    String? fullName,
+    String? phone,
+  }) async {
+    return await _updateUser(
+      userId: userId,
+      fullName: fullName,
+      phone: phone,
+    );
   }
 
   Future<AuthState> getCurrentAuthState() async {
@@ -110,6 +130,7 @@ class AuthServiceFactory {
     final registerUser = RegisterUser(repository);
     final logoutUser = LogoutUser(repository);
     final getCurrentUser = GetCurrentUser(repository);
+    final updateUser = UpdateUser(repository);
 
     // Create and return auth service
     return AuthService(
@@ -117,6 +138,7 @@ class AuthServiceFactory {
       registerUser: registerUser,
       logoutUser: logoutUser,
       getCurrentUser: getCurrentUser,
+      updateUser: updateUser,
       repository: repository,
     );
   }

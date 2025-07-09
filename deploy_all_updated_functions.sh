@@ -59,34 +59,8 @@ echo "   📋 Installment Functions (6)"
 echo "   🔍 Search Functions (3)"
 
 echo -e "\n${BLUE}🔐 Deploying Authentication Functions...${NC}"
-deploy_function "auth-register" "functions/auth-register/" || exit 1
-deploy_function "auth-login" "functions/auth-login/" || exit 1
-deploy_function "auth-refresh" "functions/auth-refresh/" || exit 1
-deploy_function "auth-verify" "functions/auth-verify/" || exit 1
-
-echo -e "\n${BLUE}👤 Deploying Client Functions...${NC}"
-deploy_function "create-client" "functions/create-client/" || exit 1
-deploy_function "list-clients" "functions/list-clients/" || exit 1
-deploy_function "get-client" "functions/get-client/" || exit 1
-deploy_function "update-client" "functions/update-client/" || exit 1
-deploy_function "delete-client" "functions/delete-client/" || exit 1
-deploy_function "search-clients" "functions/search-clients/" || exit 1
-
-echo -e "\n${BLUE}💰 Deploying Investor Functions...${NC}"
-deploy_function "create-investor" "functions/create-investor/" || exit 1
-deploy_function "list-investors" "functions/list-investors/" || exit 1
-deploy_function "get-investor" "functions/get-investor/" || exit 1
-deploy_function "update-investor" "functions/update-investor/" || exit 1
-deploy_function "delete-investor" "functions/delete-investor/" || exit 1
-deploy_function "search-investors" "functions/search-investors/" || exit 1
-
-echo -e "\n${BLUE}📋 Deploying Installment Functions...${NC}"
-deploy_function "create-installment" "functions/create-installment/" || exit 1
-deploy_function "list-installments" "functions/list-installments/" || exit 1
-deploy_function "get-installment" "functions/get-installment/" || exit 1
-deploy_function "delete-installment" "functions/delete-installment/" || exit 1
-deploy_function "search-installments" "functions/search-installments/" || exit 1
-deploy_function "update-installment-payment" "functions/update-installment-payment/" || exit 1
+deploy_function "auth-update" "functions/auth-update/" || exit 1
+deploy_function "auth-get-user" "functions/auth-get-user/" || exit 1
 
 echo -e "\n${GREEN}🎉 All functions deployed successfully!${NC}"
 

@@ -20,14 +20,17 @@ class ApiClient {
     final authState = await _authLocalDataSource.getAuthState();
     
     // Check if this is an auth endpoint
-    final isAuthEndpoint = endpoint?.startsWith('/auth/') ?? false;
+    final isApiKeyEndpoint = endpoint == '/auth/login' ||
+        endpoint == '/auth/register' ||
+        endpoint == '/auth/refresh' ||
+        endpoint == '/auth/verify';
     
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Connection': 'keep-alive',
     };
     
-    if (isAuthEndpoint) {
+    if (isApiKeyEndpoint) {
       // Auth endpoints use API key authentication
       headers['X-API-Key'] = _apiKey;
     } else {

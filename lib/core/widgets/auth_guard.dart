@@ -17,14 +17,18 @@ class _AuthGuardState extends State<AuthGuard> {
   StreamSubscription? _authSubscription;
   bool _isChecking = true;
   bool _isAuthenticated = false;
+  bool _isServiceInitialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _authService = AuthServiceProvider.of(context);
-    _subscribeToAuthStream();
+    if (!_isServiceInitialized) {
+      _authService = AuthServiceProvider.of(context);
+      _subscribeToAuthStream();
       _checkAuthentication();
+      _isServiceInitialized = true;
     }
+  }
 
   void _subscribeToAuthStream() {
     _authSubscription?.cancel();

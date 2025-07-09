@@ -226,6 +226,27 @@ paths:
         function_id: d4ebrg3ucrog7lqe4egr
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
+  /auth/user:
+    get:
+      summary: Get current user information
+      operationId: auth-get-user
+      security:
+        - bearerAuth: []
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eni47g77jfmhonbhde
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    put:
+      summary: Update user profile
+      operationId: auth-update
+      security:
+        - bearerAuth: []
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e5tijqfm1q7ikuj0c5
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
 components:
   securitySchemes:
     apiKey:

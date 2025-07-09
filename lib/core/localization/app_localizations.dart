@@ -372,6 +372,23 @@ class AppLocalizations {
   String get localDatabase =>
       locale.languageCode == 'ru' ? 'Локальная база данных' : 'Local Database';
 
+  // ===== Profile & Authentication =====
+  String get profile => locale.languageCode == 'ru' ? 'Профиль' : 'Profile';
+  String get editProfile => locale.languageCode == 'ru' ? 'Редактировать профиль' : 'Edit Profile';
+  String get logout => locale.languageCode == 'ru' ? 'Выйти' : 'Logout';
+  String get profileUpdated => locale.languageCode == 'ru' ? 'Профиль успешно обновлен' : 'Profile updated successfully';
+  String get email => locale.languageCode == 'ru' ? 'Email' : 'Email';
+  String get enterEmail => locale.languageCode == 'ru' ? 'Введите email' : 'Enter your email';
+  String get emailRequired => locale.languageCode == 'ru' ? 'Email обязателен' : 'Email is required';
+  String get emailInvalid => locale.languageCode == 'ru' ? 'Введите корректный email' : 'Please enter a valid email';
+  String get phone => locale.languageCode == 'ru' ? 'Телефон' : 'Phone';
+  String get enterPhone => locale.languageCode == 'ru' ? 'Введите номер телефона' : 'Enter your phone number';
+  String get phoneInvalid => locale.languageCode == 'ru' ? 'Введите корректный номер телефона' : 'Please enter a valid phone number';
+  String get fullNameRequired => locale.languageCode == 'ru' ? 'Полное имя обязательно' : 'Full name is required';
+  String get fullNameTooShort => locale.languageCode == 'ru' ? 'Полное имя должно содержать минимум 2 символа' : 'Full name must be at least 2 characters';
+  String get saving => locale.languageCode == 'ru' ? 'Сохранение...' : 'Saving...';
+  String get saveChanges => locale.languageCode == 'ru' ? 'Сохранить изменения' : 'Save Changes';
+
   // Month/term labels
   String get month => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
   String get monthShort => locale.languageCode == 'ru' ? 'мес.' : 'mo.';
