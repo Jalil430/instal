@@ -249,6 +249,9 @@ class AppLocalizations {
   String get enterValidDownPayment => locale.languageCode == 'ru'
       ? 'Введите сумму первоначального взноса'
       : 'Enter a valid down payment amount';
+  String get sessionExpired => locale.languageCode == 'ru' 
+      ? 'Ваша сессия истекла. Пожалуйста, войдите снова.' 
+      : 'Your session has expired. Please log in again.';
   String get validateMonthlyPayment => locale.languageCode == 'ru'
       ? 'Введите сумму ежемесячного платежа'
       : 'Enter a valid monthly payment amount';

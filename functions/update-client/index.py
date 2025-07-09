@@ -3,13 +3,86 @@ import json
 import ydb
 import re
 import hmac
+import jwt
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
+from decimal import Decimal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class JWTAuth:
+    """Handles JWT token authentication and validation"""
+    
+    @staticmethod
+    def verify_jwt_token(token: str, token_type: str = 'access') -> dict:
+        """Verify and decode JWT token"""
+        secret_key = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-jwt-key-change-in-production')
+        
+        try:
+            payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+            
+            # Check token type
+            if payload.get('type') != token_type:
+                raise ValueError(f"Invalid token type. Expected {token_type}")
+            
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise ValueError("Token has expired")
+        except jwt.InvalidTokenError:
+            raise ValueError("Invalid token")
+    
+    @staticmethod
+    def extract_token_from_event(event: dict) -> Optional[str]:
+        """Extract JWT token from Authorization header"""
+        headers = event.get('headers', {})
+        
+        # Handle case-insensitive headers
+        auth_header = None
+        for key, value in headers.items():
+            if key.lower() == 'authorization':
+                auth_header = value
+                break
+        
+        if not auth_header:
+            return None
+        
+        # Extract token from Bearer header
+        if not auth_header.startswith('Bearer '):
+            return None
+        
+        return auth_header[7:]  # Remove 'Bearer ' prefix
+    
+    @staticmethod
+    def authenticate_request(event: dict) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Authenticate request and return user_id and error message
+        Returns: (user_id, error_message)
+        """
+        try:
+            # Extract JWT token
+            token = JWTAuth.extract_token_from_event(event)
+            
+            if not token:
+                return None, "Authorization header missing or invalid format"
+            
+            # Verify token
+            payload = JWTAuth.verify_jwt_token(token, 'access')
+            user_id = payload.get('user_id')
+            
+            if not user_id:
+                return None, "Invalid token: user_id not found"
+            
+            logger.info(f"Request authenticated for user: {payload.get('email', 'unknown')}")
+            return user_id, None
+            
+        except ValueError as e:
+            return None, f"Authentication failed: {str(e)}"
+        except Exception as e:
+            logger.error(f"Unexpected authentication error: {e}")
+            return None, "Authentication error"
 
 class SecurityValidator:
     """Handles input validation and sanitization"""
@@ -36,9 +109,6 @@ class SecurityValidator:
         
         # Define validation rules, all fields are optional for update
         validation_rules = {
-            'user_id': {
-                'type': str, 'min_length': 1, 'max_length': 50, 'pattern': r'^[a-zA-Z0-9_-]+$'
-            },
             'full_name': {
                 'type': str, 'min_length': 1, 'max_length': 100
                 # No pattern restriction - allow any Unicode characters
@@ -91,30 +161,6 @@ class SecurityValidator:
         
         return sanitized, errors
 
-class ApiKeyAuth:
-    """Handles API key authentication"""
-    
-    @staticmethod
-    def validate_api_key(event: dict) -> bool:
-        """Validate API key from request headers"""
-        expected_api_key = os.environ.get('API_KEY')
-        if not expected_api_key:
-            logger.warning("API_KEY not configured in environment")
-            return False
-        
-        headers = event.get('headers', {})
-        api_key = None
-        for key, value in headers.items():
-            if key.lower() == 'x-api-key':
-                api_key = value
-                break
-        
-        if not api_key:
-            logger.warning("No API key provided in request")
-            return False
-        
-        return hmac.compare_digest(expected_api_key, api_key)
-
 def handler(event, context):
     """
     Yandex Cloud Function handler to update a client by ID.
@@ -122,9 +168,11 @@ def handler(event, context):
     try:
         logger.info(f"Received update request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         
-        if not ApiKeyAuth.validate_api_key(event):
-            logger.warning("Unauthorized access attempt")
-            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Unauthorized: Invalid or missing API key'})}
+        # Authentication
+        user_id, auth_error = JWTAuth.authenticate_request(event)
+        if not user_id:
+            logger.warning(f"Authentication failed: {auth_error}")
+            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': f'Unauthorized: {auth_error}'})}
         
         path_params = event.get('pathParameters', {})
         client_id = path_params.get('id')
@@ -166,15 +214,16 @@ def handler(event, context):
             pool = ydb.SessionPool(driver)
             
             def update_client_in_db(session):
-                # First, check if the client exists (using same pattern as get-client)
+                # First, check if the client exists and belongs to the authenticated user
                 check_query = """
                 DECLARE $client_id AS Utf8;
-                SELECT id FROM clients WHERE id = $client_id;
+                DECLARE $user_id AS Utf8;
+                SELECT id FROM clients WHERE id = $client_id AND user_id = $user_id;
                 """
                 prepared_check = session.prepare(check_query)
                 result_sets = session.transaction().execute(
                     prepared_check, 
-                    {'$client_id': sanitized_id}, 
+                    {'$client_id': sanitized_id, '$user_id': user_id}, 
                     commit_tx=True
                 )
                 if not result_sets[0].rows:

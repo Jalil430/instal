@@ -10,6 +10,7 @@ import '../data/repositories/investor_repository_impl.dart';
 import '../data/datasources/investor_remote_datasource.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
 import '../../../shared/widgets/custom_button.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 class AddEditInvestorScreen extends StatefulWidget {
   final String? investorId; // null for add, id for edit
@@ -36,6 +37,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
   bool _isLoading = false;
   bool _isSaving = false;
   Investor? _existingInvestor;
+  bool _isInitialized = false;
 
   bool get _isEditing => widget.investorId != null;
 
@@ -43,12 +45,20 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
   void initState() {
     super.initState();
     _initializeRepository();
-    if (_isEditing) {
-      _loadInvestor();
-    }
     // Add listeners to auto-calculate percentages
     _investorPercentageController.addListener(_calculateUserPercentage);
     _userPercentageController.addListener(_calculateInvestorPercentage);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      if (_isEditing) {
+        _loadInvestor();
+      }
+      _isInitialized = true;
+    }
   }
 
   void _initializeRepository() {
@@ -133,7 +143,17 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
     setState(() => _isSaving = true);
     
     try {
-      const userId = 'user123'; // TODO: Replace with actual user ID
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
       
       if (_isEditing && _existingInvestor != null) {
         // Update existing investor
@@ -157,7 +177,7 @@ class _AddEditInvestorScreenState extends State<AddEditInvestorScreen> {
         // Create new investor
         final newInvestor = Investor(
           id: const Uuid().v4(),
-          userId: userId,
+          userId: currentUser.id,
           fullName: _fullNameController.text,
           investmentAmount: double.parse(_investmentAmountController.text),
           investorPercentage: double.parse(_investorPercentageController.text),

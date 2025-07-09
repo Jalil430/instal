@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:instal_app/features/analytics/data/repositories/analytics_repository.dart';
 import 'package:instal_app/features/analytics/domain/entities/analytics_data.dart';
 import 'package:instal_app/features/analytics/domain/usecases/get_analytics_data.dart';
@@ -12,6 +13,7 @@ import '../widgets/total_sales_section.dart';
 import '../widgets/key_metrics_section.dart';
 import '../widgets/installment_details_section.dart';
 import '../widgets/installment_status_section.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -21,23 +23,57 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
-  late Future<AnalyticsData> _analyticsDataFuture;
+  Future<AnalyticsData>? _analyticsDataFuture;
   late GetAnalyticsData _getAnalyticsData;
   bool _isRefreshing = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAnalytics();
-  }
-
-  void _initializeAnalytics() {
     final installmentRepository = InstallmentRepositoryImpl(
       InstallmentRemoteDataSourceImpl(),
     );
     final analyticsRepository = AnalyticsRepository(installmentRepository);
     _getAnalyticsData = GetAnalyticsData(analyticsRepository);
-    _analyticsDataFuture = _getAnalyticsData('user123');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+    _loadAnalyticsData();
+    }
+  }
+
+  Future<void> _loadAnalyticsData() async {
+    try {
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
+      
+      if (mounted) {
+        setState(() {
+      _analyticsDataFuture = _getAnalyticsData(currentUser.id);
+        });
+      }
+    } catch (e) {
+      print('Error loading analytics: $e');
+      if (mounted) {
+        setState(() {
+          _analyticsDataFuture = Future.error(e);
+        });
+      }
+    }
   }
 
   Future<void> _refreshAnalytics() async {
@@ -46,12 +82,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     setState(() => _isRefreshing = true);
     
     try {
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
+      
       // Clear analytics cache to force fresh data
       final cache = CacheService();
-      cache.remove(CacheService.analyticsKey('user123'));
+      cache.remove(CacheService.analyticsKey(currentUser.id));
       
       // Reload data
-      final newFuture = _getAnalyticsData('user123');
+      final newFuture = _getAnalyticsData(currentUser.id);
       setState(() {
         _analyticsDataFuture = newFuture;
       });
@@ -62,8 +110,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       // Handle error silently or show snackbar
       print('Error refreshing analytics: $e');
     } finally {
+      if (mounted) {
       setState(() => _isRefreshing = false);
+      }
     }
+  }
+
+  bool _isAnalyticsDataEmpty(AnalyticsData data) {
+    // Check if there are no active installments
+    return data.installmentDetails.activeInstallments == 0;
   }
 
   @override
@@ -115,24 +170,67 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             child: FutureBuilder<AnalyticsData>(
               future: _analyticsDataFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting || snapshot.connectionState == ConnectionState.none) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Error: ${snapshot.error}'),
+                        Icon(Icons.analytics_outlined, size: 64, color: AppTheme.textSecondary),
                         const SizedBox(height: 16),
+                        Text(
+                          'Ошибка загрузки аналитики',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Попробуйте обновить данные или добавьте рассрочки',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _refreshAnalytics,
-                          child: const Text('Retry'),
+                          child: Text('Повторить'),
                         ),
                       ],
                     ),
                   );
-                } else if (!snapshot.hasData) {
-                  return const Center(child: Text('No data available'));
+                } else if (snapshot.data != null && _isAnalyticsDataEmpty(snapshot.data!)) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.analytics_outlined, size: 64, color: AppTheme.textSecondary),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Нет данных для аналитики',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Добавьте рассрочки для просмотра аналитики',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 final analyticsData = snapshot.data!;

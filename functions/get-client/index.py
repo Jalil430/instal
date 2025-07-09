@@ -3,13 +3,85 @@ import json
 import ydb
 import re
 import hmac
+import jwt
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class JWTAuth:
+    """Handles JWT token authentication and validation"""
+    
+    @staticmethod
+    def verify_jwt_token(token: str, token_type: str = 'access') -> dict:
+        """Verify and decode JWT token"""
+        secret_key = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-jwt-key-change-in-production')
+        
+        try:
+            payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+            
+            # Check token type
+            if payload.get('type') != token_type:
+                raise ValueError(f"Invalid token type. Expected {token_type}")
+            
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise ValueError("Token has expired")
+        except jwt.InvalidTokenError:
+            raise ValueError("Invalid token")
+    
+    @staticmethod
+    def extract_token_from_event(event: dict) -> Optional[str]:
+        """Extract JWT token from Authorization header"""
+        headers = event.get('headers', {})
+        
+        # Handle case-insensitive headers
+        auth_header = None
+        for key, value in headers.items():
+            if key.lower() == 'authorization':
+                auth_header = value
+                break
+        
+        if not auth_header:
+            return None
+        
+        # Extract token from Bearer header
+        if not auth_header.startswith('Bearer '):
+            return None
+        
+        return auth_header[7:]  # Remove 'Bearer ' prefix
+    
+    @staticmethod
+    def authenticate_request(event: dict) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Authenticate request and return user_id and error message
+        Returns: (user_id, error_message)
+        """
+        try:
+            # Extract JWT token
+            token = JWTAuth.extract_token_from_event(event)
+            
+            if not token:
+                return None, "Authorization header missing or invalid format"
+            
+            # Verify token
+            payload = JWTAuth.verify_jwt_token(token, 'access')
+            user_id = payload.get('user_id')
+            
+            if not user_id:
+                return None, "Invalid token: user_id not found"
+            
+            logger.info(f"Request authenticated for user: {payload.get('email', 'unknown')}")
+            return user_id, None
+            
+        except ValueError as e:
+            return None, f"Authentication failed: {str(e)}"
+        except Exception as e:
+            logger.error(f"Unexpected authentication error: {e}")
+            return None, "Authentication error"
 
 class SecurityValidator:
     """Handles input validation and sanitization"""
@@ -28,34 +100,6 @@ class SecurityValidator:
         # Sanitize - convert to lowercase
         return client_id.lower(), None
 
-class ApiKeyAuth:
-    """Handles API key authentication"""
-    
-    @staticmethod
-    def validate_api_key(event: dict) -> bool:
-        """Validate API key from request headers"""
-        # Get API key from environment
-        expected_api_key = os.environ.get('API_KEY')
-        if not expected_api_key:
-            logger.warning("API_KEY not configured in environment")
-            return False
-        
-        # Get API key from headers
-        headers = event.get('headers', {})
-        # Handle case-insensitive headers
-        api_key = None
-        for key, value in headers.items():
-            if key.lower() == 'x-api-key':
-                api_key = value
-                break
-        
-        if not api_key:
-            logger.warning("No API key provided in request")
-            return False
-        
-        # Use constant-time comparison to prevent timing attacks
-        return hmac.compare_digest(expected_api_key, api_key)
-
 def handler(event, context):
     """
     Yandex Cloud Function handler to retrieve a client by ID with enhanced security.
@@ -64,13 +108,14 @@ def handler(event, context):
         # Log request (without sensitive data)
         logger.info(f"Received GET request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         
-        # 1. API Key Authentication
-        if not ApiKeyAuth.validate_api_key(event):
-            logger.warning("Unauthorized access attempt")
+        # 1. Authentication
+        user_id, auth_error = JWTAuth.authenticate_request(event)
+        if not user_id:
+            logger.warning(f"Authentication failed: {auth_error}")
             return {
                 'statusCode': 401,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Unauthorized: Invalid or missing API key'})
+                'body': json.dumps({'error': f'Unauthorized: {auth_error}'})
             }
         
         # 2. Extract and validate client ID from path parameters
@@ -102,17 +147,18 @@ def handler(event, context):
             pool = ydb.SessionPool(driver)
             
             def get_client(session):
-                # Get client by ID
+                # Get client by ID for the authenticated user
                 query = """
                 DECLARE $client_id AS Utf8;
+                DECLARE $user_id AS Utf8;
                 SELECT id, user_id, full_name, contact_number, passport_number, address, created_at, updated_at
                 FROM clients 
-                WHERE id = $client_id;
+                WHERE id = $client_id AND user_id = $user_id;
                 """
                 prepared_query = session.prepare(query)
                 result_sets = session.transaction().execute(
                     prepared_query,
-                    {'$client_id': sanitized_id},
+                    {'$client_id': sanitized_id, '$user_id': user_id},
                     commit_tx=True
                 )
                 

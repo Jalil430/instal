@@ -2,7 +2,8 @@ import os
 import json
 import ydb
 import re
-import hmac
+
+import jwt
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
@@ -11,6 +12,77 @@ from decimal import Decimal
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class JWTAuth:
+    """Handles JWT token authentication and validation"""
+    
+    @staticmethod
+    def verify_jwt_token(token: str, token_type: str = 'access') -> dict:
+        """Verify and decode JWT token"""
+        secret_key = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-jwt-key-change-in-production')
+        
+        try:
+            payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+            
+            # Check token type
+            if payload.get('type') != token_type:
+                raise ValueError(f"Invalid token type. Expected {token_type}")
+            
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise ValueError("Token has expired")
+        except jwt.InvalidTokenError:
+            raise ValueError("Invalid token")
+    
+    @staticmethod
+    def extract_token_from_event(event: dict) -> Optional[str]:
+        """Extract JWT token from Authorization header"""
+        headers = event.get('headers', {})
+        
+        # Handle case-insensitive headers
+        auth_header = None
+        for key, value in headers.items():
+            if key.lower() == 'authorization':
+                auth_header = value
+                break
+        
+        if not auth_header:
+            return None
+        
+        # Extract token from Bearer header
+        if not auth_header.startswith('Bearer '):
+            return None
+        
+        return auth_header[7:]  # Remove 'Bearer ' prefix
+    
+    @staticmethod
+    def authenticate_request(event: dict) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Authenticate request and return user_id and error message
+        Returns: (user_id, error_message)
+        """
+        try:
+            # Extract JWT token
+            token = JWTAuth.extract_token_from_event(event)
+            
+            if not token:
+                return None, "Authorization header missing or invalid format"
+            
+            # Verify token
+            payload = JWTAuth.verify_jwt_token(token, 'access')
+            user_id = payload.get('user_id')
+            
+            if not user_id:
+                return None, "Invalid token: user_id not found"
+            
+            logger.info(f"Request authenticated for user: {payload.get('email', 'unknown')}")
+            return user_id, None
+            
+        except ValueError as e:
+            return None, f"Authentication failed: {str(e)}"
+        except Exception as e:
+            logger.error(f"Unexpected authentication error: {e}")
+            return None, "Authentication error"
 
 class SecurityValidator:
     """Handles input validation and sanitization"""
@@ -74,23 +146,7 @@ class SecurityValidator:
         
         return sanitized, errors
 
-class ApiKeyAuth:
-    """Handles API key authentication"""
-    
-    @staticmethod
-    def validate_api_key(event: dict) -> bool:
-        expected_api_key = os.environ.get('API_KEY')
-        if not expected_api_key:
-            logger.warning("API_KEY not configured")
-            return False
-        
-        headers = event.get('headers', {})
-        api_key = headers.get('x-api-key') or headers.get('X-Api-Key')
-        if not api_key:
-            logger.warning("No API key in request")
-            return False
-        
-        return hmac.compare_digest(expected_api_key, api_key)
+
 
 def handler(event, context):
     """
@@ -99,8 +155,11 @@ def handler(event, context):
     try:
         logger.info(f"Received update request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         
-        if not ApiKeyAuth.validate_api_key(event):
-            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Unauthorized'})}
+        # Authentication
+        user_id, auth_error = JWTAuth.authenticate_request(event)
+        if not user_id:
+            logger.warning(f"Authentication failed: {auth_error}")
+            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': f'Unauthorized: {auth_error}'})}
         
         path_params = event.get('pathParameters', {})
         investor_id = path_params.get('id')

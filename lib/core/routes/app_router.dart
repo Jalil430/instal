@@ -12,11 +12,26 @@ import '../../features/investors/screens/investor_details_screen.dart';
 import '../../features/investors/screens/add_edit_investor_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../widgets/auth_guard.dart';
 
 class AppRouter {
   static final router = GoRouter(
-    initialLocation: '/installments',
+    initialLocation: '/',
     routes: [
+      // Authentication routes
+      GoRoute(
+        path: '/auth/login',
+        name: 'login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/auth/register',
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      
       // Home route - redirect to installments
       GoRoute(
         path: '/',
@@ -24,26 +39,32 @@ class AppRouter {
         redirect: (context, state) => '/installments',
       ),
       
-      // Installments routes
+      // Protected routes wrapped with AuthGuard
       GoRoute(
         path: '/installments',
         name: 'installments',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const InstallmentsListScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const InstallmentsListScreen()),
+          ),
         ),
       ),
       GoRoute(
         path: '/analytics',
         name: 'analytics',
-        pageBuilder: (context, state) => const MaterialPage(
-          child: MainLayout(child: AnalyticsScreen()),
+        pageBuilder: (context, state) => MaterialPage(
+          child: AuthGuard(
+            child: MainLayout(child: const AnalyticsScreen()),
+          ),
         ),
       ),
       GoRoute(
         path: '/installments/add',
         name: 'add-installment',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const AddInstallmentScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const AddInstallmentScreen()),
+          ),
         ),
       ),
       GoRoute(
@@ -52,7 +73,9 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           return MaterialPage(
-            child: MainLayout(child: InstallmentDetailsScreen(installmentId: id)),
+            child: AuthGuard(
+              child: MainLayout(child: InstallmentDetailsScreen(installmentId: id)),
+            ),
           );
         },
       ),
@@ -62,14 +85,18 @@ class AppRouter {
         path: '/clients',
         name: 'clients',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const ClientsListScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const ClientsListScreen()),
+          ),
         ),
       ),
       GoRoute(
         path: '/clients/add',
         name: 'add-client',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const AddEditClientScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const AddEditClientScreen()),
+          ),
         ),
       ),
       GoRoute(
@@ -78,7 +105,9 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           return MaterialPage(
-            child: MainLayout(child: ClientDetailsScreen(clientId: id)),
+            child: AuthGuard(
+              child: MainLayout(child: ClientDetailsScreen(clientId: id)),
+            ),
           );
         },
       ),
@@ -88,7 +117,9 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           return MaterialPage(
-            child: MainLayout(child: AddEditClientScreen(clientId: id)),
+            child: AuthGuard(
+              child: MainLayout(child: AddEditClientScreen(clientId: id)),
+            ),
           );
         },
       ),
@@ -98,14 +129,18 @@ class AppRouter {
         path: '/investors',
         name: 'investors',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const InvestorsListScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const InvestorsListScreen()),
+          ),
         ),
       ),
       GoRoute(
         path: '/investors/add',
         name: 'add-investor',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const AddEditInvestorScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const AddEditInvestorScreen()),
+          ),
         ),
       ),
       GoRoute(
@@ -114,7 +149,9 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           return MaterialPage(
-            child: MainLayout(child: InvestorDetailsScreen(investorId: id)),
+            child: AuthGuard(
+              child: MainLayout(child: InvestorDetailsScreen(investorId: id)),
+            ),
           );
         },
       ),
@@ -124,7 +161,9 @@ class AppRouter {
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           return MaterialPage(
-            child: MainLayout(child: AddEditInvestorScreen(investorId: id)),
+            child: AuthGuard(
+              child: MainLayout(child: AddEditInvestorScreen(investorId: id)),
+            ),
           );
         },
       ),
@@ -133,7 +172,9 @@ class AppRouter {
         path: '/settings',
         name: 'settings',
         pageBuilder: (context, state) => MaterialPage(
-          child: MainLayout(child: const SettingsScreen()),
+          child: AuthGuard(
+            child: MainLayout(child: const SettingsScreen()),
+          ),
         ),
       ),
     ],

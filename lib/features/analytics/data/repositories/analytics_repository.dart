@@ -19,37 +19,83 @@ class AnalyticsRepository {
       return cachedAnalytics;
     }
 
-    // Load installments and all payments in parallel for better performance
-    final installmentsFuture = _installmentRepository.getAllInstallments(userId);
-    
-    // Instead of using getAllPayments (which is inefficient), 
-    // we'll collect payments from installments in parallel
-    final installments = await installmentsFuture;
-    
-    // Get all payments for all installments in parallel
-    final paymentsFutures = installments.map((installment) async {
-      try {
-        return await _installmentRepository.getPaymentsByInstallmentId(installment.id);
-      } catch (e) {
-        // If individual installment fails, return empty list to avoid breaking the entire analytics
-        return <InstallmentPayment>[];
-      }
-    });
-    
-    final allPaymentsLists = await Future.wait(paymentsFutures);
-    final payments = allPaymentsLists.expand((list) => list).toList();
+    try {
+      // Load installments and all payments in parallel for better performance
+      final installmentsFuture = _installmentRepository.getAllInstallments(userId);
+      
+      // Instead of using getAllPayments (which is inefficient), 
+      // we'll collect payments from installments in parallel
+      final installments = await installmentsFuture;
+      
+      // Get all payments for all installments in parallel
+      final paymentsFutures = installments.map((installment) async {
+        try {
+          return await _installmentRepository.getPaymentsByInstallmentId(installment.id);
+        } catch (e) {
+          // If individual installment fails, return empty list to avoid breaking the entire analytics
+          return <InstallmentPayment>[];
+        }
+      });
+      
+      final allPaymentsLists = await Future.wait(paymentsFutures);
+      final payments = allPaymentsLists.expand((list) => list).toList();
 
-    final analyticsData = AnalyticsData(
-      keyMetrics: _calculateKeyMetrics(installments, payments),
-      totalSales: _calculateTotalSales(payments),
-      installmentStatus: _calculateInstallmentStatus(installments, payments),
-      installmentDetails: _calculateInstallmentDetails(installments, payments),
-    );
+      final analyticsData = AnalyticsData(
+        keyMetrics: _calculateKeyMetrics(installments, payments),
+        totalSales: _calculateTotalSales(payments),
+        installmentStatus: _calculateInstallmentStatus(installments, payments),
+        installmentDetails: _calculateInstallmentDetails(installments, payments),
+      );
 
-    // Cache the result for 1 minute (analytics change frequently)
-    _cache.set(cacheKey, analyticsData, duration: const Duration(minutes: 1));
+      // Cache the result for 1 minute (analytics change frequently)
+      _cache.set(cacheKey, analyticsData, duration: const Duration(minutes: 1));
 
-    return analyticsData;
+      return analyticsData;
+    } catch (e) {
+      print('Error calculating analytics data: $e');
+      
+      // Return default analytics data instead of throwing an error
+      final defaultAnalytics = AnalyticsData(
+        keyMetrics: KeyMetricsData(
+          totalRevenue: 0.0,
+          totalRevenueChange: null,
+          totalRevenueChartData: [const FlSpot(0, 0)],
+          newInstallments: 0,
+          newInstallmentsChange: null,
+          newInstallmentsChartData: [const FlSpot(0, 0)],
+          collectionRate: 0.0,
+          collectionRateChange: null,
+          collectionRateChartData: [const FlSpot(0, 0)],
+          portfolioGrowth: 0.0,
+          portfolioGrowthChange: null,
+          portfolioGrowthChartData: [const FlSpot(0, 0)],
+        ),
+        totalSales: TotalSalesData(
+          weeklySales: [0, 0, 0, 0, 0, 0, 0],
+          averageSales: 0.0,
+          percentageChange: null,
+        ),
+        installmentStatus: InstallmentStatusData(
+          overdueCount: 0,
+          dueToPayCount: 0,
+          upcomingCount: 0,
+          paidCount: 0,
+        ),
+        installmentDetails: InstallmentDetailsData(
+          activeInstallments: 0,
+          totalPortfolio: 0.0,
+          totalOverdue: 0.0,
+          averageInstallmentValue: 0.0,
+          averageTerm: 0.0,
+          totalInstallmentValue: 0.0,
+          upcomingRevenue30Days: 0.0,
+        ),
+      );
+      
+      // Cache the default data
+      _cache.set(cacheKey, defaultAnalytics);
+      return defaultAnalytics;
+    }
   }
 
   KeyMetricsData _calculateKeyMetrics(List<Installment> installments, List<InstallmentPayment> payments) {
@@ -312,6 +358,53 @@ class AnalyticsRepository {
       averageTerm: averageTerm.toDouble(),
       totalInstallmentValue: totalInstallmentValue,
       upcomingRevenue30Days: upcomingRevenue30Days,
+    );
+  }
+
+  // Default/empty data methods for error scenarios
+  KeyMetricsData _getDefaultKeyMetrics() {
+    return KeyMetricsData(
+      totalRevenue: 0.0,
+      totalRevenueChange: null,
+      totalRevenueChartData: List.generate(28, (index) => FlSpot(index.toDouble(), 0.0)),
+      newInstallments: 0,
+      newInstallmentsChange: null,
+      newInstallmentsChartData: List.generate(28, (index) => FlSpot(index.toDouble(), 0.0)),
+      collectionRate: 0.0,
+      collectionRateChange: null,
+      collectionRateChartData: List.generate(28, (index) => FlSpot(index.toDouble(), 0.0)),
+      portfolioGrowth: 0.0,
+      portfolioGrowthChange: null,
+      portfolioGrowthChartData: List.generate(28, (index) => FlSpot(index.toDouble(), 0.0)),
+    );
+  }
+
+  TotalSalesData _getDefaultTotalSales() {
+    return TotalSalesData(
+      weeklySales: List.filled(7, 0.0),
+      averageSales: 0.0,
+      percentageChange: null,
+    );
+  }
+
+  InstallmentStatusData _getDefaultInstallmentStatus() {
+    return InstallmentStatusData(
+      overdueCount: 0,
+      dueToPayCount: 0,
+      upcomingCount: 0,
+      paidCount: 0,
+    );
+  }
+
+  InstallmentDetailsData _getDefaultInstallmentDetails() {
+    return InstallmentDetailsData(
+      activeInstallments: 0,
+      totalPortfolio: 0.0,
+      totalOverdue: 0.0,
+      averageInstallmentValue: 0.0,
+      averageTerm: 0.0,
+      totalInstallmentValue: 0.0,
+      upcomingRevenue30Days: 0.0,
     );
   }
 } 

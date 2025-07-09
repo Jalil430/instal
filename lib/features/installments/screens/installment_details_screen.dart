@@ -42,12 +42,21 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
   Investor? _investor;
   List<InstallmentPayment> _payments = [];
   bool _isLoading = true;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _initializeRepositories();
-    _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _loadData();
+      _isInitialized = true;
+    }
   }
 
   void _initializeRepositories() {

@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Secure API for client management with authentication and rate limiting
 security:
-  - apiKey: []
+  - bearerAuth: []
 paths:
   /clients:
     post:
@@ -158,14 +158,7 @@ paths:
         function_id: d4etn874nnro96omhmdk
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
-    put:
-      summary: Update an installment
-      operationId: update-installment
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        function_id: d4eq95tgg9cms7uehhp5
-        service_account_id: ajevsnimu8g62t29vlad
-        payload_format_version: '1.0'
+
     delete:
       summary: Delete an installment
       operationId: delete-installment
@@ -189,12 +182,60 @@ paths:
         function_id: d4ec86pvqoqla7ck2qv7
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: auth-register
+      security: 
+        - apiKey: []  # Auth endpoints still use API key
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e4t4mv875gkg24at8a
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /auth/login:
+    post:
+      summary: Login user
+      operationId: auth-login
+      security: 
+        - apiKey: []  # Auth endpoints still use API key
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8jcns4qe2bkvh7rvv
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      operationId: auth-refresh
+      security: 
+        - apiKey: []  # Auth endpoints still use API key
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4evah37mne0rubchbl8
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /auth/verify:
+    post:
+      summary: Verify JWT token
+      operationId: auth-verify
+      security: 
+        - apiKey: []  # Auth endpoints still use API key
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ebrg3ucrog7lqe4egr
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
 components:
   securitySchemes:
     apiKey:
       type: apiKey
       in: header
       name: X-API-Key
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 x-yc-apigateway-cors:
   origin:
     - '*'
@@ -207,4 +248,5 @@ x-yc-apigateway-cors:
   headers:
     - Content-Type
     - X-API-Key
+    - Authorization
   maxAge: 86400 

@@ -5,6 +5,7 @@ import 'core/routes/app_router.dart';
 import 'core/localization/app_localizations.dart';
 import 'shared/database/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'features/auth/presentation/widgets/auth_service_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,26 +48,32 @@ class _InstalAppState extends State<InstalApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Instal',
-      theme: AppTheme.lightTheme,
-      debugShowCheckedModeBanner: false,
-      routerConfig: AppRouter.router,
-      locale: _locale,
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      builder: (context, child) {
-        // Pass setLocale down via InheritedWidget or directly if needed
-        return LocaleSetter(
-          setLocale: setLocale,
-          child: child!,
-        );
-      },
+    // Create authentication service
+    final authService = AuthServiceFactory.create();
+
+    return AuthServiceProvider(
+      authService: authService,
+      child: MaterialApp.router(
+        title: 'Instal',
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        routerConfig: AppRouter.router,
+        locale: _locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        builder: (context, child) {
+          // Pass setLocale down via InheritedWidget or directly if needed
+          return LocaleSetter(
+            setLocale: setLocale,
+            child: child!,
+          );
+        },
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/localization/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import '../../main.dart';
 import '../../shared/widgets/custom_button.dart';
+import '../auth/presentation/widgets/auth_service_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -60,6 +62,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final folder = p.dirname(_dbPath!);
     final uri = Uri.file(folder);
     await launchUrl(uri);
+  }
+
+  Future<void> _logout() async {
+    try {
+      final authService = AuthServiceProvider.of(context);
+      await authService.logout();
+      
+      if (mounted) {
+        context.go('/auth/login');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during logout: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -151,6 +173,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   if (_dbPath == null)
                     const CircularProgressIndicator(),
+                  const SizedBox(height: 32),
+                  
+                  // Account Section
+                  Text(
+                    'Account',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomButton(
+                    onPressed: _logout,
+                    text: 'Logout',
+                    icon: Icons.logout,
+                    showIcon: true,
+                    color: AppTheme.errorColor,
+                  ),
                   const SizedBox(height: 32),
                 ],
               ),

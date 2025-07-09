@@ -1,28 +1,60 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:instal_app/features/auth/data/datasources/auth_local_datasource.dart';
 
 class ApiClient {
   static const String _baseUrl = 'https://d5degr4sfnv9p7i065ga.kf69zffa.apigw.yandexcloud.net';
-  static const String _apiKey = '05edf99238bc0c342aa0cc48be2363ffcebbbf15b7d0eaca4f31dbd6a03d30be';
+  static const String _apiKey = 'AQVN1gWo_joBv9AiZVrbtOHPm46XIcO_z_YH4RQh';
   
-  static const Duration _defaultTimeout = Duration(seconds: 10); // Reduced from 30 to 10
+  static const Duration _defaultTimeout = Duration(seconds: 10);
   
-  // Create a persistent HTTP client for connection pooling
   static final http.Client _httpClient = http.Client();
+  static final AuthLocalDataSource _authLocalDataSource = AuthLocalDataSourceImpl();
   
-  static Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'X-API-Key': _apiKey,
-    'Connection': 'keep-alive', // Enable connection reuse
-  };
+  static String get baseUrl => _baseUrl;
+  static String get apiKey => _apiKey;
+  static http.Client get httpClient => _httpClient;
+  static Duration get defaultTimeout => _defaultTimeout;
+  
+  static Future<Map<String, String>> _getHeaders([String? endpoint]) async {
+    final authState = await _authLocalDataSource.getAuthState();
+    
+    // Check if this is an auth endpoint
+    final isAuthEndpoint = endpoint?.startsWith('/auth/') ?? false;
+    
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Connection': 'keep-alive',
+    };
+    
+    if (isAuthEndpoint) {
+      // Auth endpoints use API key authentication
+      headers['X-API-Key'] = _apiKey;
+    } else {
+      // Business endpoints require JWT authentication
+      if (!authState.isAuthenticated || authState.accessToken == null) {
+        throw UnauthorizedException('User not authenticated');
+      }
+      
+      // Check if token is expired
+      if (authState.isTokenExpired) {
+        throw UnauthorizedException('Access token expired');
+      }
+      
+      headers['Authorization'] = 'Bearer ${authState.accessToken}';
+    }
+    
+    return headers;
+  }
 
   static Future<http.Response> get(String endpoint, {Duration? timeout}) async {
     final uri = Uri.parse('$_baseUrl$endpoint');
     
     try {
+      final headers = await _getHeaders(endpoint);
       final response = await _httpClient.get(
         uri,
-        headers: _headers,
+        headers: headers,
       ).timeout(timeout ?? _defaultTimeout);
       
       return response;
@@ -36,9 +68,10 @@ class ApiClient {
     final bodyJson = json.encode(body);
     
     try {
+      final headers = await _getHeaders(endpoint);
       final response = await _httpClient.post(
         uri,
-        headers: _headers,
+        headers: headers,
         body: bodyJson,
       ).timeout(timeout ?? _defaultTimeout);
       
@@ -52,9 +85,10 @@ class ApiClient {
     final uri = Uri.parse('$_baseUrl$endpoint');
     
     try {
+      final headers = await _getHeaders(endpoint);
       final response = await _httpClient.put(
         uri,
-        headers: _headers,
+        headers: headers,
         body: json.encode(body),
       ).timeout(timeout ?? _defaultTimeout);
       
@@ -68,9 +102,10 @@ class ApiClient {
     final uri = Uri.parse('$_baseUrl$endpoint');
     
     try {
+      final headers = await _getHeaders(endpoint);
       final response = await _httpClient.delete(
         uri,
-        headers: _headers,
+        headers: headers,
       ).timeout(timeout ?? _defaultTimeout);
       
       return response;
@@ -79,7 +114,6 @@ class ApiClient {
     }
   }
 
-  // Clean up the HTTP client when the app shuts down
   static void dispose() {
     _httpClient.close();
   }
@@ -92,7 +126,13 @@ class ApiClient {
     String errorMessage;
     try {
       final errorData = json.decode(response.body);
-      errorMessage = errorData['error'] ?? 'Unknown error occurred';
+      
+      // Handle cloud function gateway error format
+      if (errorData['message'] != null) {
+        errorMessage = errorData['message'];
+      } else {
+        errorMessage = errorData['error'] ?? 'Unknown error occurred';
+      }
       
       // If there are validation details, include them
       if (errorData['details'] != null && errorData['details'] is List) {

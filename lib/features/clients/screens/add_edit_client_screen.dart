@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/entities/client.dart';
@@ -9,6 +10,7 @@ import '../data/repositories/client_repository_impl.dart';
 import '../data/datasources/client_remote_datasource.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
 import '../../../shared/widgets/custom_button.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 
 class AddEditClientScreen extends StatefulWidget {
@@ -36,6 +38,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
   bool _isLoading = false;
   bool _isSaving = false;
   Client? _existingClient;
+  bool _isInitialized = false;
 
   bool get _isEditing => widget.clientId != null;
 
@@ -43,8 +46,16 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
   void initState() {
     super.initState();
     _initializeRepository();
-    if (_isEditing) {
-      _loadClient();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      if (_isEditing) {
+        _loadClient();
+      }
+      _isInitialized = true;
     }
   }
 
@@ -100,7 +111,17 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
     setState(() => _isSaving = true);
     
     try {
-      const userId = 'user123'; // TODO: Replace with actual user ID
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
       
       if (_isEditing && _existingClient != null) {
         // Update existing client
@@ -124,7 +145,7 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
         // Create new client
         final newClient = Client(
           id: const Uuid().v4(),
-          userId: userId,
+          userId: currentUser.id,
           fullName: _fullNameController.text,
           contactNumber: _contactNumberController.text,
           passportNumber: _passportNumberController.text,
@@ -143,13 +164,24 @@ class _AddEditClientScreenState extends State<AddEditClientScreen> {
         }
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      
+      if (e is UnauthorizedException) {
+        final authService = AuthServiceProvider.of(context);
+        await authService.logout();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)?.sessionExpired ?? 'Ваша сессия истекла. Пожалуйста, войдите снова.')),
+        );
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${AppLocalizations.of(context)?.errorSaving ?? 'Ошибка сохранения'}: $e')),
         );
       }
     } finally {
+      if (mounted) {
       setState(() => _isSaving = false);
+      }
     }
   }
 

@@ -11,6 +11,8 @@ import '../../../shared/widgets/custom_dropdown.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../widgets/client_list_item.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
+import '../../../core/api/cache_service.dart';
 
 class ClientsListScreen extends StatefulWidget {
   const ClientsListScreen({super.key});
@@ -26,6 +28,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   late ClientRepository _clientRepository;
   List<Client> _clients = [];
   bool _isLoading = true;
+  bool _isInitialized = false;
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -42,7 +45,15 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
     );
     
     _initializeRepository();
-    _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _loadData();
+      _isInitialized = true;
+    }
   }
 
   @override
@@ -60,15 +71,19 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'user123';
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
       
-      // Try to load from cache first for immediate UI update
-      final clientRepository = ClientRepositoryImpl(
-        ClientRemoteDataSourceImpl(),
-      );
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
       
-      final clients = await clientRepository.getAllClients(userId);
+      final clients = await _clientRepository.getAllClients(currentUser.id);
       
       setState(() {
         _clients = clients;
@@ -359,15 +374,37 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
 
     if (confirmed == true) {
       try {
+        // Clear cache to ensure fresh data after deletion
+        final cache = CacheService();
+        final authService = AuthServiceProvider.of(context);
+        final currentUser = await authService.getCurrentUser();
+        
+        if (currentUser != null) {
+          cache.remove(CacheService.clientsKey(currentUser.id));
+          cache.remove(CacheService.analyticsKey(currentUser.id));
+        }
+        cache.remove(CacheService.clientKey(client.id));
+        
         await _clientRepository.deleteClient(client.id);
-        _loadData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.clientDeleted)),
-        );
+        // Immediately refresh the list after deletion
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.clientDeleted),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.clientDeleteError(e))),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.clientDeleteError(e)),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
       }
     }
   }

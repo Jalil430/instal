@@ -16,6 +16,7 @@ import '../../clients/data/datasources/client_remote_datasource.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../core/api/cache_service.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
@@ -34,6 +35,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   Map<String, List<InstallmentPayment>> _installmentPayments = {};
   final Map<String, bool> _expandedStates = {}; // Track expansion state by installment ID
   bool _isLoading = true;
+  bool _isInitialized = false;
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -50,7 +52,15 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     );
     
     _initializeRepositories();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
     _loadData();
+      _isInitialized = true;
+    }
   }
 
   @override
@@ -75,14 +85,23 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     final stopwatch = Stopwatch()..start();
     
     try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'user123';
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
       
       // Get all installments first
-      final installments = await _installmentRepository.getAllInstallments(userId);
+      final installments = await _installmentRepository.getAllInstallments(currentUser.id);
       
       // Get all clients in parallel
-      final clientsFuture = _clientRepository.getAllClients(userId);
+      final clientsFuture = _clientRepository.getAllClients(currentUser.id);
       
       // Get all payments for all installments in parallel (batch operation)
       final paymentsMap = <String, List<InstallmentPayment>>{};
@@ -94,6 +113,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           return MapEntry(installment.id, payments);
         } catch (e) {
           // If individual installment fails, return empty payments to avoid breaking the entire list
+          print('Failed to load payments for installment ${installment.id}: $e');
           return MapEntry(installment.id, <InstallmentPayment>[]);
         }
       });
@@ -127,10 +147,34 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       print('🚀 Installments loaded in ${stopwatch.elapsedMilliseconds}ms (${installments.length} installments, ${paymentsMap.values.fold(0, (sum, payments) => sum + payments.length)} payments)');
       
     } catch (e) {
-      setState(() => _isLoading = false);
+      stopwatch.stop();
+      print('Error loading installments data: $e');
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _installments = [];
+          _clientNames = {};
+          _installmentPayments = {};
+        });
+        
+        // Show more specific error messages
+        String errorMessage;
+        if (e.toString().contains('502') || e.toString().contains('Bad Gateway')) {
+          errorMessage = 'Сервер временно недоступен. Попробуйте позже.';
+        } else if (e.toString().contains('500') || e.toString().contains('ServerException')) {
+          errorMessage = 'Ошибка сервера. Попробуйте позже.';
+        } else if (e.toString().contains('Network error')) {
+          errorMessage = 'Ошибка сети. Проверьте подключение к интернету.';
+        } else {
+          errorMessage = '${AppLocalizations.of(context)?.errorLoadingData ?? 'Ошибка загрузки данных'}: ${e.toString().replaceAll('ApiException: ', '').replaceAll('ServerException: ', '')}';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -139,13 +183,23 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   Future<void> _refreshData() async {
     // Refresh without showing loading spinner - use cached data while loading
     try {
-      const userId = 'user123';
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
       
       // Get all installments first
-      final installments = await _installmentRepository.getAllInstallments(userId);
+      final installments = await _installmentRepository.getAllInstallments(currentUser.id);
       
       // Get all clients in parallel
-      final clientsFuture = _clientRepository.getAllClients(userId);
+      final clientsFuture = _clientRepository.getAllClients(currentUser.id);
       
       // Get all payments for all installments in parallel
       final paymentsMap = <String, List<InstallmentPayment>>{};
@@ -562,8 +616,13 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       try {
         // Clear cache to ensure fresh data after deletion
         final cache = CacheService();
-        cache.remove(CacheService.installmentsKey('user123'));
-        cache.remove(CacheService.analyticsKey('user123'));
+        final authService = AuthServiceProvider.of(context);
+        final currentUser = await authService.getCurrentUser();
+        
+        if (currentUser != null) {
+          cache.remove(CacheService.installmentsKey(currentUser.id));
+          cache.remove(CacheService.analyticsKey(currentUser.id));
+        }
         cache.remove(CacheService.installmentKey(installment.id));
         cache.remove(CacheService.paymentsKey(installment.id));
         

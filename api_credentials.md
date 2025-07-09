@@ -25,7 +25,7 @@ curl -X POST https://d5degr4sfnv9p7i065ga.kf69zffa.apigw.yandexcloud.net/clients
   -H "Content-Type: application/json" \
   -H "X-API-Key: 05edf99238bc0c342aa0cc48be2363ffcebbbf15b7d0eaca4f31dbd6a03d30be" \
   -d '{
-    "user_id": "user123",
+    "user_id": "actual_user_id_from_jwt",
     "full_name": "John Doe",
     "contact_number": "+1234567890",
     "passport_number": "AB123456",

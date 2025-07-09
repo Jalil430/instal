@@ -11,6 +11,8 @@ import '../../../shared/widgets/custom_dropdown.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../widgets/investor_list_item.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
+import '../../../core/api/cache_service.dart';
 
 class InvestorsListScreen extends StatefulWidget {
   const InvestorsListScreen({super.key});
@@ -26,6 +28,7 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
   late InvestorRepository _investorRepository;
   List<Investor> _investors = [];
   bool _isLoading = true;
+  bool _isInitialized = false;
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -42,7 +45,15 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
     );
     
     _initializeRepository();
-    _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _loadData();
+      _isInitialized = true;
+    }
   }
 
   @override
@@ -60,10 +71,19 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'user123';
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
       
-      final investors = await _investorRepository.getAllInvestors(userId);
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
+      
+      final investors = await _investorRepository.getAllInvestors(currentUser.id);
       
       setState(() {
         _investors = investors;
@@ -231,78 +251,68 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                             child: Row(
                               children: [
                                 Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    l10n?.fullName ?? 'Полное имя',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
                                   flex: 2,
                                   child: Text(
-                                    l10n?.fullNameHeader ?? 'ПОЛНОЕ ИМЯ',
-                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                          color: AppTheme.textSecondary,
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 12,
-                                          letterSpacing: 0.5,
-                                        ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 20),
-                                    child: Text(
-                                      l10n?.investmentAmountHeader ?? 'СУММА ИНВЕСТИЦИИ',
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
+                                    l10n?.investmentAmount ?? 'Сумма инвестиции',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                      letterSpacing: 0.3,
                                     ),
                                   ),
                                 ),
                                 Expanded(
-                                  flex: 1,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 20),
-                                    child: Text(
-                                      l10n?.investorShareHeader ?? 'ДОЛЯ ИНВЕСТОРА',
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 20),
-                                    child: Text(
-                                      l10n?.userShareHeader ?? 'ДОЛЯ ПОЛЬЗОВАТЕЛЯ',
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
+                                  flex: 2,
                                   child: Text(
-                                    l10n?.creationDateHeader ?? 'ДАТА СОЗДАНИЯ',
-                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                          color: AppTheme.textSecondary,
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 12,
-                                          letterSpacing: 0.5,
-                                        ),
+                                    l10n?.investorShareHeader ?? 'Процент инвестора',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    l10n?.userShareHeader ?? 'Процент пользователя',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    l10n?.creationDate ?? 'Дата создания',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                      letterSpacing: 0.3,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          
                           // Table Content
                           Expanded(
                             child: _filteredAndSortedInvestors.isEmpty
@@ -363,15 +373,37 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
 
     if (confirmed == true) {
       try {
+        // Clear cache to ensure fresh data after deletion
+        final cache = CacheService();
+        final authService = AuthServiceProvider.of(context);
+        final currentUser = await authService.getCurrentUser();
+        
+        if (currentUser != null) {
+          cache.remove(CacheService.investorsKey(currentUser.id));
+          cache.remove(CacheService.analyticsKey(currentUser.id));
+        }
+        cache.remove(CacheService.investorKey(investor.id));
+        
         await _investorRepository.deleteInvestor(investor.id);
-        _loadData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.investorDeleted)),
-        );
+        // Immediately refresh the list after deletion
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.investorDeleted),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.investorDeleteError(e))),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.investorDeleteError(e)),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
       }
     }
   }

@@ -20,6 +20,7 @@ import '../../investors/data/datasources/investor_remote_datasource.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_dropdown.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 class AddInstallmentScreen extends StatefulWidget {
   const AddInstallmentScreen({super.key});
@@ -54,12 +55,12 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isFormSubmitted = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _initializeRepositories();
-    _loadData();
     
     // Set buying date to today
     _buyingDate = DateTime.now();
@@ -67,6 +68,15 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     // Set installment start date to one month from today
     final now = DateTime.now();
     _installmentStartDate = DateTime(now.year, now.month + 1, now.day);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _loadData();
+      _isInitialized = true;
+    }
   }
 
   void _initializeRepositories() {
@@ -84,11 +94,20 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'user123';
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
       
-      final clients = await _clientRepository.getAllClients(userId);
-      final investors = await _investorRepository.getAllInvestors(userId);
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
+      
+      final clients = await _clientRepository.getAllClients(currentUser.id);
+      final investors = await _investorRepository.getAllInvestors(currentUser.id);
       
       setState(() {
         _clients = clients;
@@ -150,7 +169,17 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
     setState(() => _isSaving = true);
     
     try {
-      const userId = 'user123'; // TODO: Replace with actual user ID
+      // Get current user from authentication
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        // Redirect to login if not authenticated
+        if (mounted) {
+          context.go('/auth/login');
+        }
+        return;
+      }
       
       // Calculate installment end date (date of last monthly payment)
       final startDate = _installmentStartDate!;
@@ -168,7 +197,7 @@ class _AddInstallmentScreenState extends State<AddInstallmentScreen> {
       // Create installment
       final installment = Installment(
         id: const Uuid().v4(),
-        userId: userId,
+        userId: currentUser.id,
         clientId: _selectedClient!.id,
         investorId: _selectedInvestor?.id ?? '',
         productName: _productNameController.text,

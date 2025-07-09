@@ -34,12 +34,21 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
   Client? _client;
   List<Installment> _installments = [];
   bool _isLoading = true;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _initializeRepositories();
-    _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _loadData();
+      _isInitialized = true;
+    }
   }
 
   void _initializeRepositories() {
