@@ -9,6 +9,7 @@ import '../domain/entities/installment_payment.dart';
 import 'installment_payment_item.dart';
 import 'payment_registration_dialog.dart';
 import '../../../shared/widgets/custom_contextual_dialog.dart';
+import '../services/reminder_service.dart';
 
 class InstallmentListItem extends StatefulWidget {
   final Installment installment;
@@ -25,6 +26,8 @@ class InstallmentListItem extends StatefulWidget {
   final VoidCallback? onDataChanged;
   final VoidCallback? onDelete;
   final VoidCallback? onSelect;
+  final bool isSelected;
+  final VoidCallback? onSelectionToggle;
 
   const InstallmentListItem({
     super.key,
@@ -42,6 +45,8 @@ class InstallmentListItem extends StatefulWidget {
     this.onDataChanged,
     this.onDelete,
     this.onSelect,
+    this.isSelected = false,
+    this.onSelectionToggle,
   });
 
   static String getOverallStatus(
@@ -184,6 +189,14 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
     }
   }
 
+  void _sendWhatsAppReminder() async {
+    await ReminderService.sendSingleReminder(
+      context: context,
+      installmentId: widget.installment.id,
+      templateType: 'manual',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -217,9 +230,10 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                 child: _InstallmentContextMenu(
                   onSelect: widget.onSelect,
                   onDelete: widget.onDelete,
+                  onSendWhatsAppReminder: () => _sendWhatsAppReminder(),
                 ),
                 width: 200,
-                estimatedHeight: 100,
+                estimatedHeight: 120,
               );
             },
             child: AnimatedBuilder(
@@ -251,6 +265,16 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                     child: Row(
                       children: [
+                        // Checkbox column
+                        Container(
+                          width: 48,
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Checkbox(
+                            value: widget.isSelected,
+                            onChanged: (value) => widget.onSelectionToggle?.call(),
+                            activeColor: AppTheme.primaryColor,
+                          ),
+                        ),
                         // Client Name - Simple
                         Expanded(
                           flex: 2,
@@ -478,8 +502,13 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
 class _InstallmentContextMenu extends StatelessWidget {
   final VoidCallback? onSelect;
   final VoidCallback? onDelete;
+  final VoidCallback? onSendWhatsAppReminder;
 
-  const _InstallmentContextMenu({this.onSelect, this.onDelete});
+  const _InstallmentContextMenu({
+    this.onSelect, 
+    this.onDelete,
+    this.onSendWhatsAppReminder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -501,6 +530,17 @@ class _InstallmentContextMenu extends StatelessWidget {
             onTap: onSelect,
             textStyle: textStyle,
           ),
+          if (onSendWhatsAppReminder != null) ...[
+            const Divider(height: 1),
+            _ContextMenuTile(
+              icon: Icons.message,
+              label: 'Send WhatsApp Reminder',
+              onTap: onSendWhatsAppReminder,
+              textStyle: textStyle?.copyWith(color: AppTheme.primaryColor),
+              iconColor: AppTheme.primaryColor,
+            ),
+          ],
+          const Divider(height: 1),
           _ContextMenuTile(
             icon: Icons.delete_outline,
             label: l10n?.deleteAction ?? 'Удалить',

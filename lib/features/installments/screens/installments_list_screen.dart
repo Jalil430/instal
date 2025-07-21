@@ -17,6 +17,7 @@ import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../core/api/cache_service.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
+import '../services/reminder_service.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
@@ -34,8 +35,10 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   Map<String, String> _clientNames = {};
   Map<String, List<InstallmentPayment>> _installmentPayments = {};
   final Map<String, bool> _expandedStates = {}; // Track expansion state by installment ID
+  final Set<String> _selectedInstallmentIds = {}; // Track selected installments
   bool _isLoading = true;
   bool _isInitialized = false;
+  bool _isSelectionMode = false;
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -293,6 +296,121 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     return filtered;
   }
 
+  // Selection methods
+  void _toggleSelection(String installmentId) {
+    setState(() {
+      if (_selectedInstallmentIds.contains(installmentId)) {
+        _selectedInstallmentIds.remove(installmentId);
+        if (_selectedInstallmentIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedInstallmentIds.add(installmentId);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedInstallmentIds.clear();
+      _selectedInstallmentIds.addAll(_filteredAndSortedInstallments.map((i) => i.id));
+      _isSelectionMode = true;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedInstallmentIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  void _sendBulkReminders() async {
+    if (_selectedInstallmentIds.isEmpty) return;
+    
+    // Show confirmation dialog
+    final confirmed = await _showBulkReminderConfirmationDialog();
+    if (!confirmed) return;
+    
+    await ReminderService.sendBulkReminders(
+      context: context,
+      installmentIds: _selectedInstallmentIds.toList(),
+      templateType: 'manual',
+    );
+    
+    // Clear selection after sending
+    _clearSelection();
+  }
+
+  Future<bool> _showBulkReminderConfirmationDialog() async {
+    final l10n = AppLocalizations.of(context);
+    
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send WhatsApp Reminders'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to send WhatsApp reminders to ${_selectedInstallmentIds.length} selected installments?',
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This will send individual WhatsApp messages to each client.',
+                      style: TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              l10n?.cancel ?? 'Cancel',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n?.confirm ?? 'Send'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -317,6 +435,59 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
             ),
             child: Column(
               children: [
+                // Bulk Action Toolbar (appears when items are selected)
+                if (_isSelectionMode) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: AppTheme.primaryColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_selectedInstallmentIds.length} selected',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Send WhatsApp Reminders button
+                        CustomButton(
+                          text: 'Send WhatsApp Reminders',
+                          onPressed: _sendBulkReminders,
+                          color: AppTheme.primaryColor,
+                          icon: Icons.message,
+                        ),
+                        const SizedBox(width: 8),
+                        // Clear selection button
+                        TextButton(
+                          onPressed: _clearSelection,
+                          child: Text(
+                            'Clear',
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 // Title and Actions Row
                 Row(
                   children: [
@@ -423,6 +594,24 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                             ),
                             child: Row(
                               children: [
+                                // Checkbox column
+                                Container(
+                                  width: 48,
+                                  padding: const EdgeInsets.only(right: 16),
+                                  child: Checkbox(
+                                    value: _selectedInstallmentIds.isNotEmpty && 
+                                           _selectedInstallmentIds.length == _filteredAndSortedInstallments.length,
+                                    tristate: true,
+                                    onChanged: (value) {
+                                      if (value == true) {
+                                        _selectAll();
+                                      } else {
+                                        _clearSelection();
+                                      }
+                                    },
+                                    activeColor: AppTheme.primaryColor,
+                                  ),
+                                ),
                                 Expanded(
                                   flex: 2,
                                   child: Padding(
@@ -576,9 +765,9 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                           }),
                                           onDataChanged: () => _loadData(),
                                           onDelete: () => _deleteInstallment(installment),
-                                          onSelect: () {
-                                            print('Selected installment: \'${installment.productName}\'');
-                                          },
+                                          onSelect: () => _toggleSelection(installment.id),
+                                          isSelected: _selectedInstallmentIds.contains(installment.id),
+                                          onSelectionToggle: () => _toggleSelection(installment.id),
                                         ),
                                       );
                                     },

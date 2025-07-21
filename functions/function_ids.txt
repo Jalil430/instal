@@ -1,7 +1,24 @@
-auth-register=d4e4t4mv875gkg24at8a
-auth-login=d4e8jcns4qe2bkvh7rvv
-auth-refresh=d4evah37mne0rubchbl8
-auth-verify=d4ebrg3ucrog7lqe4egr
-auth-update=d4e5tijqfm1q7ikuj0c5
-auth-get-user=d4eni47g77jfmhonbhde
- 
+# Function ID Mapping for API Gateway Configuration
+# Update instal-api.yaml with these function IDs after deployment
+
+# WhatsApp Functions
+# Replace PLACEHOLDER_* values in instal-api.yaml with actual function IDs
+
+# get-whatsapp-settings=FUNCTION_ID_WILL_BE_HERE
+# update-whatsapp-settings=FUNCTION_ID_WILL_BE_HERE  
+# test-whatsapp-connection=FUNCTION_ID_WILL_BE_HERE
+# send-manual-reminder=FUNCTION_ID_WILL_BE_HERE
+# send-auto-reminders=FUNCTION_ID_WILL_BE_HERE
+
+# Instructions:
+# 1. Run deploy_whatsapp_functions.sh to deploy functions
+# 2. Copy function IDs from deployment output
+# 3. Update instal-api.yaml with actual function IDs
+# 4. Deploy API Gateway configuration
+
+# Example API Gateway update:
+# Replace: function_id: PLACEHOLDER_GET_WHATSAPP_SETTINGS
+# With:    function_id: d4e1234567890abcdef123456
+
+# Cron Triggers:
+# whatsapp-auto-reminders-trigger -> send-auto-reminders (daily at 9:00 AM UTC)

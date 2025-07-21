@@ -57,10 +57,18 @@ echo "   👤 Client Functions (6)"
 echo "   💰 Investor Functions (6)"
 echo "   📋 Installment Functions (6)"
 echo "   🔍 Search Functions (3)"
+echo "   📱 WhatsApp Functions (5)"
 
 echo -e "\n${BLUE}🔐 Deploying Authentication Functions...${NC}"
 deploy_function "auth-update" "functions/auth-update/" || exit 1
 deploy_function "auth-get-user" "functions/auth-get-user/" || exit 1
+
+echo -e "\n${BLUE}📱 Deploying WhatsApp Functions...${NC}"
+deploy_function "get-whatsapp-settings" "functions/get-whatsapp-settings/" || exit 1
+deploy_function "update-whatsapp-settings" "functions/update-whatsapp-settings/" || exit 1
+deploy_function "test-whatsapp-connection" "functions/test-whatsapp-connection/" || exit 1
+deploy_function "send-manual-reminder" "functions/send-manual-reminder/" || exit 1
+deploy_function "send-auto-reminders" "functions/send-auto-reminders/" || exit 1
 
 echo -e "\n${GREEN}🎉 All functions deployed successfully!${NC}"
 
