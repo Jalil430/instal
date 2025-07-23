@@ -29,6 +29,8 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
   List<Investor> _investors = [];
   bool _isLoading = true;
   bool _isInitialized = false;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedInvestorIds = {};
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -128,6 +130,131 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
     
     return filtered;
   }
+  
+  // Selection methods
+  void _toggleSelection(String investorId) {
+    setState(() {
+      if (_selectedInvestorIds.contains(investorId)) {
+        _selectedInvestorIds.remove(investorId);
+        if (_selectedInvestorIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedInvestorIds.add(investorId);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedInvestorIds.clear();
+      _selectedInvestorIds.addAll(_filteredAndSortedInvestors.map((i) => i.id));
+      _isSelectionMode = true;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedInvestorIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+  
+  Future<void> _deleteBulkInvestors() async {
+    if (_selectedInvestorIds.isEmpty) return;
+    
+    final l10n = AppLocalizations.of(context);
+    
+    // Show confirmation dialog
+    final confirmed = await showCustomConfirmationDialog(
+      context: context,
+      title: l10n?.deleteInvestorTitle ?? 'Delete Investor',
+      content: _selectedInvestorIds.length == 1
+          ? l10n?.deleteInvestorConfirmation(_filteredAndSortedInvestors.firstWhere((i) => i.id == _selectedInvestorIds.first).fullName) ?? 'Are you sure you want to delete this investor?'
+          : '${l10n?.deleteInvestorsConfirmation ?? 'Are you sure you want to delete these investors?'} (${_selectedInvestorIds.length})',
+    );
+    
+    if (confirmed != true) return;
+    
+    try {
+      // Clear cache to ensure fresh data after deletion
+      final cache = CacheService();
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser != null) {
+        cache.remove(CacheService.investorsKey(currentUser.id));
+        cache.remove(CacheService.analyticsKey(currentUser.id));
+      }
+      
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(l10n?.deleting ?? 'Deleting...'),
+            ],
+          ),
+          duration: const Duration(seconds: 60),
+        ),
+      );
+      
+      // Delete all selected investors
+      for (final id in _selectedInvestorIds) {
+        cache.remove(CacheService.investorKey(id));
+        await _investorRepository.deleteInvestor(id);
+      }
+      
+      // Clear the current snackbar
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      
+      // Immediately remove from local state to update UI
+      setState(() {
+        _investors.removeWhere((i) => _selectedInvestorIds.contains(i.id));
+      });
+      
+      // Clear selection
+      _clearSelection();
+      
+      // Also reload data from server to ensure consistency
+      _loadData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _selectedInvestorIds.length == 1
+                  ? l10n?.investorDeleted ?? 'Investor deleted'
+                  : l10n?.investorsDeleted ?? 'Investors deleted',
+            ),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.investorDeleteError(e) ?? 'Error deleting: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        // Reload data on error to ensure UI consistency
+        _loadData();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,41 +288,79 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                           ),
                         ),
                         Text(
-                          '${_filteredAndSortedInvestors.length} ${_getInvestorsCountText(_filteredAndSortedInvestors.length)}',
-                          style: const TextStyle(
+                          _isSelectionMode
+                              ? '${l10n?.selectedItems ?? 'Selected'}: ${_selectedInvestorIds.length}'
+                              : '${_filteredAndSortedInvestors.length} ${_getInvestorsCountText(_filteredAndSortedInvestors.length)}',
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.textSecondary,
+                            color: _isSelectionMode ? AppTheme.primaryColor : AppTheme.textSecondary,
                           ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    // Enhanced Search field
-                    CustomSearchBar(
-                      value: _searchQuery,
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.investors ?? 'инвесторы').toLowerCase()}...',
-                      width: 320,
-                    ),
-                    const SizedBox(width: 16),
-                    // Enhanced Sort dropdown
-                    CustomDropdown<String>(
-                      value: _sortBy,
-                      width: 200,
-                      items: {
-                        'creationDate': l10n?.creationDate ?? 'Дата создания',
-                        'name': l10n?.sortByName ?? 'Имени',
-                        'investment': l10n?.sortByInvestment ?? 'Инвестиции',
-                      },
-                      onChanged: (value) => setState(() => _sortBy = value),
-                    ),
-                    const SizedBox(width: 16),
-                    // Custom Add button
-                    CustomButton(
-                      text: l10n?.addInvestor ?? 'Добавить инвестора',
-                      onPressed: () => context.go('/investors/add'),
-                    ),
+                    // Show different controls based on selection mode
+                    if (_isSelectionMode) ...[
+                      // Clear selection button - light grey
+                      CustomButton(
+                        text: l10n?.cancelSelection ?? 'Cancel Selection',
+                        onPressed: _clearSelection,
+                        color: Colors.grey[100],
+                        textColor: AppTheme.textSecondary,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Select All button - subtle style
+                      CustomButton(
+                        text: l10n?.selectAll ?? 'Select All',
+                        onPressed: _selectAll,
+                        color: AppTheme.subtleBackgroundColor,
+                        textColor: AppTheme.primaryColor,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Delete button - error color
+                      CustomButton(
+                        text: l10n?.deleteAction ?? 'Delete',
+                        onPressed: _selectedInvestorIds.isNotEmpty ? _deleteBulkInvestors : null,
+                        color: AppTheme.errorColor,
+                        icon: Icons.delete_outline,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                    ] else ...[
+                      // Regular mode controls
+                      // Enhanced Search field
+                      CustomSearchBar(
+                        value: _searchQuery,
+                        onChanged: (value) => setState(() => _searchQuery = value),
+                        hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.investors ?? 'инвесторы').toLowerCase()}...',
+                        width: 320,
+                      ),
+                      const SizedBox(width: 16),
+                      // Enhanced Sort dropdown
+                      CustomDropdown<String>(
+                        value: _sortBy,
+                        width: 200,
+                        items: {
+                          'creationDate': l10n?.creationDate ?? 'Дата создания',
+                          'name': l10n?.sortByName ?? 'Имени',
+                          'investment': l10n?.sortByInvestment ?? 'Инвестиции',
+                        },
+                        onChanged: (value) => setState(() => _sortBy = value),
+                      ),
+                      const SizedBox(width: 16),
+                      // Custom Add button
+                      CustomButton(
+                        text: l10n?.addInvestor ?? 'Добавить инвестора',
+                        onPressed: () => context.go('/investors/add'),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -333,12 +498,14 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                                       final investor = _filteredAndSortedInvestors[index];
                                       return InvestorListItem(
                                         investor: investor,
-                                        onTap: () => context.go('/investors/${investor.id}'),
+                                        onTap: _isSelectionMode 
+                                            ? () => _toggleSelection(investor.id)
+                                            : () => context.go('/investors/${investor.id}'),
                                         onEdit: () => context.go('/investors/${investor.id}/edit'),
                                         onDelete: () => _deleteInvestor(investor),
-                                        onSelect: () {
-                                          print('Selected investor: \'${investor.fullName}\'');
-                                        },
+                                        onSelect: () => _toggleSelection(investor.id),
+                                        onSelectionToggle: () => _toggleSelection(investor.id),
+                                        isSelected: _selectedInvestorIds.contains(investor.id),
                                       );
                                     },
                                   ),

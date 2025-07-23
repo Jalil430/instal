@@ -21,7 +21,7 @@ def handler(event, context):
     
     GET /whatsapp/settings
     
-    Returns user's WhatsApp settings with masked credentials for security
+    Returns user's WhatsApp settings with unmasked credentials
     """
     try:
         logger.info(f"Get WhatsApp settings request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
@@ -51,15 +51,15 @@ def handler(event, context):
                 'body': json.dumps(default_settings)
             }
         
-        # Mask sensitive credentials for security
-        masked_settings = mask_sensitive_data(user_settings)
+        # Add computed fields without masking credentials
+        processed_settings = add_computed_fields(user_settings)
         
         logger.info(f"WhatsApp settings retrieved for user {user_id}")
         
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps(masked_settings)
+            'body': json.dumps(processed_settings)
         }
         
     except Exception as e:
@@ -97,53 +97,38 @@ def create_default_settings(user_id: str) -> Dict[str, Any]:
         'connection_status': 'not_configured'
     }
 
-def mask_sensitive_data(settings: Dict[str, Any]) -> Dict[str, Any]:
+def add_computed_fields(settings: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Mask sensitive credentials in settings for security
+    Add computed fields to settings without masking credentials
     
     Args:
         settings: Raw settings from database
         
     Returns:
-        Settings with masked credentials
+        Settings with computed fields
     """
-    masked = settings.copy()
-    
-    # Mask Green API credentials
-    if masked.get('green_api_instance_id'):
-        instance_id = masked['green_api_instance_id']
-        if len(instance_id) > 8:
-            masked['green_api_instance_id'] = instance_id[:4] + '*' * (len(instance_id) - 8) + instance_id[-4:]
-        else:
-            masked['green_api_instance_id'] = '*' * len(instance_id)
-    
-    if masked.get('green_api_token'):
-        token = masked['green_api_token']
-        if len(token) > 8:
-            masked['green_api_token'] = token[:4] + '*' * (len(token) - 8) + token[-4:]
-        else:
-            masked['green_api_token'] = '*' * len(token)
+    processed = settings.copy()
     
     # Add computed fields
-    masked['is_configured'] = bool(
+    processed['is_configured'] = bool(
         settings.get('green_api_instance_id') and 
         settings.get('green_api_token')
     )
     
     # Add connection status (will be updated by connection test)
-    if masked['is_configured']:
-        masked['connection_status'] = 'configured'
+    if processed['is_configured']:
+        processed['connection_status'] = 'configured'
     else:
-        masked['connection_status'] = 'not_configured'
+        processed['connection_status'] = 'not_configured'
     
     # Format timestamps
-    if masked.get('created_at'):
-        masked['created_at'] = format_timestamp(masked['created_at'])
+    if processed.get('created_at'):
+        processed['created_at'] = format_timestamp(processed['created_at'])
     
-    if masked.get('updated_at'):
-        masked['updated_at'] = format_timestamp(masked['updated_at'])
+    if processed.get('updated_at'):
+        processed['updated_at'] = format_timestamp(processed['updated_at'])
     
-    return masked
+    return processed
 
 def format_timestamp(timestamp) -> str:
     """

@@ -27,6 +27,9 @@ class InstallmentsListScreen extends StatefulWidget {
 }
 
 class _InstallmentsListScreenState extends State<InstallmentsListScreen> with TickerProviderStateMixin {
+  // WhatsApp brand color - static so it can be accessed from dialog
+  static const Color whatsAppColor = Color(0xFF25D366);
+  
   String _searchQuery = '';
   String _sortBy = 'status';
   late InstallmentRepository _installmentRepository;
@@ -318,6 +321,25 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       _isSelectionMode = true;
     });
   }
+  
+  void _selectAllOverdue() {
+    setState(() {
+      _selectedInstallmentIds.clear();
+      
+      // Find all installments with overdue status
+      for (final installment in _filteredAndSortedInstallments) {
+        final payments = _installmentPayments[installment.id] ?? [];
+        final status = InstallmentListItem.getOverallStatus(context, payments);
+        
+        // Add to selection if status is overdue
+        if (status == 'просрочено') {
+          _selectedInstallmentIds.add(installment.id);
+        }
+      }
+      
+      _isSelectionMode = _selectedInstallmentIds.isNotEmpty;
+    });
+  }
 
   void _clearSelection() {
     setState(() {
@@ -343,28 +365,128 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     _clearSelection();
   }
 
+  Future<void> _deleteBulkInstallments() async {
+    if (_selectedInstallmentIds.isEmpty) return;
+    
+    final l10n = AppLocalizations.of(context);
+    
+    // Show confirmation dialog
+    final confirmed = await showCustomConfirmationDialog(
+      context: context,
+      title: l10n?.deleteInstallmentTitle ?? 'Delete Installment',
+      content: _selectedInstallmentIds.length == 1
+          ? l10n?.deleteInstallmentConfirmation ?? 'Are you sure you want to delete this installment?'
+          : '${l10n?.deleteInstallmentConfirmation ?? 'Are you sure you want to delete these installments?'} (${_selectedInstallmentIds.length})',
+    );
+    
+    if (confirmed != true) return;
+    
+    try {
+      // Clear cache to ensure fresh data after deletion
+      final cache = CacheService();
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser != null) {
+        cache.remove(CacheService.installmentsKey(currentUser.id));
+        cache.remove(CacheService.analyticsKey(currentUser.id));
+      }
+      
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(l10n?.deleting ?? 'Deleting...'),
+            ],
+          ),
+          duration: const Duration(seconds: 60),
+        ),
+      );
+      
+      // Delete all selected installments
+      for (final id in _selectedInstallmentIds) {
+        cache.remove(CacheService.installmentKey(id));
+        cache.remove(CacheService.paymentsKey(id));
+        await _installmentRepository.deleteInstallment(id);
+      }
+      
+      // Clear the current snackbar
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      
+      // Immediately remove from local state to update UI
+      setState(() {
+        _installments.removeWhere((i) => _selectedInstallmentIds.contains(i.id));
+        for (final id in _selectedInstallmentIds) {
+          _installmentPayments.remove(id);
+          _expandedStates.remove(id);
+        }
+      });
+      
+      // Clear selection
+      _clearSelection();
+      
+      // Also reload data from server to ensure consistency
+      _loadData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _selectedInstallmentIds.length == 1
+                  ? l10n?.installmentDeleted ?? 'Installment deleted'
+                  : l10n?.installmentsDeleted ?? 'Installments deleted',
+            ),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.installmentDeleteError(e) ?? 'Error deleting: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        // Reload data on error to ensure UI consistency
+        _loadData();
+      }
+    }
+  }
+
   Future<bool> _showBulkReminderConfirmationDialog() async {
     final l10n = AppLocalizations.of(context);
     
     return await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Send WhatsApp Reminders'),
+        title: Text(l10n?.sendWhatsAppReminder ?? 'Send Reminder'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to send WhatsApp reminders to ${_selectedInstallmentIds.length} selected installments?',
+              l10n?.sendReminderConfirmation ?? 'Are you sure you want to send reminders to the selected installments?',
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: _InstallmentsListScreenState.whatsAppColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  color: _InstallmentsListScreenState.whatsAppColor.withOpacity(0.3),
                   width: 1,
                 ),
               ),
@@ -372,15 +494,15 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: AppTheme.primaryColor,
+                    color: _InstallmentsListScreenState.whatsAppColor,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'This will send individual WhatsApp messages to each client.',
+                      l10n?.sendReminderInfo ?? 'This will send individual messages to each client.',
                       style: TextStyle(
-                        color: AppTheme.primaryColor,
+                        color: _InstallmentsListScreenState.whatsAppColor,
                         fontSize: 12,
                       ),
                     ),
@@ -401,7 +523,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: _InstallmentsListScreenState.whatsAppColor,
               foregroundColor: Colors.white,
             ),
             child: Text(l10n?.confirm ?? 'Send'),
@@ -435,59 +557,6 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
             ),
             child: Column(
               children: [
-                // Bulk Action Toolbar (appears when items are selected)
-                if (_isSelectionMode) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: AppTheme.primaryColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${_selectedInstallmentIds.length} selected',
-                          style: TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const Spacer(),
-                        // Send WhatsApp Reminders button
-                        CustomButton(
-                          text: 'Send WhatsApp Reminders',
-                          onPressed: _sendBulkReminders,
-                          color: AppTheme.primaryColor,
-                          icon: Icons.message,
-                        ),
-                        const SizedBox(width: 8),
-                        // Clear selection button
-                        TextButton(
-                          onPressed: _clearSelection,
-                          child: Text(
-                            'Clear',
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 // Title and Actions Row
                 Row(
                   children: [
@@ -504,42 +573,99 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                           ),
                         ),
                         Text(
-                          '${_filteredAndSortedInstallments.length} ${_getItemsText(_filteredAndSortedInstallments.length)}',
-                          style: const TextStyle(
+                          _isSelectionMode
+                              ? '${l10n?.selectedItems ?? 'Selected'}: ${_selectedInstallmentIds.length}'
+                              : '${_filteredAndSortedInstallments.length} ${_getItemsText(_filteredAndSortedInstallments.length)}',
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.textSecondary,
+                            color: _isSelectionMode ? AppTheme.primaryColor : AppTheme.textSecondary,
                           ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    // Enhanced Search field
-                    CustomSearchBar(
-                      value: _searchQuery,
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      hintText: '${l10n?.search ?? 'Поиск'} ${_getItemsText(0)}...',
-                      width: 320,
-                    ),
-                    const SizedBox(width: 16),
-                    // Enhanced Sort dropdown
-                    CustomDropdown(
-                      value: _sortBy,
-                      width: 200,
-                      items: {
-                        'creationDate': l10n?.creationDate ?? 'Дата создания',
-                        'status': l10n?.status ?? 'Статус',
-                        'amount': l10n?.amount ?? 'Сумма',
-                        'client': l10n?.client ?? 'Клиент',
-                      },
-                      onChanged: (value) => setState(() => _sortBy = value!),
-                    ),
-                    const SizedBox(width: 16),
-                    // Custom Add button
-                    CustomButton(
-                      text: l10n?.addInstallment ?? 'Добавить рассрочку',
-                      onPressed: () => context.go('/installments/add'),
-                    ),
+                    // Show different controls based on selection mode
+                    if (_isSelectionMode) ...[
+                      // Clear selection button - light grey (at the very left)
+                      CustomButton(
+                        text: l10n?.cancelSelection ?? 'Cancel Selection',
+                        onPressed: _clearSelection,
+                        color: Colors.grey[100],
+                        textColor: AppTheme.textSecondary,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Select All button - subtle style
+                      CustomButton(
+                        text: l10n?.selectAll ?? 'Select All',
+                        onPressed: _selectAll,
+                        color: AppTheme.subtleBackgroundColor,
+                        textColor: AppTheme.primaryColor,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Select All Overdue button - same style as Select All
+                      CustomButton(
+                        text: l10n?.selectAllOverdue ?? 'Select All Overdue',
+                        onPressed: _selectAllOverdue,
+                        color: AppTheme.subtleBackgroundColor,
+                        textColor: AppTheme.primaryColor,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Delete button - error color
+                      CustomButton(
+                        text: l10n?.deleteAction ?? 'Delete',
+                        onPressed: _selectedInstallmentIds.isNotEmpty ? _deleteBulkInstallments : null,
+                        color: AppTheme.errorColor,
+                        icon: Icons.delete_outline,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Send WhatsApp Reminders button - primary action
+                      CustomButton(
+                        text: l10n?.sendWhatsAppReminder ?? 'Send Reminder',
+                        onPressed: _sendBulkReminders,
+                        color: whatsAppColor,
+                        icon: Icons.chat_bubble_outline,
+                      ),
+                    ] else ...[
+                      // Regular mode controls
+                      // Enhanced Search field
+                      CustomSearchBar(
+                        value: _searchQuery,
+                        onChanged: (value) => setState(() => _searchQuery = value),
+                        hintText: '${l10n?.search ?? 'Поиск'} ${_getItemsText(0)}...',
+                        width: 320,
+                      ),
+                      const SizedBox(width: 16),
+                      // Enhanced Sort dropdown
+                      CustomDropdown(
+                        value: _sortBy,
+                        width: 200,
+                        items: {
+                          'creationDate': l10n?.creationDate ?? 'Дата создания',
+                          'status': l10n?.status ?? 'Статус',
+                          'amount': l10n?.amount ?? 'Сумма',
+                          'client': l10n?.client ?? 'Клиент',
+                        },
+                        onChanged: (value) => setState(() => _sortBy = value!),
+                      ),
+                      const SizedBox(width: 16),
+                      // Custom Add button
+                      CustomButton(
+                        text: l10n?.addInstallment ?? 'Добавить рассрочку',
+                        onPressed: () => context.go('/installments/add'),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -594,24 +720,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                             ),
                             child: Row(
                               children: [
-                                // Checkbox column
-                                Container(
-                                  width: 48,
-                                  padding: const EdgeInsets.only(right: 16),
-                                  child: Checkbox(
-                                    value: _selectedInstallmentIds.isNotEmpty && 
-                                           _selectedInstallmentIds.length == _filteredAndSortedInstallments.length,
-                                    tristate: true,
-                                    onChanged: (value) {
-                                      if (value == true) {
-                                        _selectAll();
-                                      } else {
-                                        _clearSelection();
-                                      }
-                                    },
-                                    activeColor: AppTheme.primaryColor,
-                                  ),
-                                ),
+                                // No checkbox column - using background color for selection
                                 Expanded(
                                   flex: 2,
                                   child: Padding(
@@ -758,7 +867,9 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                           payments: payments,
                                           nextPayment: nextPayment,
                                           isExpanded: _expandedStates[installment.id] ?? false,
-                                          onTap: () => context.go('/installments/${installment.id}'),
+                                          onTap: _isSelectionMode 
+                                              ? () => _toggleSelection(installment.id)
+                                              : () => context.go('/installments/${installment.id}'),
                                           onClientTap: () => context.go('/clients/${installment.clientId}'),
                                           onExpansionChanged: (expanded) => setState(() {
                                             _expandedStates[installment.id] = expanded;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 
 class WhatsAppTemplateEditor extends StatefulWidget {
@@ -32,13 +33,13 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
     '{total_amount}',
   ];
   
-  final Map<String, String> _variableDescriptions = {
-    '{client_name}': 'Client\'s full name',
-    '{installment_amount}': 'Monthly payment amount',
-    '{due_date}': 'Payment due date',
-    '{days_remaining}': 'Days until due date',
-    '{product_name}': 'Product/service name',
-    '{total_amount}': 'Total installment price',
+  Map<String, String> _getVariableDescriptions(BuildContext context) => {
+    '{client_name}': AppLocalizations.of(context)?.clientFullName ?? 'Client\'s full name',
+    '{installment_amount}': AppLocalizations.of(context)?.monthlyPaymentAmount ?? 'Monthly payment amount',
+    '{due_date}': AppLocalizations.of(context)?.paymentDueDate ?? 'Payment due date',
+    '{days_remaining}': AppLocalizations.of(context)?.daysUntilDueDate ?? 'Days until due date',
+    '{product_name}': AppLocalizations.of(context)?.productServiceName ?? 'Product/service name',
+    '{total_amount}': AppLocalizations.of(context)?.totalInstallmentPrice ?? 'Total installment price',
   };
 
   @override
@@ -60,7 +61,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
 
   void _validateCurrentTemplate() {
     setState(() {
-      _validationErrors = _validateTemplate(_getCurrentController().text);
+      _validationErrors = _validateTemplate(_getCurrentController().text, context);
     });
   }
 
@@ -77,16 +78,16 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
     }
   }
 
-  List<String> _validateTemplate(String template) {
+  List<String> _validateTemplate(String template, BuildContext context) {
     List<String> errors = [];
     
     if (template.trim().isEmpty) {
-      errors.add('Template cannot be empty');
+      errors.add(AppLocalizations.of(context)?.templateCannotBeEmpty ?? 'Template cannot be empty');
       return errors;
     }
     
     if (template.length > 1000) {
-      errors.add('Template must be less than 1000 characters');
+      errors.add(AppLocalizations.of(context)?.templateTooLong ?? 'Template must be less than 1000 characters');
     }
     
     // Check for invalid variable syntax
@@ -96,7 +97,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
     for (Match match in matches) {
       String variable = match.group(0)!;
       if (!_availableVariables.contains(variable)) {
-        errors.add('Invalid variable: $variable');
+        errors.add('${AppLocalizations.of(context)?.invalidVariable ?? 'Invalid variable'}: $variable');
       }
     }
     
@@ -104,13 +105,13 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
     int openBraces = template.split('{').length - 1;
     int closeBraces = template.split('}').length - 1;
     if (openBraces != closeBraces) {
-      errors.add('Unmatched braces in template');
+      errors.add(AppLocalizations.of(context)?.unmatchedBraces ?? 'Unmatched braces in template');
     }
     
     // Warn if no variables are used
     bool hasVariables = _availableVariables.any((variable) => template.contains(variable));
     if (!hasVariables) {
-      errors.add('Consider using variables to personalize the message');
+      errors.add(AppLocalizations.of(context)?.considerUsingVariables ?? 'Consider using variables to personalize the message');
     }
     
     return errors;
@@ -122,42 +123,10 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              Icon(
-                Icons.message,
-                color: AppTheme.primaryColor,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Message Templates',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          
-          Text(
-            'Customize the WhatsApp message templates for different reminder types. Use variables to personalize messages.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          
           // Tab selector
           _buildTabSelector(),
           const SizedBox(height: 16),
@@ -175,9 +144,18 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
   
   Widget _buildTabSelector() {
     final tabs = [
-      {'title': '7 Days Before', 'subtitle': 'Advance reminder'},
-      {'title': 'Due Today', 'subtitle': 'Due date reminder'},
-      {'title': 'Manual', 'subtitle': 'Manual reminder'},
+      {
+        'title': AppLocalizations.of(context)?.sevenDaysBefore ?? '7 Days Before', 
+        'subtitle': AppLocalizations.of(context)?.advanceReminder ?? 'Advance reminder'
+      },
+      {
+        'title': AppLocalizations.of(context)?.dueToday ?? 'Due Today', 
+        'subtitle': AppLocalizations.of(context)?.dueDateReminder ?? 'Due date reminder'
+      },
+      {
+        'title': AppLocalizations.of(context)?.manual ?? 'Manual', 
+        'subtitle': AppLocalizations.of(context)?.manualReminder ?? 'Manual reminder'
+      },
     ];
     
     return Container(
@@ -242,19 +220,19 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
     switch (_selectedTabIndex) {
       case 0:
         currentController = widget.template7DaysController;
-        templateType = '7-day advance reminder';
+        templateType = AppLocalizations.of(context)?.sevenDayAdvanceReminder ?? '7-day advance reminder';
         break;
       case 1:
         currentController = widget.templateDueTodayController;
-        templateType = 'due date reminder';
+        templateType = AppLocalizations.of(context)?.dueDateReminder ?? 'due date reminder';
         break;
       case 2:
         currentController = widget.templateManualController;
-        templateType = 'manual reminder';
+        templateType = AppLocalizations.of(context)?.manualReminder ?? 'manual reminder';
         break;
       default:
         currentController = widget.templateManualController;
-        templateType = 'manual reminder';
+        templateType = AppLocalizations.of(context)?.manualReminder ?? 'manual reminder';
     }
     
     return Column(
@@ -263,7 +241,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
         Row(
           children: [
             Text(
-              'Template for $templateType:',
+              '${AppLocalizations.of(context)?.templateFor ?? 'Template for'} $templateType:',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -294,7 +272,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
             color: AppTheme.textPrimary,
           ),
           decoration: InputDecoration(
-            hintText: 'Enter your message template here...',
+            hintText: AppLocalizations.of(context)?.enterMessageTemplate ?? 'Enter your message template here...',
             hintStyle: TextStyle(
               color: AppTheme.textHint,
               fontFamily: 'Inter',
@@ -318,10 +296,10 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Template cannot be empty';
+              return AppLocalizations.of(context)?.templateCannotBeEmpty ?? 'Template cannot be empty';
             }
             if (value.length > 1000) {
-              return 'Template must be less than 1000 characters';
+              return AppLocalizations.of(context)?.templateTooLong ?? 'Template must be less than 1000 characters';
             }
             return null;
           },
@@ -369,7 +347,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
               ),
               const SizedBox(width: 6),
               Text(
-                'Preview:',
+                AppLocalizations.of(context)?.preview ?? 'Preview:',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -380,7 +358,9 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
           ),
           const SizedBox(height: 8),
           Text(
-            preview.isEmpty ? 'Template preview will appear here...' : preview,
+            preview.isEmpty 
+                ? AppLocalizations.of(context)?.templatePreviewPlaceholder ?? 'Template preview will appear here...' 
+                : preview,
             style: TextStyle(
               fontSize: 13,
               color: preview.isEmpty ? AppTheme.textHint : AppTheme.textPrimary,
@@ -412,7 +392,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
               ),
               const SizedBox(width: 6),
               Text(
-                'Available Variables:',
+                AppLocalizations.of(context)?.availableVariables ?? 'Available Variables:',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -493,7 +473,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _variableDescriptions[variable] ?? '',
+                        _getVariableDescriptions(context)[variable] ?? '',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppTheme.textSecondary,
@@ -530,7 +510,7 @@ class _WhatsAppTemplateEditorState extends State<WhatsAppTemplateEditor> {
               ),
               const SizedBox(width: 6),
               Text(
-                'Template Issues:',
+                AppLocalizations.of(context)?.templateIssues ?? 'Template Issues:',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

@@ -282,6 +282,10 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Удалить инвестора' : 'Delete Investor';
   String get investorDeleted =>
       locale.languageCode == 'ru' ? 'Инвестор удален' : 'Investor deleted';
+  String get investorsDeleted =>
+      locale.languageCode == 'ru' ? 'Инвесторы удалены' : 'Investors deleted';
+  String get deleteInvestorsConfirmation =>
+      locale.languageCode == 'ru' ? 'Вы уверены, что хотите удалить этих инвесторов?' : 'Are you sure you want to delete these investors?';
   String investorDeleteError(Object e) =>
       locale.languageCode == 'ru' ? 'Ошибка удаления инвестора: $e' : 'Error deleting investor: $e';
   String get investorNotFound =>
@@ -300,6 +304,10 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Удалить клиента' : 'Delete Client';
   String get clientDeleted =>
       locale.languageCode == 'ru' ? 'Клиент удален' : 'Client deleted';
+  String get clientsDeleted =>
+      locale.languageCode == 'ru' ? 'Клиенты удалены' : 'Clients deleted';
+  String get deleteClientsConfirmation =>
+      locale.languageCode == 'ru' ? 'Вы уверены, что хотите удалить этих клиентов?' : 'Are you sure you want to delete these clients?';
   String clientDeleteError(Object e) =>
       locale.languageCode == 'ru' ? 'Ошибка удаления клиента: $e' : 'Error deleting client: $e';
   String get clientNotFound =>
@@ -354,6 +362,10 @@ class AppLocalizations {
       : 'Are you sure you want to delete this installment?';
   String get installmentDeleted =>
       locale.languageCode == 'ru' ? 'Рассрочка удалена' : 'Installment deleted';
+  String get installmentsDeleted =>
+      locale.languageCode == 'ru' ? 'Рассрочки удалены' : 'Installments deleted';
+  String get deleting =>
+      locale.languageCode == 'ru' ? 'Удаление...' : 'Deleting...';
   String installmentDeleteError(Object e) =>
       locale.languageCode == 'ru' ? 'Ошибка удаления: $e' : 'Delete error: $e';
 
@@ -442,15 +454,244 @@ class AppLocalizations {
   String get averageTerm => locale.languageCode == 'ru' ? 'Средний срок' : 'Average Term';
   String get topProduct => locale.languageCode == 'ru' ? 'Самый популярный товар' : 'Top Product';
   String get upcomingRevenue30Days => locale.languageCode == 'ru' ? 'Ожидаемые платежи (30 дней)' : 'Upcoming Revenue (30 days)';
+  
+  // WhatsApp reminders
+  String get sendWhatsAppReminder => locale.languageCode == 'ru' ? 'Отправить напоминание' : 'Send Reminder';
+  String get sendReminderConfirmation => locale.languageCode == 'ru' 
+      ? 'Вы уверены, что хотите отправить напоминания для выбранных рассрочек?' 
+      : 'Are you sure you want to send reminders to the selected installments?';
+  String get sendReminderInfo => locale.languageCode == 'ru'
+      ? 'Это отправит индивидуальные сообщения каждому клиенту.'
+      : 'This will send individual messages to each client.';
+  String get sendingWhatsAppReminder => locale.languageCode == 'ru'
+      ? 'Отправка напоминания...'
+      : 'Sending WhatsApp reminder...';
+  String get reminderSent => locale.languageCode == 'ru'
+      ? 'Напоминание отправлено'
+      : 'Reminder sent';
+  String get reminderSentMultiple => locale.languageCode == 'ru'
+      ? 'Напоминания отправлены'
+      : 'Reminders sent';
+  String get partialSuccess => locale.languageCode == 'ru'
+      ? 'Частичный успех'
+      : 'Partial Success';
+  String get remindersSentPartial => locale.languageCode == 'ru'
+      ? 'Напоминания отправлены частично'
+      : 'Reminders sent partially';
+  String get failedReminders => locale.languageCode == 'ru'
+      ? 'Неудачные напоминания'
+      : 'Failed reminders';
+  String get unknownError => locale.languageCode == 'ru'
+      ? 'Неизвестная ошибка'
+      : 'Unknown error';
+  String get ok => locale.languageCode == 'ru'
+      ? 'OK'
+      : 'OK';
+  String get retry => locale.languageCode == 'ru'
+      ? 'Повторить'
+      : 'Retry';
+  String get noInstallmentsSelected => locale.languageCode == 'ru'
+      ? 'Не выбрано ни одной рассрочки'
+      : 'No installments selected';
+  String get noInternetConnection => locale.languageCode == 'ru'
+      ? 'Нет подключения к интернету. Пожалуйста, проверьте сеть и попробуйте снова.'
+      : 'No internet connection. Please check your network and try again.';
+  String get failedToSendReminder => locale.languageCode == 'ru'
+      ? 'Не удалось отправить напоминание'
+      : 'Failed to send reminder';
+  String get failedToSendReminders => locale.languageCode == 'ru'
+      ? 'Не удалось отправить напоминания'
+      : 'Failed to send reminders';
+      
+  // WhatsApp integration
+  String get whatsAppIntegration => locale.languageCode == 'ru'
+      ? 'Интеграция WhatsApp'
+      : 'WhatsApp Integration';
+  String get whatsAppSetup => locale.languageCode == 'ru'
+      ? 'Настройка WhatsApp'
+      : 'WhatsApp Setup';
+  String get connectWhatsApp => locale.languageCode == 'ru'
+      ? 'Подключить WhatsApp для автоматических напоминаний'
+      : 'Connect your WhatsApp for automated reminders';
+  String get credentials => locale.languageCode == 'ru'
+      ? 'Учетные данные'
+      : 'Credentials';
+  String get templates => locale.languageCode == 'ru'
+      ? 'Шаблоны'
+      : 'Templates';
+  String get setUpWhatsAppIntegration => locale.languageCode == 'ru'
+      ? 'Настроить интеграцию WhatsApp'
+      : 'Set Up WhatsApp Integration';
+  String get changeCredentials => locale.languageCode == 'ru'
+      ? 'Изменить учетные данные'
+      : 'Change Credentials';
+  String get changeTemplates => locale.languageCode == 'ru'
+      ? 'Изменить шаблоны'
+      : 'Change Templates';
+  String get messageTemplates => locale.languageCode == 'ru'
+      ? 'Шаблоны сообщений'
+      : 'Message Templates';
+  String get customizeMessages => locale.languageCode == 'ru'
+      ? 'Настройте сообщения напоминаний WhatsApp'
+      : 'Customize your WhatsApp reminder messages';
+  String get updateCredentials => locale.languageCode == 'ru'
+      ? 'Обновить учетные данные'
+      : 'Update Credentials';
+  String get updateGreenApiCredentials => locale.languageCode == 'ru'
+      ? 'Обновите учетные данные Green API'
+      : 'Update your Green API credentials';
+  String get findCredentialsInfo => locale.languageCode == 'ru'
+      ? 'Найдите свои учетные данные на green-api.com в панели управления'
+      : 'Find your credentials at green-api.com in your instance dashboard';
+  String get howToGetCredentials => locale.languageCode == 'ru'
+      ? 'Как получить учетные данные Green API'
+      : 'How to get Green API credentials';
+  String get credentialsSteps => locale.languageCode == 'ru'
+      ? '1. Посетите green-api.com и создайте аккаунт\n'
+        '2. Создайте новый Instance в панели управления\n'
+        '3. Скопируйте Instance ID и API Token\n'
+        '4. Отсканируйте QR-код с помощью WhatsApp'
+      : '1. Visit green-api.com and create account\n'
+        '2. Create new instance in dashboard\n'
+        '3. Copy Instance ID and API Token\n'
+        '4. Scan QR code with WhatsApp';
+  String get instanceId => locale.languageCode == 'ru'
+      ? 'Instance ID'
+      : 'Instance ID';
+  String get enterInstanceId => locale.languageCode == 'ru'
+      ? 'Введите Instance ID Green API'
+      : 'Enter your Green API instance ID';
+  String get instanceIdRequired => locale.languageCode == 'ru'
+      ? 'Instance ID обязателен'
+      : 'Instance ID is required';
+  String get instanceIdNumeric => locale.languageCode == 'ru'
+      ? 'Instance ID должен быть числовым'
+      : 'Instance ID must be numeric';
+  String get apiToken => locale.languageCode == 'ru'
+      ? 'API Token'
+      : 'API Token';
+  String get enterApiToken => locale.languageCode == 'ru'
+      ? 'Введите токен Green API'
+      : 'Enter your Green API token';
+  String get apiTokenRequired => locale.languageCode == 'ru'
+      ? 'API Token обязателен'
+      : 'API Token is required';
+  String get apiTokenTooShort => locale.languageCode == 'ru'
+      ? 'API Token слишком короткий'
+      : 'API Token appears to be too short';
+  String get testConnection => locale.languageCode == 'ru'
+      ? 'Проверить соединение'
+      : 'Test Connection';
+  String get testing => locale.languageCode == 'ru'
+      ? 'Проверка...'
+      : 'Testing...';
+  String get connectionSuccess => locale.languageCode == 'ru'
+      ? 'Соединение успешно! Вы можете продолжить.'
+      : 'Connection successful! You can continue.';
+  String get connectionFailed => locale.languageCode == 'ru'
+      ? 'Соединение не удалось. Проверьте учетные данные.'
+      : 'Connection failed. Please check your credentials.';
+  String get continue_ => locale.languageCode == 'ru'
+      ? 'Продолжить'
+      : 'Continue';
+  String get completeSetup => locale.languageCode == 'ru'
+      ? 'Завершить настройку'
+      : 'Complete Setup';
+  String get settingUp => locale.languageCode == 'ru'
+      ? 'Настройка...'
+      : 'Setting up...';
+  String get back => locale.languageCode == 'ru'
+      ? 'Назад'
+      : 'Back';
+  String get whatsAppSetupCompleted => locale.languageCode == 'ru'
+      ? 'Настройка интеграции WhatsApp завершена!'
+      : 'WhatsApp integration setup completed!';
+  String get credentialsUpdated => locale.languageCode == 'ru'
+      ? 'Учетные данные успешно обновлены!'
+      : 'Credentials updated successfully!';
+  String get templatesUpdated => locale.languageCode == 'ru'
+      ? 'Шаблоны успешно обновлены!'
+      : 'Templates updated successfully!';
+  String get whatsAppRemindersEnabled => locale.languageCode == 'ru'
+      ? 'Напоминания WhatsApp включены'
+      : 'WhatsApp reminders enabled';
+  String get whatsAppRemindersDisabled => locale.languageCode == 'ru'
+      ? 'Напоминания WhatsApp отключены'
+      : 'WhatsApp reminders disabled';
+  String get failedToUpdateSettings => locale.languageCode == 'ru'
+      ? 'Не удалось обновить настройки напоминаний'
+      : 'Failed to update reminder settings';
+  String get connectionTestFailed => locale.languageCode == 'ru'
+      ? 'Проверка соединения не удалась'
+      : 'Connection test failed';
+  String get testConnectionFirst => locale.languageCode == 'ru'
+      ? 'Пожалуйста, сначала проверьте соединение'
+      : 'Please test the connection first';
+  String get connectionTestRequired => locale.languageCode == 'ru'
+      ? 'Для продолжения необходимо успешное соединение'
+      : 'Connection test must be successful to continue';
+  String get failedToSaveSettings => locale.languageCode == 'ru'
+      ? 'Не удалось сохранить настройки'
+      : 'Failed to save settings';
+  String get failedToSaveTemplates => locale.languageCode == 'ru'
+      ? 'Не удалось сохранить шаблоны'
+      : 'Failed to save templates';
+  String get failedToSaveCredentials => locale.languageCode == 'ru'
+      ? 'Не удалось сохранить учетные данные'
+      : 'Failed to save credentials';
+  String get errorLoadingWhatsAppSettings => locale.languageCode == 'ru'
+      ? 'Ошибка загрузки настроек WhatsApp'
+      : 'Error loading WhatsApp settings';
+  String get errorLoadingUserData => locale.languageCode == 'ru'
+      ? 'Ошибка загрузки данных пользователя'
+      : 'Error loading user data';
+  String get errorDuringLogout => locale.languageCode == 'ru'
+      ? 'Ошибка при выходе из системы'
+      : 'Error during logout';
+  String get unableToLoadProfileInfo => locale.languageCode == 'ru'
+      ? 'Не удалось загрузить информацию профиля'
+      : 'Unable to load profile information';
+      
+  // WhatsApp Template Editor
+  String get clientFullName => locale.languageCode == 'ru' ? 'Полное имя клиента' : 'Client\'s full name';
+  String get monthlyPaymentAmount => locale.languageCode == 'ru' ? 'Сумма ежемесячного платежа' : 'Monthly payment amount';
+  String get paymentDueDate => locale.languageCode == 'ru' ? 'Дата платежа' : 'Payment due date';
+  String get daysUntilDueDate => locale.languageCode == 'ru' ? 'Дней до даты платежа' : 'Days until due date';
+  String get productServiceName => locale.languageCode == 'ru' ? 'Название товара/услуги' : 'Product/service name';
+  String get totalInstallmentPrice => locale.languageCode == 'ru' ? 'Общая стоимость рассрочки' : 'Total installment price';
+  String get templateCannotBeEmpty => locale.languageCode == 'ru' ? 'Шаблон не может быть пустым' : 'Template cannot be empty';
+  String get templateTooLong => locale.languageCode == 'ru' ? 'Шаблон должен содержать менее 1000 символов' : 'Template must be less than 1000 characters';
+  String get invalidVariable => locale.languageCode == 'ru' ? 'Недопустимая переменная' : 'Invalid variable';
+  String get unmatchedBraces => locale.languageCode == 'ru' ? 'Несовпадающие скобки в шаблоне' : 'Unmatched braces in template';
+  String get considerUsingVariables => locale.languageCode == 'ru' ? 'Рассмотрите использование переменных для персонализации сообщения' : 'Consider using variables to personalize the message';
+  String get sevenDaysBefore => locale.languageCode == 'ru' ? 'За 7 дней' : '7 Days Before';
+  String get advanceReminder => locale.languageCode == 'ru' ? 'Предварительное напоминание' : 'Advance reminder';
+  String get dueToday => locale.languageCode == 'ru' ? 'Сегодня' : 'Due Today';
+  String get dueDateReminder => locale.languageCode == 'ru' ? 'Напоминание о сроке' : 'Due date reminder';
+  String get manual => locale.languageCode == 'ru' ? 'Ручное' : 'Manual';
+  String get manualReminder => locale.languageCode == 'ru' ? 'Ручное напоминание' : 'Manual reminder';
+  String get sevenDayAdvanceReminder => locale.languageCode == 'ru' ? '7-дневное предварительное напоминание' : '7-day advance reminder';
+  String get templateFor => locale.languageCode == 'ru' ? 'Шаблон для' : 'Template for';
+  String get enterMessageTemplate => locale.languageCode == 'ru' ? 'Введите шаблон сообщения здесь...' : 'Enter your message template here...';
+  String get preview => locale.languageCode == 'ru' ? 'Предварительный просмотр:' : 'Preview:';
+  String get templatePreviewPlaceholder => locale.languageCode == 'ru' ? 'Предварительный просмотр шаблона появится здесь...' : 'Template preview will appear here...';
+  String get availableVariables => locale.languageCode == 'ru' ? 'Доступные переменные:' : 'Available Variables:';
+  String get templateIssues => locale.languageCode == 'ru' ? 'Проблемы шаблона:' : 'Template Issues:';
+  
+  // Selection mode
+  String get selectAll => locale.languageCode == 'ru' ? 'Выбрать все' : 'Select All';
+  String get selectAllOverdue => locale.languageCode == 'ru' ? 'Выбрать все просроченные' : 'Select All Overdue';
+  String get selectionMode => locale.languageCode == 'ru' ? 'Режим выбора' : 'Selection Mode';
+  String get selectedItems => locale.languageCode == 'ru' ? 'Выбрано' : 'Selected';
+  String get cancelSelection => locale.languageCode == 'ru' ? 'Отменить выбор' : 'Cancel Selection';
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
   bool isSupported(Locale locale) {
-    return ['ru', 'en'].contains(locale.languageCode);
+    return ['en', 'ru'].contains(locale.languageCode);
   }
 
   @override

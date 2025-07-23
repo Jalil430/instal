@@ -1,5 +1,5 @@
-get-whatsapp-settings=d4eu4h1irj55no6jt4jn
 update-whatsapp-settings=d4efejgin025sorlklin
 test-whatsapp-connection=d4e9f146f73o17mdfg5k
 send-manual-reminder=d4ea495odfsc1cvltug4
 send-auto-reminders=d4ebia6isnibg01i533n
+get-whatsapp-settings=d4eu4h1irj55no6jt4jn

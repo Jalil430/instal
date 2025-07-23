@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../settings/data/services/whatsapp_api_service.dart';
 import '../../../core/widgets/error_boundary.dart';
 import '../../../core/services/connectivity_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ReminderService {
   /// Send a WhatsApp reminder for a single installment
@@ -39,8 +40,10 @@ class ReminderService {
     required String templateType,
     required bool isBulk,
   }) async {
+    final l10n = AppLocalizations.of(context);
+    
     if (installmentIds.isEmpty) {
-      ErrorHandler.showErrorSnackBar(context, 'No installments selected');
+      ErrorHandler.showErrorSnackBar(context, l10n?.noInstallmentsSelected ?? 'No installments selected');
       return;
     }
 
@@ -51,7 +54,7 @@ class ReminderService {
     if (!isConnected) {
       ErrorHandler.showErrorSnackBar(
         context, 
-        'No internet connection. Please check your network and try again.',
+        l10n?.noInternetConnection ?? 'No internet connection. Please check your network and try again.',
         onRetry: () => _sendReminders(
           context: context,
           installmentIds: installmentIds,
@@ -66,20 +69,23 @@ class ReminderService {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              isBulk
-                  ? 'Sending ${installmentIds.length} WhatsApp reminders...'
-                  : 'Sending WhatsApp reminder...',
-            ),
-          ],
-        ),
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                isBulk
+                    ? '${l10n?.sendingWhatsAppReminder ?? 'Sending WhatsApp reminder...'} (${installmentIds.length})'
+                    : l10n?.sendingWhatsAppReminder ?? 'Sending WhatsApp reminder...',
+              ),
+            ],
+          ),
+        );
+      },
     );
 
     try {
@@ -106,11 +112,12 @@ class ReminderService {
           );
         } else {
           // Complete success
+          final l10n = AppLocalizations.of(context);
           ErrorHandler.showSuccessSnackBar(
             context,
             isBulk
-                ? '${result['successful_sends']} reminders sent successfully!'
-                : 'WhatsApp reminder sent successfully!',
+                ? '${result['successful_sends']} ${l10n?.reminderSentMultiple ?? 'Reminders sent'}!'
+                : '${l10n?.reminderSent ?? 'Reminder sent'}!',
           );
         }
       } else {
@@ -121,9 +128,12 @@ class ReminderService {
                 .toList() ??
             ['Unknown error'];
 
+        final l10n = AppLocalizations.of(context);
         _showErrorDialog(
           context,
-          'Failed to send ${isBulk ? 'reminders' : 'reminder'}',
+          isBulk
+              ? l10n?.failedToSendReminders ?? 'Failed to send reminders'
+              : l10n?.failedToSendReminder ?? 'Failed to send reminder',
           errors.join('\n'),
           onRetry: ErrorHandler.isRetryable(errors.first) ? () => _sendReminders(
             context: context,
@@ -182,19 +192,21 @@ class ReminderService {
     int failedCount,
     List<dynamic>? results,
   ) {
+    final l10n = AppLocalizations.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Partial Success'),
+        title: Text(l10n?.partialSuccess ?? 'Partial Success'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$successCount reminders sent successfully, $failedCount failed.',
+              '${l10n?.remindersSentPartial ?? '$successCount reminders sent successfully, $failedCount failed.'}',
             ),
             const SizedBox(height: 16),
-            const Text('Failed reminders:'),
+            Text(l10n?.failedReminders ?? 'Failed reminders:'),
             const SizedBox(height: 8),
             Container(
               constraints: const BoxConstraints(maxHeight: 200),
@@ -208,7 +220,7 @@ class ReminderService {
                           .map((r) => Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: Text(
-                                  '• ${r['client_name'] ?? 'Unknown'}: ${r['error'] ?? 'Unknown error'}',
+                                  '• ${r['client_name'] ?? l10n?.unknown ?? 'Unknown'}: ${r['error'] ?? l10n?.unknownError ?? 'Unknown error'}',
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ))
@@ -222,7 +234,7 @@ class ReminderService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l10n?.ok ?? 'OK'),
           ),
         ],
       ),
@@ -236,6 +248,8 @@ class ReminderService {
     String message, {
     VoidCallback? onRetry,
   }) {
+    final l10n = AppLocalizations.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -244,7 +258,7 @@ class ReminderService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l10n?.ok ?? 'OK'),
           ),
           if (onRetry != null)
             ElevatedButton(
@@ -252,7 +266,7 @@ class ReminderService {
                 Navigator.of(context).pop();
                 onRetry();
               },
-              child: const Text('Retry'),
+              child: Text(l10n?.retry ?? 'Retry'),
             ),
         ],
       ),

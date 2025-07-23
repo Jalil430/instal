@@ -13,6 +13,7 @@ class CustomButton extends StatelessWidget {
   final bool showIcon;
   final bool iconRight;
   final Color? color;
+  final Color? textColor;
 
   const CustomButton({
     super.key,
@@ -27,13 +28,16 @@ class CustomButton extends StatelessWidget {
     this.showIcon = true,
     this.iconRight = false,
     this.color,
+    this.textColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final iconWidget = Icon(icon, size: fontSize == 16 ? 20 : 18);
-    final textWidget = Text(text);
     final backgroundColor = color ?? AppTheme.brightPrimaryColor;
+    final foregroundColor = textColor ?? Colors.white;
+    final iconWidget = Icon(icon, size: fontSize == 16 ? 20 : 18, color: foregroundColor);
+    final textWidget = Text(text, style: TextStyle(color: foregroundColor));
+    
     return SizedBox(
       width: width,
       height: height,
@@ -42,7 +46,7 @@ class CustomButton extends StatelessWidget {
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: backgroundColor,
-                foregroundColor: Colors.white,
+                foregroundColor: foregroundColor,
                 elevation: 0,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
@@ -76,7 +80,7 @@ class CustomButton extends StatelessWidget {
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: backgroundColor,
-                foregroundColor: Colors.white,
+                foregroundColor: foregroundColor,
                 elevation: 0,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
@@ -92,4 +96,4 @@ class CustomButton extends StatelessWidget {
             ),
     );
   }
-} 
+}

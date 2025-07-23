@@ -11,6 +11,8 @@ class InvestorListItem extends StatefulWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onSelect;
+  final VoidCallback? onSelectionToggle;
+  final bool isSelected;
 
   const InvestorListItem({
     super.key,
@@ -19,6 +21,8 @@ class InvestorListItem extends StatefulWidget {
     this.onEdit,
     this.onDelete,
     this.onSelect,
+    this.onSelectionToggle,
+    this.isSelected = false,
   });
 
   @override
@@ -90,11 +94,13 @@ class _InvestorListItemState extends State<InvestorListItem> with TickerProvider
               height: 48, // Fixed height to match InstallmentListItem
               margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
               decoration: BoxDecoration(
-                color: Color.lerp(
-                  AppTheme.surfaceColor,
-                  AppTheme.backgroundColor,
-                  _hoverAnimation.value * 0.6,
-                ),
+                color: widget.isSelected
+                    ? AppTheme.primaryColor.withOpacity(0.1)
+                    : Color.lerp(
+                        AppTheme.surfaceColor,
+                        AppTheme.backgroundColor,
+                        _hoverAnimation.value * 0.6,
+                      ),
                 border: Border(
                   bottom: BorderSide(
                     color: AppTheme.borderColor.withOpacity(0.3),
@@ -215,7 +221,7 @@ class _InvestorContextMenu extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ContextMenuTile(
-            icon: Icons.check_box_outline_blank,
+            icon: Icons.check,
             label: l10n.select,
             onTap: onSelect,
             textStyle: textStyle,

@@ -29,6 +29,8 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   List<Client> _clients = [];
   bool _isLoading = true;
   bool _isInitialized = false;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedClientIds = {};
   
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -129,6 +131,131 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
     
     return filtered;
   }
+  
+  // Selection methods
+  void _toggleSelection(String clientId) {
+    setState(() {
+      if (_selectedClientIds.contains(clientId)) {
+        _selectedClientIds.remove(clientId);
+        if (_selectedClientIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedClientIds.add(clientId);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedClientIds.clear();
+      _selectedClientIds.addAll(_filteredAndSortedClients.map((c) => c.id));
+      _isSelectionMode = true;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedClientIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+  
+  Future<void> _deleteBulkClients() async {
+    if (_selectedClientIds.isEmpty) return;
+    
+    final l10n = AppLocalizations.of(context);
+    
+    // Show confirmation dialog
+    final confirmed = await showCustomConfirmationDialog(
+      context: context,
+      title: l10n?.deleteClientTitle ?? 'Delete Client',
+      content: _selectedClientIds.length == 1
+          ? l10n?.deleteClientConfirmation(_filteredAndSortedClients.firstWhere((c) => c.id == _selectedClientIds.first).fullName) ?? 'Are you sure you want to delete this client?'
+          : '${l10n?.deleteClientsConfirmation ?? 'Are you sure you want to delete these clients?'} (${_selectedClientIds.length})',
+    );
+    
+    if (confirmed != true) return;
+    
+    try {
+      // Clear cache to ensure fresh data after deletion
+      final cache = CacheService();
+      final authService = AuthServiceProvider.of(context);
+      final currentUser = await authService.getCurrentUser();
+      
+      if (currentUser != null) {
+        cache.remove(CacheService.clientsKey(currentUser.id));
+        cache.remove(CacheService.analyticsKey(currentUser.id));
+      }
+      
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(l10n?.deleting ?? 'Deleting...'),
+            ],
+          ),
+          duration: const Duration(seconds: 60),
+        ),
+      );
+      
+      // Delete all selected clients
+      for (final id in _selectedClientIds) {
+        cache.remove(CacheService.clientKey(id));
+        await _clientRepository.deleteClient(id);
+      }
+      
+      // Clear the current snackbar
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      
+      // Immediately remove from local state to update UI
+      setState(() {
+        _clients.removeWhere((c) => _selectedClientIds.contains(c.id));
+      });
+      
+      // Clear selection
+      _clearSelection();
+      
+      // Also reload data from server to ensure consistency
+      _loadData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _selectedClientIds.length == 1
+                  ? l10n?.clientDeleted ?? 'Client deleted'
+                  : l10n?.clientsDeleted ?? 'Clients deleted',
+            ),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.clientDeleteError(e) ?? 'Error deleting: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        // Reload data on error to ensure UI consistency
+        _loadData();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,41 +289,79 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
                           ),
                         ),
                         Text(
-                          '${_filteredAndSortedClients.length} ${_getClientsCountText(_filteredAndSortedClients.length)}',
-                          style: const TextStyle(
+                          _isSelectionMode
+                              ? '${l10n?.selectedItems ?? 'Selected'}: ${_selectedClientIds.length}'
+                              : '${_filteredAndSortedClients.length} ${_getClientsCountText(_filteredAndSortedClients.length)}',
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppTheme.textSecondary,
+                            color: _isSelectionMode ? AppTheme.primaryColor : AppTheme.textSecondary,
                           ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    // Enhanced Search field
-                    CustomSearchBar(
-                      value: _searchQuery,
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
-                      width: 320,
-                    ),
-                    const SizedBox(width: 16),
-                    // Enhanced Sort dropdown
-                    CustomDropdown<String>(
-                      value: _sortBy,
-                      width: 200,
-                      items: {
-                        'creationDate': l10n?.creationDate ?? 'Дата создания',
-                        'name': l10n?.sortByName ?? 'Имени',
-                        'contact': l10n?.sortByContact ?? 'Контакту',
-                      },
-                      onChanged: (value) => setState(() => _sortBy = value),
-                    ),
-                    const SizedBox(width: 16),
-                    // Custom Add button
-                    CustomButton(
-                      text: l10n?.addClient ?? 'Добавить клиента',
-                      onPressed: () => context.go('/clients/add'),
-                    ),
+                    // Show different controls based on selection mode
+                    if (_isSelectionMode) ...[
+                      // Clear selection button - light grey
+                      CustomButton(
+                        text: l10n?.cancelSelection ?? 'Cancel Selection',
+                        onPressed: _clearSelection,
+                        color: Colors.grey[100],
+                        textColor: AppTheme.textSecondary,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Select All button - subtle style
+                      CustomButton(
+                        text: l10n?.selectAll ?? 'Select All',
+                        onPressed: _selectAll,
+                        color: AppTheme.subtleBackgroundColor,
+                        textColor: AppTheme.primaryColor,
+                        showIcon: false,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(width: 8),
+                      // Delete button - error color
+                      CustomButton(
+                        text: l10n?.deleteAction ?? 'Delete',
+                        onPressed: _selectedClientIds.isNotEmpty ? _deleteBulkClients : null,
+                        color: AppTheme.errorColor,
+                        icon: Icons.delete_outline,
+                        height: 36,
+                        fontSize: 13,
+                      ),
+                    ] else ...[
+                      // Regular mode controls
+                      // Enhanced Search field
+                      CustomSearchBar(
+                        value: _searchQuery,
+                        onChanged: (value) => setState(() => _searchQuery = value),
+                        hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
+                        width: 320,
+                      ),
+                      const SizedBox(width: 16),
+                      // Enhanced Sort dropdown
+                      CustomDropdown<String>(
+                        value: _sortBy,
+                        width: 200,
+                        items: {
+                          'creationDate': l10n?.creationDate ?? 'Дата создания',
+                          'name': l10n?.sortByName ?? 'Имени',
+                          'contact': l10n?.sortByContact ?? 'Контакту',
+                        },
+                        onChanged: (value) => setState(() => _sortBy = value),
+                      ),
+                      const SizedBox(width: 16),
+                      // Custom Add button
+                      CustomButton(
+                        text: l10n?.addClient ?? 'Добавить клиента',
+                        onPressed: () => context.go('/clients/add'),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -334,12 +499,14 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
                                       final client = _filteredAndSortedClients[index];
                                       return ClientListItem(
                                         client: client,
-                                        onTap: () => context.go('/clients/${client.id}'),
+                                        onTap: _isSelectionMode 
+                                            ? () => _toggleSelection(client.id)
+                                            : () => context.go('/clients/${client.id}'),
                                         onEdit: () => context.go('/clients/${client.id}/edit'),
                                         onDelete: () => _deleteClient(client),
-                                        onSelect: () {
-                                          print('Selected client: \'${client.fullName}\'');
-                                        },
+                                        onSelect: () => _toggleSelection(client.id),
+                                        onSelectionToggle: () => _toggleSelection(client.id),
+                                        isSelected: _selectedClientIds.contains(client.id),
                                       );
                                     },
                                   ),

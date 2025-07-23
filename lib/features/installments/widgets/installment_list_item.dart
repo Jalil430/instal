@@ -232,32 +232,40 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                   onDelete: widget.onDelete,
                   onSendWhatsAppReminder: () => _sendWhatsAppReminder(),
                 ),
-                width: 200,
+                width: 260,
                 estimatedHeight: 120,
               );
             },
             child: AnimatedBuilder(
               animation: _hoverAnimation,
               builder: (context, child) {
+                // Define selection color
+                final Color selectionColor = const Color(0xFFE3F2FD); // Light blue selection color
+                
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   decoration: BoxDecoration(
-                    color: widget.isExpanded
-                        ? Color.lerp(
-                            const Color(0xFFF8F9FA),
-                            const Color(0xFFF1F3F4),
-                            _hoverAnimation.value,
-                          )
-                        : Color.lerp(
-                            AppTheme.surfaceColor,
-                            AppTheme.backgroundColor,
-                            _hoverAnimation.value * 0.6,
-                          ),
+                    color: widget.isSelected
+                        ? selectionColor // Use selection color when selected
+                        : widget.isExpanded
+                            ? Color.lerp(
+                                const Color(0xFFF8F9FA),
+                                const Color(0xFFF1F3F4),
+                                _hoverAnimation.value,
+                              )
+                            : Color.lerp(
+                                AppTheme.surfaceColor,
+                                AppTheme.backgroundColor,
+                                _hoverAnimation.value * 0.6,
+                              ),
                     border: Border(
                       bottom: BorderSide(
                         color: AppTheme.borderColor.withOpacity(0.3),
                         width: 1,
                       ),
+                      left: widget.isSelected
+                          ? BorderSide(color: AppTheme.primaryColor, width: 3) // Left border for selected items
+                          : BorderSide.none,
                     ),
                     // No shadow on hover
                   ),
@@ -265,16 +273,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                     child: Row(
                       children: [
-                        // Checkbox column
-                        Container(
-                          width: 48,
-                          padding: const EdgeInsets.only(right: 16),
-                          child: Checkbox(
-                            value: widget.isSelected,
-                            onChanged: (value) => widget.onSelectionToggle?.call(),
-                            activeColor: AppTheme.primaryColor,
-                          ),
-                        ),
+                        // Removed checkbox column - now using background color for selection
                         // Client Name - Simple
                         Expanded(
                           flex: 2,
@@ -504,6 +503,9 @@ class _InstallmentContextMenu extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onSendWhatsAppReminder;
 
+  // WhatsApp brand color
+  static const Color whatsAppColor = Color(0xFF25D366);
+
   const _InstallmentContextMenu({
     this.onSelect, 
     this.onDelete,
@@ -525,7 +527,7 @@ class _InstallmentContextMenu extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ContextMenuTile(
-            icon: Icons.check_box_outline_blank,
+            icon: Icons.check,
             label: l10n?.select ?? 'Выбрать',
             onTap: onSelect,
             textStyle: textStyle,
@@ -533,11 +535,11 @@ class _InstallmentContextMenu extends StatelessWidget {
           if (onSendWhatsAppReminder != null) ...[
             const Divider(height: 1),
             _ContextMenuTile(
-              icon: Icons.message,
-              label: 'Send WhatsApp Reminder',
+              icon: Icons.chat_bubble_outline,
+              label: l10n?.sendWhatsAppReminder ?? 'Send Reminder',
               onTap: onSendWhatsAppReminder,
-              textStyle: textStyle?.copyWith(color: AppTheme.primaryColor),
-              iconColor: AppTheme.primaryColor,
+              textStyle: textStyle?.copyWith(color: whatsAppColor),
+              iconColor: whatsAppColor,
             ),
           ],
           const Divider(height: 1),
