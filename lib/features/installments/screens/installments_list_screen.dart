@@ -18,6 +18,7 @@ import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../core/api/cache_service.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../services/reminder_service.dart';
+import '../../../shared/widgets/create_installment_dialog.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
@@ -663,7 +664,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                       // Custom Add button
                       CustomButton(
                         text: l10n?.addInstallment ?? 'Добавить рассрочку',
-                        onPressed: () => context.go('/installments/add'),
+                        onPressed: () => _showCreateInstallmentDialog(),
                       ),
                     ],
                   ],
@@ -960,5 +961,14 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         }
       }
     }
+  }
+
+  void _showCreateInstallmentDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateInstallmentDialog(
+        onSuccess: _loadData,
+      ),
+    );
   }
 } 

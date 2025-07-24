@@ -75,10 +75,15 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
       }
 
       final installments = await _installmentRepository.getInstallmentsByInvestorId(widget.investorId);
+      
+      // Filter installments to ensure only investor's installments are shown
+      final filteredInstallments = installments.where((installment) => 
+        installment.investorId == widget.investorId
+      ).toList();
 
       setState(() {
         _investor = investor;
-        _installments = installments;
+        _installments = filteredInstallments;
         _isLoading = false;
       });
     } catch (e) {

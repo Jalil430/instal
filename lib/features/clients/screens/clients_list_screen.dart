@@ -13,6 +13,7 @@ import '../widgets/client_list_item.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../../../core/api/cache_service.dart';
+import '../../../shared/widgets/create_edit_client_dialog.dart';
 
 class ClientsListScreen extends StatefulWidget {
   const ClientsListScreen({super.key});
@@ -359,7 +360,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
                       // Custom Add button
                       CustomButton(
                         text: l10n?.addClient ?? 'Добавить клиента',
-                        onPressed: () => context.go('/clients/add'),
+                        onPressed: () => _showCreateClientDialog(),
                       ),
                     ],
                   ],
@@ -502,7 +503,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
                                         onTap: _isSelectionMode 
                                             ? () => _toggleSelection(client.id)
                                             : () => context.go('/clients/${client.id}'),
-                                        onEdit: () => context.go('/clients/${client.id}/edit'),
+                                        onEdit: () => _showEditClientDialog(client),
                                         onDelete: () => _deleteClient(client),
                                         onSelect: () => _toggleSelection(client.id),
                                         onSelectionToggle: () => _toggleSelection(client.id),
@@ -574,5 +575,24 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
         }
       }
     }
+  }
+
+  void _showCreateClientDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateEditClientDialog(
+        onSuccess: _loadData,
+      ),
+    );
+  }
+
+  void _showEditClientDialog(Client client) {
+    showDialog(
+      context: context,
+      builder: (context) => CreateEditClientDialog(
+        client: client,
+        onSuccess: _loadData,
+      ),
+    );
   }
 } 

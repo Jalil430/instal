@@ -13,6 +13,7 @@ import '../widgets/investor_list_item.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../../../core/api/cache_service.dart';
+import '../../../shared/widgets/create_edit_investor_dialog.dart';
 
 class InvestorsListScreen extends StatefulWidget {
   const InvestorsListScreen({super.key});
@@ -358,7 +359,7 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                       // Custom Add button
                       CustomButton(
                         text: l10n?.addInvestor ?? 'Добавить инвестора',
-                        onPressed: () => context.go('/investors/add'),
+                        onPressed: () => _showCreateInvestorDialog(),
                       ),
                     ],
                   ],
@@ -501,7 +502,7 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
                                         onTap: _isSelectionMode 
                                             ? () => _toggleSelection(investor.id)
                                             : () => context.go('/investors/${investor.id}'),
-                                        onEdit: () => context.go('/investors/${investor.id}/edit'),
+                                        onEdit: () => _showEditInvestorDialog(investor),
                                         onDelete: () => _deleteInvestor(investor),
                                         onSelect: () => _toggleSelection(investor.id),
                                         onSelectionToggle: () => _toggleSelection(investor.id),
@@ -573,5 +574,24 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
         }
       }
     }
+  }
+
+  void _showCreateInvestorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => CreateEditInvestorDialog(
+        onSuccess: _loadData,
+      ),
+    );
+  }
+
+  void _showEditInvestorDialog(Investor investor) {
+    showDialog(
+      context: context,
+      builder: (context) => CreateEditInvestorDialog(
+        investor: investor,
+        onSuccess: _loadData,
+      ),
+    );
   }
 } 

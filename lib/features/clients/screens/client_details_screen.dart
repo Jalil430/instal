@@ -75,10 +75,15 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
       }
 
       final installments = await _installmentRepository.getInstallmentsByClientId(widget.clientId);
+      
+      // Filter installments to ensure only client's installments are shown
+      final filteredInstallments = installments.where((installment) => 
+        installment.clientId == widget.clientId
+      ).toList();
 
       setState(() {
         _client = client;
-        _installments = installments;
+        _installments = filteredInstallments;
         _isLoading = false;
       });
     } catch (e) {

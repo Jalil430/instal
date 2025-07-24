@@ -7,7 +7,7 @@ import '../../shared/widgets/custom_button.dart';
 import '../../shared/widgets/custom_dropdown.dart';
 import '../auth/presentation/widgets/auth_service_provider.dart';
 import '../auth/domain/entities/user.dart';
-import 'presentation/profile_edit_screen.dart';
+import '../../shared/widgets/edit_profile_dialog.dart';
 import 'data/services/whatsapp_api_service.dart';
 import 'presentation/widgets/whatsapp_integration_section.dart';
 import 'presentation/widgets/whatsapp_setup_dialog.dart';
@@ -225,15 +225,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _navigateToEditProfile() {
+  void _showEditProfileDialog() {
     if (_currentUser == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ProfileEditScreen(user: _currentUser!),
+    showDialog(
+      context: context,
+      builder: (context) => EditProfileDialog(
+        user: _currentUser!,
+        onSuccess: _loadCurrentUser,
       ),
-    ).then((_) {
-      _loadCurrentUser();
-    });
+    );
   }
 
   void _changeLanguage(String langCode) {
@@ -302,7 +302,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SizedBox(
           width: 350, // Same width as language dropdown and WhatsApp buttons
           child: CustomButton(
-            onPressed: _navigateToEditProfile,
+            onPressed: _showEditProfileDialog,
             text: AppLocalizations.of(context)?.editProfile ?? 'Edit Profile',
             icon: Icons.edit,
             showIcon: true,
