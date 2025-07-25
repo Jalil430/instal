@@ -37,7 +37,7 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
       return cachedInstallments;
     }
 
-    final response = await ApiClient.get('/installments?user_id=$userId');
+    final response = await ApiClient.get('/installments?user_id=$userId&limit=50000&offset=0');
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);
@@ -147,7 +147,7 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
 
   @override
   Future<List<InstallmentModel>> getInstallmentsByClientId(String clientId) async {
-    final response = await ApiClient.get('/installments?client_id=$clientId');
+    final response = await ApiClient.get('/installments?client_id=$clientId&limit=50000&offset=0');
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);
@@ -156,7 +156,7 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
 
   @override
   Future<List<InstallmentModel>> getInstallmentsByInvestorId(String investorId) async {
-    final response = await ApiClient.get('/installments?investor_id=$investorId');
+    final response = await ApiClient.get('/installments?investor_id=$investorId&limit=50000&offset=0');
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);

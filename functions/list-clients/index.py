@@ -101,8 +101,8 @@ def handler(event, context):
         except (ValueError, TypeError):
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Invalid limit or offset. Must be integers.'})}
 
-        if not (0 < limit <= 100):
-             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Limit must be between 1 and 100.'})}
+        if not (0 < limit <= 50000):
+             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Limit must be between 1 and 50000.'})}
         if offset < 0:
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Offset must be a non-negative number.'})}
 

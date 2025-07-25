@@ -19,6 +19,7 @@ import '../../../core/api/cache_service.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../services/reminder_service.dart';
 import '../../../shared/widgets/create_installment_dialog.dart';
+import '../../../core/error/global_error_handler.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});

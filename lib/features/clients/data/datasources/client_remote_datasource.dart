@@ -24,7 +24,7 @@ class ClientRemoteDataSourceImpl implements ClientRemoteDataSource {
       return cachedClients;
     }
 
-    final response = await ApiClient.get('/clients?user_id=$userId');
+    final response = await ApiClient.get('/clients?user_id=$userId&limit=50000&offset=0');
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);

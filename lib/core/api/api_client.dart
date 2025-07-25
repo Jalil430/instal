@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:instal_app/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:instal_app/features/auth/domain/entities/auth_state.dart';
+import 'package:instal_app/features/auth/domain/entities/user.dart';
 
 class ApiClient {
   static const String _baseUrl = 'https://d5degr4sfnv9p7i065ga.kf69zffa.apigw.yandexcloud.net';
@@ -10,6 +12,9 @@ class ApiClient {
   
   static final http.Client _httpClient = http.Client();
   static final AuthLocalDataSource _authLocalDataSource = AuthLocalDataSourceImpl();
+  
+  // Flag to prevent infinite refresh loops
+  static bool _isRefreshing = false;
   
   static String get baseUrl => _baseUrl;
   static String get apiKey => _apiKey;
@@ -39,80 +44,194 @@ class ApiClient {
         throw UnauthorizedException('User not authenticated');
       }
       
-      // Check if token is expired
+      // Check if token needs refresh or is expired
       if (authState.isTokenExpired) {
-        throw UnauthorizedException('Access token expired');
+        if (authState.refreshToken != null) {
+          try {
+            // Attempt to refresh the token
+            final refreshedState = await _refreshToken(authState.refreshToken!);
+            headers['Authorization'] = 'Bearer ${refreshedState.accessToken}';
+          } catch (e) {
+            // If refresh fails, clear auth state and throw specific exception
+            await _authLocalDataSource.clearAuthState();
+            throw TokenExpiredException('Session expired. Please log in again.');
+          }
+        } else {
+          // No refresh token available, clear auth state
+          await _authLocalDataSource.clearAuthState();
+          throw TokenExpiredException('Session expired. Please log in again.');
+        }
+      } else if (authState.needsRefresh) {
+        // Token is still valid but should be refreshed proactively
+        if (authState.refreshToken != null) {
+          try {
+            // Attempt to refresh the token in background
+            final refreshedState = await _refreshToken(authState.refreshToken!);
+            headers['Authorization'] = 'Bearer ${refreshedState.accessToken}';
+          } catch (e) {
+            // If refresh fails, use current token (it's still valid)
+            headers['Authorization'] = 'Bearer ${authState.accessToken}';
+          }
+        } else {
+          headers['Authorization'] = 'Bearer ${authState.accessToken}';
+        }
+      } else {
+        headers['Authorization'] = 'Bearer ${authState.accessToken}';
       }
-      
-      headers['Authorization'] = 'Bearer ${authState.accessToken}';
     }
     
     return headers;
   }
 
-  static Future<http.Response> get(String endpoint, {Duration? timeout}) async {
-    final uri = Uri.parse('$_baseUrl$endpoint');
+  static Future<AuthState> _refreshToken(String refreshToken) async {
+    if (_isRefreshing) {
+      throw TokenExpiredException('Token refresh already in progress');
+    }
     
+    _isRefreshing = true;
     try {
-      final headers = await _getHeaders(endpoint);
-      final response = await _httpClient.get(
-        uri,
-        headers: headers,
-      ).timeout(timeout ?? _defaultTimeout);
+      final response = await _httpClient.post(
+        Uri.parse('$_baseUrl/auth/refresh'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': _apiKey,
+        },
+        body: json.encode({'refresh_token': refreshToken}),
+      ).timeout(_defaultTimeout);
+
+      if (response.statusCode != 200) {
+        throw TokenExpiredException('Token refresh failed with status: ${response.statusCode}');
+      }
+
+      final Map<String, dynamic> responseData = json.decode(response.body);
       
-      return response;
+      // Get current auth state to preserve user data that might not be in refresh response
+      final currentAuthState = await _authLocalDataSource.getAuthState();
+      
+      // Parse the response and create new auth state
+      final newAuthState = AuthState.authenticated(
+        user: User(
+          id: responseData['user_id'],
+          email: responseData['email'],
+          fullName: responseData['full_name'],
+          phone: currentAuthState.user?.phone, // Preserve existing phone if not in response
+          createdAt: currentAuthState.user?.createdAt ?? DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        accessToken: responseData['access_token'],
+        refreshToken: responseData['refresh_token'],
+        expiresAt: DateTime.now().add(Duration(seconds: responseData['expires_in'] ?? 3600)),
+      );
+
+      // Save the new auth state
+      await _authLocalDataSource.saveAuthState(newAuthState);
+      
+      return newAuthState;
     } catch (e) {
-      throw ApiException('Network error: $e');
+      // If refresh fails, clear the auth state to force re-login
+      await _authLocalDataSource.clearAuthState();
+      throw TokenExpiredException('Token refresh failed: $e');
+    } finally {
+      _isRefreshing = false;
     }
   }
 
-  static Future<http.Response> post(String endpoint, Map<String, dynamic> body, {Duration? timeout}) async {
-    final uri = Uri.parse('$_baseUrl$endpoint');
-    final bodyJson = json.encode(body);
-    
-    try {
+  static Future<http.Response> get(String endpoint, {Duration? timeout}) async {
+    return _makeRequest(() async {
+      final uri = Uri.parse('$_baseUrl$endpoint');
       final headers = await _getHeaders(endpoint);
-      final response = await _httpClient.post(
+      return await _httpClient.get(
+        uri,
+        headers: headers,
+      ).timeout(timeout ?? _defaultTimeout);
+    });
+  }
+
+  static Future<http.Response> post(String endpoint, Map<String, dynamic> body, {Duration? timeout}) async {
+    return _makeRequest(() async {
+      final uri = Uri.parse('$_baseUrl$endpoint');
+      final bodyJson = json.encode(body);
+      final headers = await _getHeaders(endpoint);
+      return await _httpClient.post(
         uri,
         headers: headers,
         body: bodyJson,
       ).timeout(timeout ?? _defaultTimeout);
-      
-      return response;
-    } catch (e) {
-      throw ApiException('Network error: $e');
-    }
+    });
   }
 
   static Future<http.Response> put(String endpoint, Map<String, dynamic> body, {Duration? timeout}) async {
-    final uri = Uri.parse('$_baseUrl$endpoint');
-    
-    try {
+    return _makeRequest(() async {
+      final uri = Uri.parse('$_baseUrl$endpoint');
       final headers = await _getHeaders(endpoint);
-      final response = await _httpClient.put(
+      return await _httpClient.put(
         uri,
         headers: headers,
         body: json.encode(body),
       ).timeout(timeout ?? _defaultTimeout);
-      
-      return response;
-    } catch (e) {
-      throw ApiException('Network error: $e');
-    }
+    });
   }
 
   static Future<http.Response> delete(String endpoint, {Duration? timeout}) async {
-    final uri = Uri.parse('$_baseUrl$endpoint');
-    
-    try {
+    return _makeRequest(() async {
+      final uri = Uri.parse('$_baseUrl$endpoint');
       final headers = await _getHeaders(endpoint);
-      final response = await _httpClient.delete(
+      return await _httpClient.delete(
         uri,
         headers: headers,
       ).timeout(timeout ?? _defaultTimeout);
+    });
+  }
+
+  static Future<http.Response> _makeRequest(Future<http.Response> Function() requestFunction) async {
+    try {
+      final response = await requestFunction();
+      
+      // If we get a 401 Unauthorized, it might be due to token expiration
+      // Try to refresh the token and retry once
+      if (response.statusCode == 401 && !_isRefreshing) {
+        _isRefreshing = true;
+        try {
+          final authState = await _authLocalDataSource.getAuthState();
+          if (authState.isAuthenticated && authState.refreshToken != null) {
+            // Attempt to refresh the token
+            await _refreshToken(authState.refreshToken!);
+            // Retry the request with the new token
+            final retryResponse = await requestFunction();
+            
+            // If retry also fails with 401, clear auth state and throw specific exception
+            if (retryResponse.statusCode == 401) {
+              await _authLocalDataSource.clearAuthState();
+              throw TokenExpiredException('Session expired. Please log in again.');
+            }
+            
+            return retryResponse;
+          } else {
+            // No refresh token available, clear auth state and throw specific exception
+            await _authLocalDataSource.clearAuthState();
+            throw TokenExpiredException('Session expired. Please log in again.');
+          }
+        } catch (e) {
+          // If refresh fails, clear auth state and throw specific exception
+          await _authLocalDataSource.clearAuthState();
+          if (e is TokenExpiredException) {
+            rethrow;
+          }
+          throw TokenExpiredException('Session expired. Please log in again.');
+        } finally {
+          _isRefreshing = false;
+        }
+      }
       
       return response;
     } catch (e) {
+      if (e is UnauthorizedException || e is TokenExpiredException) {
+        // Clear auth state on unauthorized exceptions
+        await _authLocalDataSource.clearAuthState();
+      }
+      if (e is TokenExpiredException) {
+        rethrow;
+      }
       throw ApiException('Network error: $e');
     }
   }
@@ -199,4 +318,8 @@ class RateLimitException extends ApiException {
 
 class ServerException extends ApiException {
   const ServerException(super.message);
+}
+
+class TokenExpiredException extends ApiException {
+  const TokenExpiredException(super.message);
 } 

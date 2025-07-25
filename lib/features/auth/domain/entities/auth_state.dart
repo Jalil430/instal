@@ -58,8 +58,8 @@ class AuthState {
 
   bool get needsRefresh {
     if (!isAuthenticated || expiresAt == null) return false;
-    // Refresh if token expires in less than 5 minutes
-    return DateTime.now().isAfter(expiresAt!.subtract(const Duration(minutes: 5)));
+    // Refresh if token expires in less than 10 minutes
+    return DateTime.now().isAfter(expiresAt!.subtract(const Duration(minutes: 10)));
   }
 
   @override
