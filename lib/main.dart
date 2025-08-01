@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/localization/app_localizations.dart';
-import 'core/services/token_refresh_service.dart';
+
 import 'shared/database/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/auth/presentation/widgets/auth_service_provider.dart';
@@ -14,8 +14,7 @@ void main() async {
   // Initialize database
   await DatabaseHelper.instance.database;
   
-  // Initialize token refresh service
-  TokenRefreshService().initialize();
+
   
   final prefs = await SharedPreferences.getInstance();
   final languageCode = prefs.getString('languageCode') ?? 'ru';

@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../../../../core/api/api_client.dart';
 import '../../domain/entities/auth_state.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -97,19 +96,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final authState = await localDataSource.getAuthState();
       
-      if (authState.isAuthenticated) {
-        // Check if token needs refresh
-        if (authState.needsRefresh && authState.refreshToken != null) {
-          try {
-            final refreshedState = await refreshToken(authState.refreshToken!);
-            return refreshedState;
-          } catch (e) {
-            // If refresh fails, return current state
-            // The token will be refreshed on next API call
-            return authState;
-          }
-        }
-      }
+      // No need for proactive refresh - tokens last 7 days
       
       return authState;
     } catch (e) {

@@ -56,11 +56,7 @@ class AuthState {
     return DateTime.now().isAfter(expiresAt!);
   }
 
-  bool get needsRefresh {
-    if (!isAuthenticated || expiresAt == null) return false;
-    // Refresh if token expires in less than 10 minutes
-    return DateTime.now().isAfter(expiresAt!.subtract(const Duration(minutes: 10)));
-  }
+  // Removed needsRefresh - tokens now last 7 days, no need for proactive refresh
 
   @override
   bool operator ==(Object other) {
@@ -85,6 +81,6 @@ class AuthState {
 
   @override
   String toString() {
-    return 'AuthState(user: $user, accessToken: $accessToken, refreshToken: $refreshToken, expiresAt: $expiresAt, isAuthenticated: $isAuthenticated, needsRefresh: $needsRefresh)';
+    return 'AuthState(user: $user, accessToken: $accessToken, refreshToken: $refreshToken, expiresAt: $expiresAt, isAuthenticated: $isAuthenticated)';
   }
 } 

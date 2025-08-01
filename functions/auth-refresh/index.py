@@ -114,11 +114,11 @@ class AuthUtils:
         """Generate JWT access and refresh tokens"""
         secret_key = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-jwt-key-change-in-production')
         
-        # Access token (expires in 1 hour)
+        # Access token (expires in 7 days)
         access_payload = {
             'user_id': user_id,
             'email': email,
-            'exp': datetime.utcnow() + timedelta(hours=1),
+            'exp': datetime.utcnow() + timedelta(days=7),
             'iat': datetime.utcnow(),
             'type': 'access'
         }
@@ -138,7 +138,7 @@ class AuthUtils:
         return {
             'access_token': access_token,
             'refresh_token': refresh_token,
-            'expires_in': 3600  # 1 hour in seconds
+            'expires_in': 604800  # 7 days in seconds
         }
 
 def handler(event, context):

@@ -1,59 +1,44 @@
 #!/bin/bash
 
-# Deploy the updated create-installment, update-client, and update-investor functions
-echo "Deploying updated functions..."
+echo "Deploying functions..."
 
-echo "Deploying create-installment function..."
+echo "Deploying auth-refresh function..."
 yc serverless function version create \
-  --function-name=create-installment \
+  --function-name=auth-refresh \
   --runtime=python39 \
   --entrypoint=index.handler \
   --memory=512m \
   --execution-timeout=30s \
   --service-account-id=aje6aqidkl72tp8qttce \
-  --source-path=functions/create-installment/ \
+  --source-path=functions/auth-refresh/ \
   --environment API_KEY="$API_KEY" \
   --environment JWT_SECRET_KEY="$JWT_SECRET_KEY" \
   --environment YDB_ENDPOINT="$YDB_ENDPOINT" \
   --environment YDB_DATABASE="$YDB_DATABASE"
 
-echo "Deploying update-client function..."
+echo "Deploying auth-register function..."
 yc serverless function version create \
-  --function-name=update-client \
+  --function-name=auth-register \
   --runtime=python39 \
   --entrypoint=index.handler \
   --memory=512m \
   --execution-timeout=30s \
   --service-account-id=aje6aqidkl72tp8qttce \
-  --source-path=functions/update-client/ \
+  --source-path=functions/auth-register/ \
   --environment API_KEY="$API_KEY" \
   --environment JWT_SECRET_KEY="$JWT_SECRET_KEY" \
   --environment YDB_ENDPOINT="$YDB_ENDPOINT" \
   --environment YDB_DATABASE="$YDB_DATABASE"
 
-echo "Deploying update-investor function..."
+  echo "Deploying auth-login function..."
 yc serverless function version create \
-  --function-name=update-investor \
+  --function-name=auth-login \
   --runtime=python39 \
   --entrypoint=index.handler \
   --memory=512m \
   --execution-timeout=30s \
   --service-account-id=aje6aqidkl72tp8qttce \
-  --source-path=functions/update-investor/ \
-  --environment API_KEY="$API_KEY" \
-  --environment JWT_SECRET_KEY="$JWT_SECRET_KEY" \
-  --environment YDB_ENDPOINT="$YDB_ENDPOINT" \
-  --environment YDB_DATABASE="$YDB_DATABASE"
-
-echo "Deploying update-installment-payment function..."
-yc serverless function version create \
-  --function-name=update-installment-payment \
-  --runtime=python39 \
-  --entrypoint=index.handler \
-  --memory=512m \
-  --execution-timeout=30s \
-  --service-account-id=aje6aqidkl72tp8qttce \
-  --source-path=functions/update-installment-payment/ \
+  --source-path=functions/auth-login/ \
   --environment API_KEY="$API_KEY" \
   --environment JWT_SECRET_KEY="$JWT_SECRET_KEY" \
   --environment YDB_ENDPOINT="$YDB_ENDPOINT" \
