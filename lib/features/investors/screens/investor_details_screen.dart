@@ -61,9 +61,14 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     try {
       final investor = await _investorRepository.getInvestorById(widget.investorId);
+      
+      if (!mounted) return;
+      
       if (investor == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +81,8 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
 
       final installments = await _installmentRepository.getInstallmentsByInvestorId(widget.investorId);
       
+      if (!mounted) return;
+      
       // Filter installments to ensure only investor's installments are shown
       final filteredInstallments = installments.where((installment) => 
         installment.investorId == widget.investorId
@@ -87,6 +94,8 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

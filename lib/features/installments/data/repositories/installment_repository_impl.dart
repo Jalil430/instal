@@ -88,9 +88,12 @@ class InstallmentRepositoryImpl implements InstallmentRepository {
   }
 
   @override
-  Future<void> updatePayment(InstallmentPayment payment) async {
+  Future<Installment> updatePayment(InstallmentPayment payment) async {
     final paymentModel = InstallmentPaymentModel.fromEntity(payment);
-    await _remoteDataSource.updatePayment(paymentModel);
+    final updatedInstallmentModel = await _remoteDataSource.updatePayment(paymentModel);
+    
+    // InstallmentModel extends Installment, so we can return it directly
+    return updatedInstallmentModel;
   }
 
   @override

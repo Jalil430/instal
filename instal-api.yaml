@@ -182,6 +182,17 @@ paths:
         function_id: d4ec86pvqoqla7ck2qv7
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
+  /analytics-optimized:
+    get:
+      summary: Get optimized analytics data
+      operationId: analytics-optimized
+      security:
+        - bearerAuth: []
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8s7pip0ssrbj54dcm
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
   /auth/register:
     post:
       summary: Register a new user

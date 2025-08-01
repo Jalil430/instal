@@ -72,9 +72,14 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     try {
       final installment = await _installmentRepository.getInstallmentById(widget.installmentId);
+      
+      if (!mounted) return;
+      
       if (installment == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -86,10 +91,18 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       }
 
       final client = await _clientRepository.getClientById(installment.clientId);
+      
+      if (!mounted) return;
+      
       final investor = installment.investorId.isNotEmpty
           ? await _investorRepository.getInvestorById(installment.investorId)
           : null;
+          
+      if (!mounted) return;
+      
       final payments = await _installmentRepository.getPaymentsByInstallmentId(widget.installmentId);
+
+      if (!mounted) return;
 
       setState(() {
         _installment = installment;
@@ -99,6 +112,8 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -278,7 +293,13 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
                           ..._payments.map((payment) {
                             return InstallmentPaymentItem(
                               payment: payment,
-                              onPaymentUpdated: _loadData,
+                              onPaymentUpdated: (updatedInstallment) {
+                                // Update the installment data and reload
+                                setState(() {
+                                  _installment = updatedInstallment;
+                                });
+                                _loadData();
+                              },
                               isExpanded: false,
                             );
                           }),

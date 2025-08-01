@@ -6,6 +6,7 @@ import '../../../shared/widgets/custom_status_badge.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
+import '../data/models/installment_model.dart';
 import 'installment_payment_item.dart';
 import 'payment_registration_dialog.dart';
 import '../../../shared/widgets/custom_contextual_dialog.dart';
@@ -20,10 +21,12 @@ class InstallmentListItem extends StatefulWidget {
   final List<InstallmentPayment> payments;
   final InstallmentPayment? nextPayment;
   final bool isExpanded;
+  final bool isLoadingPayments;
   final VoidCallback onTap;
   final VoidCallback? onClientTap;
   final Function(bool) onExpansionChanged;
   final VoidCallback? onDataChanged;
+  final Function(Installment)? onInstallmentUpdated;
   final VoidCallback? onDelete;
   final VoidCallback? onSelect;
   final bool isSelected;
@@ -39,10 +42,12 @@ class InstallmentListItem extends StatefulWidget {
     required this.payments,
     this.nextPayment,
     required this.isExpanded,
+    this.isLoadingPayments = false,
     required this.onTap,
     this.onClientTap,
     required this.onExpansionChanged,
     this.onDataChanged,
+    this.onInstallmentUpdated,
     this.onDelete,
     this.onSelect,
     this.isSelected = false,
@@ -181,8 +186,10 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
         context: context,
         position: position,
         payment: widget.nextPayment!,
-        onPaymentRegistered: () {
-          // Just refresh data without affecting expansion state
+        onPaymentRegistered: (updatedInstallment) {
+          // Update the specific installment without refreshing the entire list
+          widget.onInstallmentUpdated?.call(updatedInstallment);
+          // Fallback to full refresh if the specific update callback is not provided
           widget.onDataChanged?.call();
         },
       );
@@ -382,10 +389,14 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 CustomStatusBadge(
-                                  status: InstallmentListItem.getOverallStatus(
-                                    context,
-                                    widget.payments,
-                                  ),
+                                  status: widget.installment is InstallmentModel 
+                                      ? (widget.installment as InstallmentModel).paymentStatus ?? 'предстоящий'
+                                      : (widget.payments.isEmpty 
+                                          ? 'предстоящий'
+                                          : InstallmentListItem.getOverallStatus(
+                                              context,
+                                              widget.payments,
+                                            )),
                                   width: 110,
                                 ),
                                 _buildOverdueCount(context),
@@ -440,20 +451,37 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                     : Container(), // Empty space when no next payment
                               ),
                               const SizedBox(width: 6),
-                              // Arrow button using CustomIconButton with rotation
-                              CustomIconButton(
-                                size: 28,
-                                icon: Icons.keyboard_arrow_down_rounded,
-                                onPressed: () {
-                                  widget.onExpansionChanged(!widget.isExpanded);
-                                },
-                                backgroundColor: AppTheme.backgroundColor,
-                                hoverBackgroundColor: AppTheme.subtleHoverColor,
-                                iconColor: AppTheme.textSecondary,
-                                hoverIconColor: AppTheme.primaryColor,
-                                borderColor: AppTheme.borderColor.withOpacity(0.5),
-                                hoverBorderColor: AppTheme.subtleAccentColor,
-                                rotation: widget.isExpanded ? 0.5 : 0.0, // Use rotation property
+                              // Arrow button with optional loading indicator
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CustomIconButton(
+                                    size: 28,
+                                    icon: Icons.keyboard_arrow_down_rounded,
+                                    onPressed: () {
+                                      widget.onExpansionChanged(!widget.isExpanded);
+                                    },
+                                    backgroundColor: AppTheme.backgroundColor,
+                                    hoverBackgroundColor: AppTheme.subtleHoverColor,
+                                    iconColor: AppTheme.textSecondary,
+                                    hoverIconColor: AppTheme.primaryColor,
+                                    borderColor: AppTheme.borderColor.withOpacity(0.5),
+                                    hoverBorderColor: AppTheme.subtleAccentColor,
+                                    rotation: widget.isExpanded ? 0.5 : 0.0, // Use rotation property
+                                  ),
+                                  // Loading indicator to the right of arrow
+                                  if (widget.isLoadingPayments) ...[
+                                    const SizedBox(width: 8),
+                                    const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
@@ -481,8 +509,10 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                   ...widget.payments.map((payment) {
                     return InstallmentPaymentItem(
                       payment: payment,
-                      onPaymentUpdated: () {
-                        // Just refresh data without affecting expansion state
+                      onPaymentUpdated: (updatedInstallment) {
+                        // Update the specific installment without refreshing the entire list
+                        widget.onInstallmentUpdated?.call(updatedInstallment);
+                        // Fallback to full refresh if the specific update callback is not provided
                         widget.onDataChanged?.call();
                       },
                       isExpanded: true, // Expanded in list item

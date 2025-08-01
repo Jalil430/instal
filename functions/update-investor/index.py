@@ -224,7 +224,11 @@ def handler(event, context):
                 
                 # Handle full_name update
                 if 'full_name' in sanitized_data:
-                    update_query = """
+                    # Use a single transaction to update both investor and related installments
+                    tx = session.transaction(ydb.SerializableReadWrite())
+                    
+                    # Update investor name
+                    update_investor_query = """
                     DECLARE $investor_id AS Utf8;
                     DECLARE $full_name AS Utf8;
                     DECLARE $updated_at AS Timestamp;
@@ -232,17 +236,34 @@ def handler(event, context):
                     SET full_name = $full_name, updated_at = $updated_at 
                     WHERE id = $investor_id;
                     """
-                    
-                    prepared_update = session.prepare(update_query)
-                    session.transaction().execute(
-                        prepared_update,
+                    tx.execute(
+                        session.prepare(update_investor_query),
                         {
                             '$investor_id': sanitized_id,
                             '$full_name': sanitized_data['full_name'],
                             '$updated_at': current_time
-                        },
-                        commit_tx=True
+                        }
                     )
+                    
+                    # Update investor_name in all related installments
+                    update_installments_query = """
+                    DECLARE $investor_id AS Utf8;
+                    DECLARE $investor_name AS Utf8;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE installments 
+                    SET investor_name = $investor_name, updated_at = $updated_at 
+                    WHERE investor_id = $investor_id;
+                    """
+                    tx.execute(
+                        session.prepare(update_installments_query),
+                        {
+                            '$investor_id': sanitized_id,
+                            '$investor_name': sanitized_data['full_name'],
+                            '$updated_at': current_time
+                        }
+                    )
+                    
+                    tx.commit()
                 
                 # Handle investment_amount update
                 if 'investment_amount' in sanitized_data:

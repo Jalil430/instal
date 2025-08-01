@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_contextual_dialog.dart';
+import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
@@ -15,16 +16,16 @@ class PaymentRegistrationDialog {
     required BuildContext context,
     required Offset position,
     required InstallmentPayment payment,
-    required VoidCallback onPaymentRegistered,
+    required Function(Installment) onPaymentRegistered,
   }) async {
-    final result = await CustomContextualDialog.show<bool>(
+    final result = await CustomContextualDialog.show<Installment>(
       context: context,
       position: position,
       child: _PaymentRegistrationContent(payment: payment),
     );
     
-    if (result == true) {
-      onPaymentRegistered();
+    if (result != null) {
+      onPaymentRegistered(result);
     }
   }
 }
@@ -259,10 +260,10 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
       );
       
       // Use a shorter timeout for payment operations
-      await _repository.updatePayment(updatedPayment);
+      final updatedInstallment = await _repository.updatePayment(updatedPayment);
       
       if (mounted) {
-        Navigator.of(context).pop(true); // Return true to indicate success
+        Navigator.of(context).pop(updatedInstallment); // Return the updated installment
       }
     } catch (e) {
       if (mounted) {

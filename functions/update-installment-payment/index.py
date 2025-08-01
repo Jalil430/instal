@@ -84,6 +84,8 @@ class JWTAuth:
 
 def handler(event, context):
     try:
+        logger.info(f"Handler started. Event keys: {list(event.keys())}")
+        logger.info(f"Path parameters: {event.get('pathParameters', 'None')}")
         logger.info(f"Received update payment request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         
         # Authentication
@@ -94,6 +96,7 @@ def handler(event, context):
         
         # Get payment ID from path parameters
         payment_id = event['pathParameters']['id']
+        logger.info(f"Extracted payment_id: {payment_id}")
         
         # Parse request body
         try:
@@ -142,26 +145,84 @@ def handler(event, context):
         pool = ydb.SessionPool(driver)
         
         def execute_query(session):
-            # First, verify the payment belongs to an installment owned by the authenticated user
-            verify_query = """
-            DECLARE $payment_id AS Utf8;
-            DECLARE $user_id AS Utf8;
-            SELECT ip.id 
-            FROM installment_payments ip
-            JOIN installments i ON ip.installment_id = i.id
-            WHERE ip.id = $payment_id AND i.user_id = $user_id;
-            """
+            nonlocal payment_id  # Allow modification of payment_id from outer scope
+            logger.info(f"Starting execute_query with payment_id: {payment_id}, user_id: {user_id}")
             
-            verify_result = session.transaction().execute(
-                session.prepare(verify_query),
-                {'$payment_id': payment_id, '$user_id': user_id},
-                commit_tx=False
-            )
+            try:
+                # First, verify the payment belongs to an installment owned by the authenticated user
+                # and get the installment_id for updating calculated fields
+                verify_query = """DECLARE $payment_id AS Utf8;
+SELECT installment_id FROM installment_payments WHERE id = $payment_id;"""
+                
+                logger.info(f"Executing verify query with payment_id: {payment_id}")
+                logger.info(f"Verify query text: {verify_query}")
+                try:
+                    prepared_query = session.prepare(verify_query)
+                    logger.info("Query prepared successfully")
+                    verify_result = session.transaction().execute(
+                        prepared_query,
+                        {'$payment_id': payment_id},
+                        commit_tx=False
+                    )
+                    logger.info(f"Verify query executed successfully")
+                except Exception as query_error:
+                    logger.error(f"Query execution failed: {query_error}")
+                    logger.error(f"Query was: {verify_query}")
+                    raise
+            except Exception as e:
+                logger.error(f"Error in verify query: {str(e)}")
+                raise
             
-            if not verify_result[0].rows:
+            # Handle synthetic payment IDs (ending with _next)
+            if not verify_result[0].rows and payment_id.endswith('_next'):
+                installment_id = payment_id.replace('_next', '')
+                logger.info(f"Detected synthetic payment ID. Looking for next unpaid payment in installment: {installment_id}")
+                
+                # Find the actual next unpaid payment for this installment
+                find_next_payment_query = """
+DECLARE $installment_id AS Utf8;
+SELECT id
+FROM installment_payments
+WHERE installment_id = $installment_id AND is_paid = false
+ORDER BY due_date ASC
+LIMIT 1;
+"""
+                
+                logger.info(f"Find next payment query: {find_next_payment_query}")
+                try:
+                    prepared_next_query = session.prepare(find_next_payment_query)
+                    logger.info("Next payment query prepared successfully")
+                    next_payment_result = session.transaction().execute(
+                        prepared_next_query,
+                        {'$installment_id': installment_id},
+                        commit_tx=False
+                    )
+                    logger.info("Next payment query executed successfully")
+                except Exception as next_query_error:
+                    logger.error(f"Next payment query execution failed: {next_query_error}")
+                    logger.error(f"Query was: {find_next_payment_query}")
+                    raise
+                
+                if not next_payment_result[0].rows:
+                    logger.error(f"No unpaid payments found for installment: {installment_id}")
+                    raise Exception("No unpaid payments found for this installment")
+                
+                # Update payment_id to the actual payment ID
+                row = next_payment_result[0].rows[0]
+                payment_id = row.id
+                logger.info(f"Found actual payment ID: {payment_id} for installment: {installment_id}")
+                
+            elif not verify_result[0].rows:
+                logger.error(f"Payment not found or access denied. payment_id: {payment_id}, user_id: {user_id}")
                 raise Exception("Payment not found or access denied")
+            else:
+                row = verify_result[0].rows[0]
+                installment_id = row.installment_id
+                logger.info(f"Found installment_id: {installment_id} for payment_id: {payment_id}")
+
             
-            query = """
+            # Prepare queries outside transaction
+            update_payment_query = """
             DECLARE $payment_id AS Utf8;
             DECLARE $is_paid AS Bool;
             DECLARE $paid_date AS Optional<Date>;
@@ -175,22 +236,241 @@ def handler(event, context):
             WHERE id = $payment_id;
             """
             
-            prepared_query = session.prepare(query)
-            session.transaction().execute(
-                prepared_query,
+            prepared_update_payment = session.prepare(update_payment_query)
+            
+            # Start transaction for atomic updates
+            tx = session.transaction(ydb.SerializableReadWrite())
+            
+            # Update the payment first
+            logger.info(f"Updating payment {payment_id} to is_paid={is_paid}, paid_date={paid_date}")
+            tx.execute(
+                prepared_update_payment,
                 {
                     '$payment_id': payment_id,
                     '$is_paid': is_paid,
                     '$paid_date': paid_date,
                     '$updated_at': datetime.utcnow()
-                },
-                commit_tx=True
+                }
             )
+            logger.info(f"Payment {payment_id} updated successfully")
+            
+            # Now get installment data (within the same transaction to see updated payment)
+            installment_query = """
+DECLARE $installment_id AS Utf8;
+SELECT installment_price FROM installments WHERE id = $installment_id;
+"""
+            
+            installment_result = tx.execute(
+                session.prepare(installment_query),
+                {'$installment_id': installment_id}
+            )
+            
+            if not installment_result[0].rows:
+                raise Exception("Installment not found")
+                
+            installment_price = installment_result[0].rows[0].installment_price
+            
+            # Get payment statistics (within transaction to see the updated payment)
+            payment_stats_query = """
+DECLARE $installment_id AS Utf8;
+SELECT 
+    COALESCE(SUM(CASE WHEN is_paid = true THEN expected_amount ELSE CAST(0 AS Decimal(22,9)) END), CAST(0 AS Decimal(22,9))) as paid_amount,
+    CAST(COUNT(*) AS Int32) as total_payments,
+    CAST(SUM(CASE WHEN is_paid = true THEN CAST(1 AS Int32) ELSE CAST(0 AS Int32) END) AS Int32) as paid_payments,
+    CAST(SUM(CASE WHEN is_paid = false AND due_date < CurrentUtcDate() THEN CAST(1 AS Int32) ELSE CAST(0 AS Int32) END) AS Int32) as overdue_count,
+    MIN(CASE WHEN is_paid = false THEN due_date ELSE NULL END) as next_payment_date,
+    MAX(CASE WHEN is_paid = true THEN paid_date ELSE NULL END) as last_payment_date
+FROM installment_payments
+WHERE installment_id = $installment_id;
+"""
+            
+            stats_result = tx.execute(
+                session.prepare(payment_stats_query),
+                {'$installment_id': installment_id}
+            )
+            
+            if not stats_result[0].rows:
+                # No payments exist yet, use default values
+                paid_amount = 0.0
+                total_payments = 0
+                paid_payments = 0
+                overdue_count = 0
+                next_payment_date = None
+                last_payment_date = None
+            else:
+                stats_row = stats_result[0].rows[0]
+                paid_amount = stats_row.paid_amount
+                total_payments = stats_row.total_payments
+                paid_payments = stats_row.paid_payments
+                overdue_count = stats_row.overdue_count
+                next_payment_date = stats_row.next_payment_date
+                last_payment_date = stats_row.last_payment_date
+            
+            remaining_amount = installment_price - paid_amount
+            
+            # Get next payment amount separately (within transaction)
+            next_amount_query = """
+DECLARE $installment_id AS Utf8;
+SELECT id, expected_amount, due_date, is_paid FROM installment_payments 
+WHERE installment_id = $installment_id AND is_paid = false 
+ORDER BY due_date ASC LIMIT 1;
+"""
+            
+            next_amount_result = tx.execute(
+                session.prepare(next_amount_query),
+                {'$installment_id': installment_id}
+            )
+            
+            if next_amount_result[0].rows:
+                next_payment_row = next_amount_result[0].rows[0]
+                next_payment_amount = next_payment_row.expected_amount
+                logger.info(f"Next unpaid payment: ID={next_payment_row.id}, amount={next_payment_amount}, due_date={next_payment_row.due_date}, is_paid={next_payment_row.is_paid}")
+            else:
+                next_payment_amount = None
+                logger.info("No unpaid payments found")
+            
+            # Simple UPDATE with calculated values
+            update_installment_query = """
+DECLARE $installment_id AS Utf8;
+DECLARE $paid_amount AS Decimal(22,9);
+DECLARE $remaining_amount AS Decimal(22,9);
+DECLARE $total_payments AS Int32;
+DECLARE $paid_payments AS Int32;
+DECLARE $overdue_count AS Int32;
+DECLARE $next_payment_date AS Date?;
+DECLARE $next_payment_amount AS Decimal(22,9)?;
+DECLARE $last_payment_date AS Date?;
+DECLARE $updated_at AS Timestamp;
+
+UPDATE installments SET
+    paid_amount = $paid_amount,
+    remaining_amount = $remaining_amount,
+    total_payments = $total_payments,
+    paid_payments = $paid_payments,
+    overdue_count = $overdue_count,
+    next_payment_date = $next_payment_date,
+    next_payment_amount = $next_payment_amount,
+    last_payment_date = $last_payment_date,
+    updated_at = $updated_at
+WHERE id = $installment_id;
+"""
+            
+            prepared_update_installment = session.prepare(update_installment_query)
+            
+            # Update calculated fields in installments table
+            tx.execute(
+                prepared_update_installment,
+                {
+                    '$installment_id': installment_id,
+                    '$paid_amount': paid_amount,
+                    '$remaining_amount': remaining_amount,
+                    '$total_payments': total_payments,
+                    '$paid_payments': paid_payments,
+                    '$overdue_count': overdue_count,
+                    '$next_payment_date': next_payment_date,
+                    '$next_payment_amount': next_payment_amount,
+                    '$last_payment_date': last_payment_date,
+                    '$updated_at': datetime.utcnow()
+                }
+            )
+            
+            update_status_query = """
+DECLARE $installment_id AS Utf8;
+
+UPDATE installments SET
+    payment_status = CASE
+        WHEN overdue_count > 0 THEN CAST('просрочено' AS Utf8)
+        WHEN paid_payments = total_payments AND total_payments > 0 THEN CAST('оплачено' AS Utf8)
+        WHEN next_payment_date IS NOT NULL AND next_payment_date <= CurrentUtcDate() THEN CAST('к оплате' AS Utf8)
+        ELSE CAST('предстоящий' AS Utf8)
+    END
+WHERE id = $installment_id;
+"""
+            
+            prepared_update_status = session.prepare(update_status_query)
+            
+            # Update payment status based on calculated fields
+            tx.execute(
+                prepared_update_status,
+                {'$installment_id': installment_id}
+            )
+            
+            # Get the updated installment data to return to the client
+            updated_installment_query = """
+DECLARE $installment_id AS Utf8;
+SELECT 
+    id, user_id, client_id, investor_id, product_name,
+    cash_price, installment_price, down_payment, term_months, monthly_payment,
+    down_payment_date, installment_start_date, installment_end_date,
+    created_at, updated_at,
+    client_name, investor_name, paid_amount, remaining_amount,
+    next_payment_date, next_payment_amount, payment_status,
+    overdue_count, total_payments, paid_payments, last_payment_date
+FROM installments
+WHERE id = $installment_id;
+"""
+            
+            updated_installment_result = tx.execute(
+                session.prepare(updated_installment_query),
+                {'$installment_id': installment_id}
+            )
+            
+            if not updated_installment_result[0].rows:
+                raise Exception("Updated installment not found")
+            
+            updated_installment = updated_installment_result[0].rows[0]
+            
+            # Commit all changes atomically
+            tx.commit()
+            
+            # Return the updated installment data
+            return updated_installment
         
         try:
-            pool.retry_operation_sync(execute_query)
+            updated_installment = pool.retry_operation_sync(execute_query)
         finally:
             driver.stop()
+        
+        # Use the exact same date conversion logic as list-installments
+        def convert_timestamp(ts):
+            if ts is None: return None
+            return datetime.fromtimestamp(ts / 1000000).isoformat() if isinstance(ts, int) else ts.isoformat()
+
+        def convert_date(d):
+            if d is None: return None
+            if isinstance(d, date): return d.strftime('%Y-%m-%d')
+            if isinstance(d, int): return date.fromordinal(d + date(1970, 1, 1).toordinal()).strftime('%Y-%m-%d')
+            return str(d)
+        
+        # Convert the updated installment to a dictionary for JSON serialization
+        installment_data = {
+            'id': updated_installment.id,
+            'user_id': updated_installment.user_id,
+            'client_id': updated_installment.client_id,
+            'investor_id': updated_installment.investor_id,
+            'product_name': updated_installment.product_name,
+            'cash_price': float(updated_installment.cash_price),
+            'installment_price': float(updated_installment.installment_price),
+            'down_payment': float(updated_installment.down_payment),
+            'term_months': updated_installment.term_months,
+            'monthly_payment': float(updated_installment.monthly_payment),
+            'down_payment_date': convert_date(updated_installment.down_payment_date),
+            'installment_start_date': convert_date(updated_installment.installment_start_date),
+            'installment_end_date': convert_date(updated_installment.installment_end_date),
+            'created_at': convert_timestamp(updated_installment.created_at),
+            'updated_at': convert_timestamp(updated_installment.updated_at),
+            'client_name': updated_installment.client_name,
+            'investor_name': updated_installment.investor_name,
+            'paid_amount': float(updated_installment.paid_amount) if updated_installment.paid_amount else 0.0,
+            'remaining_amount': float(updated_installment.remaining_amount) if updated_installment.remaining_amount else 0.0,
+            'next_payment_date': convert_date(updated_installment.next_payment_date),
+            'next_payment_amount': float(updated_installment.next_payment_amount) if updated_installment.next_payment_amount else 0.0,
+            'payment_status': updated_installment.payment_status,
+            'overdue_count': updated_installment.overdue_count if updated_installment.overdue_count else 0,
+            'total_payments': updated_installment.total_payments if updated_installment.total_payments else 0,
+            'paid_payments': updated_installment.paid_payments if updated_installment.paid_payments else 0,
+            'last_payment_date': convert_date(updated_installment.last_payment_date)
+        }
         
         logger.info(f"Updated installment payment: {payment_id}")
         return {
@@ -201,7 +481,10 @@ def handler(event, context):
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             },
-            'body': json.dumps({'message': 'Installment payment updated successfully'})
+            'body': json.dumps({
+                'message': 'Installment payment updated successfully',
+                'installment': installment_data
+            })
         }
         
     except Exception as e:

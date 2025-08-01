@@ -18,7 +18,7 @@ abstract class InstallmentRemoteDataSource {
   Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(String installmentId);
   Future<InstallmentPaymentModel?> getPaymentById(String id);
   Future<String> createPayment(InstallmentPaymentModel payment);
-  Future<void> updatePayment(InstallmentPaymentModel payment);
+  Future<InstallmentModel> updatePayment(InstallmentPaymentModel payment);
   Future<void> deletePayment(String id);
   Future<List<InstallmentPaymentModel>> getOverduePayments(String userId);
   Future<List<InstallmentPaymentModel>> getDuePayments(String userId);
@@ -37,14 +37,17 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
       return cachedInstallments;
     }
 
-    final response = await ApiClient.get('/installments?user_id=$userId&limit=50000&offset=0');
+    // Use optimized endpoint that includes pre-calculated fields
+    // Use longer timeout for installments list as it can be a large dataset
+    final response = await ApiClient.get('/installments?user_id=$userId&limit=1000&offset=0',
+        timeout: const Duration(seconds: 30));
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);
-    final installments = jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
+    final installments = jsonList.map((json) => InstallmentModel.fromMapOptimized(json)).toList();
     
-    // Cache the result
-    _cache.set(cacheKey, installments);
+    // Cache the result with longer duration since it includes more data
+    _cache.set(cacheKey, installments, duration: const Duration(minutes: 3));
     
     return installments;
   }
@@ -138,7 +141,8 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   @override
   Future<List<InstallmentModel>> searchInstallments(String userId, String query) async {
     final encodedQuery = Uri.encodeComponent(query);
-    final response = await ApiClient.get('/installments/search?user_id=$userId&query=$encodedQuery');
+    final response = await ApiClient.get('/installments/search?user_id=$userId&query=$encodedQuery',
+        timeout: const Duration(seconds: 20));
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);
@@ -206,7 +210,7 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   }
 
   @override
-  Future<void> updatePayment(InstallmentPaymentModel payment) async {
+  Future<InstallmentModel> updatePayment(InstallmentPaymentModel payment) async {
     final paymentData = {
       'is_paid': payment.isPaid,
       'paid_date': payment.paidDate?.toIso8601String().split('T')[0], // YYYY-MM-DD format
@@ -215,13 +219,17 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     final response = await ApiClient.put('/installment-payments/${payment.id}', paymentData);
     ApiClient.handleResponse(response);
     
-    // Invalidate cache after updating payment
+    // Parse the response to get the updated installment
+    final responseData = json.decode(response.body);
+    final updatedInstallment = InstallmentModel.fromMapOptimized(responseData['installment']);
+    
+    // Update cache with the new installment data
+    _cache.set(CacheService.installmentKey(updatedInstallment.id), updatedInstallment);
+    
+    // Invalidate related cache entries
     _cache.remove(CacheService.paymentsKey(payment.installmentId));
-    _cache.remove(CacheService.installmentKey(payment.installmentId));
     
     // Payment status changes affect analytics, so we need to invalidate analytics cache
-    // We'll use a broader cache invalidation for analytics since we don't have userId here
-    // This ensures analytics is always up to date when payments change
     _cache.cleanup(); // Remove expired entries
     
     // Since payment changes affect analytics for all users potentially,
@@ -230,6 +238,8 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     for (final key in analyticsKeys) {
       _cache.remove(key);
     }
+    
+    return updatedInstallment;
   }
 
   @override

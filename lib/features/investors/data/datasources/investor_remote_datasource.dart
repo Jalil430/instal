@@ -24,7 +24,8 @@ class InvestorRemoteDataSourceImpl implements InvestorRemoteDataSource {
       return cachedInvestors;
     }
 
-    final response = await ApiClient.get('/investors?user_id=$userId&limit=50000&offset=0');
+    final response = await ApiClient.get('/investors?user_id=$userId&limit=50000&offset=0',
+        timeout: const Duration(seconds: 20));
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);

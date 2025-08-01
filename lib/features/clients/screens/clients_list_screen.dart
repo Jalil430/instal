@@ -72,11 +72,15 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     try {
       // Get current user from authentication
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
+      
+      if (!mounted) return;
       
       if (currentUser == null) {
         // Redirect to login if not authenticated
@@ -88,13 +92,19 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
       
       final clients = await _clientRepository.getAllClients(currentUser.id);
       
+      if (!mounted) return;
+      
       setState(() {
         _clients = clients;
         _isLoading = false;
       });
       
-      _fadeController.forward();
+      if (mounted) {
+        _fadeController.forward();
+      }
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,7 +174,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   }
   
   Future<void> _deleteBulkClients() async {
-    if (_selectedClientIds.isEmpty) return;
+    if (_selectedClientIds.isEmpty || !mounted) return;
     
     final l10n = AppLocalizations.of(context);
     
@@ -177,7 +187,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
           : '${l10n?.deleteClientsConfirmation ?? 'Are you sure you want to delete these clients?'} (${_selectedClientIds.length})',
     );
     
-    if (confirmed != true) return;
+    if (!mounted || confirmed != true) return;
     
     try {
       // Clear cache to ensure fresh data after deletion
@@ -185,37 +195,44 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
       
+      if (!mounted) return;
+      
       if (currentUser != null) {
         cache.remove(CacheService.clientsKey(currentUser.id));
         cache.remove(CacheService.analyticsKey(currentUser.id));
       }
       
       // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Text(l10n?.deleting ?? 'Deleting...'),
-            ],
+                const SizedBox(width: 16),
+                Text(l10n?.deleting ?? 'Deleting...'),
+              ],
+            ),
+            duration: const Duration(seconds: 60),
           ),
-          duration: const Duration(seconds: 60),
-        ),
-      );
+        );
+      }
       
       // Delete all selected clients
       for (final id in _selectedClientIds) {
+        if (!mounted) return;
         cache.remove(CacheService.clientKey(id));
         await _clientRepository.deleteClient(id);
       }
+      
+      if (!mounted) return;
       
       // Clear the current snackbar
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -229,7 +246,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
       _clearSelection();
       
       // Also reload data from server to ensure consistency
-      _loadData();
+      await _loadData();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -253,7 +270,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
           ),
         );
         // Reload data on error to ensure UI consistency
-        _loadData();
+        await _loadData();
       }
     }
   }
@@ -534,11 +551,15 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
   }
 
   Future<void> _deleteClient(Client client) async {
+    if (!mounted) return;
+    
     final confirmed = await showCustomConfirmationDialog(
       context: context,
       title: AppLocalizations.of(context)!.deleteClientTitle,
       content: AppLocalizations.of(context)!.deleteClientConfirmation(client.fullName),
     );
+
+    if (!mounted) return;
 
     if (confirmed == true) {
       try {
@@ -547,6 +568,8 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
         final authService = AuthServiceProvider.of(context);
         final currentUser = await authService.getCurrentUser();
         
+        if (!mounted) return;
+        
         if (currentUser != null) {
           cache.remove(CacheService.clientsKey(currentUser.id));
           cache.remove(CacheService.analyticsKey(currentUser.id));
@@ -554,6 +577,9 @@ class _ClientsListScreenState extends State<ClientsListScreen> with TickerProvid
         cache.remove(CacheService.clientKey(client.id));
         
         await _clientRepository.deleteClient(client.id);
+        
+        if (!mounted) return;
+        
         // Immediately refresh the list after deletion
         await _loadData();
         if (mounted) {

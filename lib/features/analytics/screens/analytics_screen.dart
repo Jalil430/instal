@@ -48,10 +48,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Future<void> _loadAnalyticsData() async {
+    if (!mounted) return;
+    
     try {
       // Get current user from authentication
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
+      
+      if (!mounted) return;
       
       if (currentUser == null) {
         // Redirect to login if not authenticated
@@ -63,7 +67,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       
       if (mounted) {
         setState(() {
-      _analyticsDataFuture = _getAnalyticsData(currentUser.id);
+          _analyticsDataFuture = _getAnalyticsData(currentUser.id);
         });
       }
     } catch (e) {
@@ -77,7 +81,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Future<void> _refreshAnalytics() async {
-    if (_isRefreshing) return; // Prevent multiple refresh calls
+    if (_isRefreshing || !mounted) return; // Prevent multiple refresh calls
     
     setState(() => _isRefreshing = true);
     
@@ -85,6 +89,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       // Get current user from authentication
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
+      
+      if (!mounted) return;
       
       if (currentUser == null) {
         // Redirect to login if not authenticated
@@ -97,6 +103,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       // Clear analytics cache to force fresh data
       final cache = CacheService();
       cache.remove(CacheService.analyticsKey(currentUser.id));
+      
+      if (!mounted) return;
       
       // Reload data
       final newFuture = _getAnalyticsData(currentUser.id);
@@ -111,7 +119,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       print('Error refreshing analytics: $e');
     } finally {
       if (mounted) {
-      setState(() => _isRefreshing = false);
+        setState(() => _isRefreshing = false);
       }
     }
   }

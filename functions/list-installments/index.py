@@ -117,29 +117,39 @@ def handler(event, context):
             pool = ydb.SessionPool(driver)
 
             def list_installments_from_db(session):
+                # Optimized query that uses pre-calculated fields to avoid N+1 queries
                 query = """
                 DECLARE $user_id AS Utf8;
                 DECLARE $limit AS Uint64;
                 DECLARE $offset AS Uint64;
                 SELECT 
-                    id,
-                    user_id,
-                    client_id,
-                    investor_id,
-                    product_name,
-                    cash_price,
-                    installment_price,
-                    down_payment,
-                    term_months,
-                    down_payment_date,
-                    installment_start_date,
-                    installment_end_date,
-                    monthly_payment,
-                    created_at,
-                    updated_at
+                    id, user_id, client_id, investor_id, product_name,
+                    cash_price, installment_price, down_payment, term_months, monthly_payment,
+                    down_payment_date, installment_start_date, installment_end_date,
+                    created_at, updated_at,
+                    -- Pre-calculated fields (eliminates N+1 queries!)
+                    COALESCE(client_name, 'Unknown Client') as client_name,
+                    COALESCE(investor_name, 'Unknown Investor') as investor_name,
+                    COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) as paid_amount,
+                    COALESCE(remaining_amount, installment_price) as remaining_amount,
+                    next_payment_date,
+                    COALESCE(next_payment_amount, CAST(0 AS Decimal(22,9))) as next_payment_amount,
+                    COALESCE(payment_status, 'предстоящий') as payment_status,
+                    COALESCE(overdue_count, CAST(0 AS Int32)) as overdue_count,
+                    COALESCE(total_payments, CAST(0 AS Int32)) as total_payments,
+                    COALESCE(paid_payments, CAST(0 AS Int32)) as paid_payments,
+                    last_payment_date
                 FROM installments
                 WHERE user_id = $user_id
-                ORDER BY created_at DESC
+                ORDER BY 
+                    CASE payment_status
+                        WHEN 'просрочено' THEN 1
+                        WHEN 'к оплате' THEN 2  
+                        WHEN 'предстоящий' THEN 3
+                        WHEN 'оплачено' THEN 4
+                        ELSE 5
+                    END,
+                    created_at DESC
                 LIMIT $limit OFFSET $offset;
                 """
                 prepared_query = session.prepare(query)
@@ -161,7 +171,7 @@ def handler(event, context):
                         if isinstance(d, int): return date.fromordinal(d + date(1970, 1, 1).toordinal()).strftime('%Y-%m-%d')
                         return str(d)
 
-                    installments.append({
+                    installment = {
                         'id': row.id,
                         'user_id': row.user_id,
                         'client_id': row.client_id,
@@ -176,10 +186,29 @@ def handler(event, context):
                         'installment_end_date': convert_date(row.installment_end_date),
                         'monthly_payment': float(row.monthly_payment),
                         'created_at': convert_timestamp(row.created_at),
-                        'updated_at': convert_timestamp(row.updated_at)
-                    })
+                        'updated_at': convert_timestamp(row.updated_at),
+                        
+                        # Pre-calculated display fields (no additional queries needed!)
+                        'client_name': row.client_name,
+                        'investor_name': row.investor_name,
+                        'paid_amount': float(row.paid_amount),
+                        'remaining_amount': float(row.remaining_amount),
+                        'next_payment_date': convert_date(row.next_payment_date),
+                        'next_payment_amount': float(row.next_payment_amount),
+                        'payment_status': row.payment_status,
+                        'overdue_count': row.overdue_count,
+                        'total_payments': row.total_payments,
+                        'paid_payments': row.paid_payments,
+                        'last_payment_date': convert_date(row.last_payment_date),
+                        
+                        # For backward compatibility, include empty payments array
+                        # Frontend can request full payment details separately if needed
+                        'payments': []
+                    }
+                    
+                    installments.append(installment)
                 
-                logger.info(f"Listed {len(installments)} installments.")
+                logger.info(f"Listed {len(installments)} installments with pre-calculated fields in single query.")
                 return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(installments)}
 
             result = pool.retry_operation_sync(list_installments_from_db)

@@ -4,13 +4,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_status_badge.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
+import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import 'payment_registration_dialog.dart';
 import 'payment_deletion_dialog.dart';
 
 class InstallmentPaymentItem extends StatefulWidget {
   final InstallmentPayment payment;
-  final VoidCallback onPaymentUpdated;
+  final Function(Installment) onPaymentUpdated;
   final bool isExpanded;
 
   const InstallmentPaymentItem({

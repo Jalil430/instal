@@ -237,7 +237,11 @@ def handler(event, context):
                 current_time = datetime.utcnow()
                 
                 if 'full_name' in sanitized_data:
-                    update_query = """
+                    # Use a single transaction to update both client and related installments
+                    tx = session.transaction(ydb.SerializableReadWrite())
+                    
+                    # Update client name
+                    update_client_query = """
                     DECLARE $client_id AS Utf8;
                     DECLARE $full_name AS Utf8;
                     DECLARE $updated_at AS Timestamp;
@@ -245,16 +249,34 @@ def handler(event, context):
                     SET full_name = $full_name, updated_at = $updated_at 
                     WHERE id = $client_id;
                     """
-                    prepared_update = session.prepare(update_query)
-                    session.transaction().execute(
-                        prepared_update,
+                    tx.execute(
+                        session.prepare(update_client_query),
                         {
                             '$client_id': sanitized_id,
                             '$full_name': sanitized_data['full_name'],
                             '$updated_at': current_time
-                        },
-                        commit_tx=True
+                        }
                     )
+                    
+                    # Update client_name in all related installments
+                    update_installments_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $client_name AS Utf8;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE installments 
+                    SET client_name = $client_name, updated_at = $updated_at 
+                    WHERE client_id = $client_id;
+                    """
+                    tx.execute(
+                        session.prepare(update_installments_query),
+                        {
+                            '$client_id': sanitized_id,
+                            '$client_name': sanitized_data['full_name'],
+                            '$updated_at': current_time
+                        }
+                    )
+                    
+                    tx.commit()
                 
                 if 'contact_number' in sanitized_data:
                     update_query = """

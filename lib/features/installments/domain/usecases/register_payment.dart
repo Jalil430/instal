@@ -1,3 +1,4 @@
+import '../entities/installment.dart';
 import '../repositories/installment_repository.dart';
 
 class RegisterPayment {
@@ -5,7 +6,7 @@ class RegisterPayment {
 
   RegisterPayment(this.repository);
 
-  Future<void> call({
+  Future<Installment> call({
     required String paymentId,
     required DateTime paidDate,
   }) async {
@@ -20,6 +21,6 @@ class RegisterPayment {
       updatedAt: DateTime.now(),
     );
 
-    await repository.updatePayment(updatedPayment);
+    return await repository.updatePayment(updatedPayment);
   }
 } 

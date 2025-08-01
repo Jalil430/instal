@@ -5,12 +5,43 @@ class CacheService {
 
   final Map<String, CacheEntry> _cache = {};
   
-  // Cache duration - 2 minutes for most data
-  static const Duration _defaultCacheDuration = Duration(minutes: 2);
+  // Optimized cache durations based on data volatility
+  static const Duration _defaultCacheDuration = Duration(minutes: 5);
+  static const Duration _listCacheDuration = Duration(minutes: 3);
+  static const Duration _detailCacheDuration = Duration(minutes: 10);
+  static const Duration _analyticsCacheDuration = Duration(minutes: 15);
 
   void set(String key, dynamic value, {Duration? duration}) {
     final expiry = DateTime.now().add(duration ?? _defaultCacheDuration);
     _cache[key] = CacheEntry(value, expiry);
+  }
+
+  // Smart cache invalidation - only invalidate related data
+  void invalidateRelated(String entityType, String userId) {
+    final keysToRemove = <String>[];
+    
+    switch (entityType) {
+      case 'client':
+        // Remove client-related caches
+        keysToRemove.addAll(getKeysWithPrefix('clients_$userId'));
+        keysToRemove.addAll(getKeysWithPrefix('client_'));
+        keysToRemove.addAll(getKeysWithPrefix('analytics_$userId'));
+        break;
+      case 'investor':
+        keysToRemove.addAll(getKeysWithPrefix('investors_$userId'));
+        keysToRemove.addAll(getKeysWithPrefix('investor_'));
+        keysToRemove.addAll(getKeysWithPrefix('analytics_$userId'));
+        break;
+      case 'installment':
+        keysToRemove.addAll(getKeysWithPrefix('installments_$userId'));
+        keysToRemove.addAll(getKeysWithPrefix('installment_'));
+        keysToRemove.addAll(getKeysWithPrefix('analytics_$userId'));
+        break;
+    }
+    
+    for (final key in keysToRemove) {
+      _cache.remove(key);
+    }
   }
 
   T? get<T>(String key) {

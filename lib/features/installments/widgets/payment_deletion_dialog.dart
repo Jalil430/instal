@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_contextual_dialog.dart';
+import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
@@ -15,9 +16,9 @@ class PaymentDeletionDialog {
     required BuildContext context,
     required Offset position,
     required InstallmentPayment payment,
-    required VoidCallback onPaymentDeleted,
+    required Function(Installment) onPaymentDeleted,
   }) async {
-    final result = await CustomContextualDialog.show<bool>(
+    final result = await CustomContextualDialog.show<Installment>(
       context: context,
       position: position,
       child: _PaymentDeletionContent(payment: payment),
@@ -25,8 +26,8 @@ class PaymentDeletionDialog {
       estimatedHeight: 140.0,
     );
     
-    if (result == true) {
-      onPaymentDeleted();
+    if (result != null) {
+      onPaymentDeleted(result);
     }
   }
 }
@@ -228,10 +229,10 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
         paidDate: null,
       );
       
-      await _repository.updatePayment(updatedPayment);
+      final updatedInstallment = await _repository.updatePayment(updatedPayment);
       
       if (mounted) {
-        Navigator.of(context).pop(true); // Return true to indicate success
+        Navigator.of(context).pop(updatedInstallment); // Return the updated installment
       }
     } catch (e) {
       if (mounted) {

@@ -15,7 +15,7 @@ abstract class InstallmentRepository {
   Future<List<InstallmentPayment>> getPaymentsByInstallmentId(String installmentId);
   Future<InstallmentPayment?> getPaymentById(String id);
   Future<String> createPayment(InstallmentPayment payment);
-  Future<void> updatePayment(InstallmentPayment payment);
+  Future<Installment> updatePayment(InstallmentPayment payment);
   Future<void> deletePayment(String id);
   Future<List<InstallmentPayment>> getOverduePayments(String userId);
   Future<List<InstallmentPayment>> getDuePayments(String userId);

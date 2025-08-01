@@ -10,6 +10,7 @@ import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
 import '../data/repositories/installment_repository_impl.dart';
 import '../data/datasources/installment_remote_datasource.dart';
+import '../data/models/installment_model.dart';
 import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
 import '../../clients/data/datasources/client_remote_datasource.dart';
@@ -41,6 +42,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   Map<String, List<InstallmentPayment>> _installmentPayments = {};
   final Map<String, bool> _expandedStates = {}; // Track expansion state by installment ID
   final Set<String> _selectedInstallmentIds = {}; // Track selected installments
+  final Set<String> _loadingPayments = {}; // Track which installments are loading payments
   bool _isLoading = true;
   bool _isInitialized = false;
   bool _isSelectionMode = false;
@@ -87,6 +89,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     
     // Performance measurement
@@ -97,6 +100,8 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
       
+      if (!mounted) return;
+      
       if (currentUser == null) {
         // Redirect to login if not authenticated
         if (mounted) {
@@ -105,40 +110,24 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         return;
       }
       
-      // Get all installments first
+      // Get all installments with pre-calculated fields (single optimized call!)
       final installments = await _installmentRepository.getAllInstallments(currentUser.id);
       
-      // Get all clients in parallel
-      final clientsFuture = _clientRepository.getAllClients(currentUser.id);
+      if (!mounted) return;
       
-      // Get all payments for all installments in parallel (batch operation)
+      // Extract pre-calculated data from optimized response
+      final clientNames = <String, String>{};
       final paymentsMap = <String, List<InstallmentPayment>>{};
       
-      // Instead of sequential calls, make parallel calls for all installments
-      final paymentsFutures = installments.map((installment) async {
-        try {
-          final payments = await _installmentRepository.getPaymentsByInstallmentId(installment.id);
-          return MapEntry(installment.id, payments);
-        } catch (e) {
-          // If individual installment fails, return empty payments to avoid breaking the entire list
-          print('Failed to load payments for installment ${installment.id}: $e');
-          return MapEntry(installment.id, <InstallmentPayment>[]);
+      for (final installment in installments) {
+        // Client names are now included in the installment data
+        if (installment is InstallmentModel && installment.clientName != null) {
+          clientNames[installment.clientId] = installment.clientName!;
         }
-      });
-      
-      // Wait for all payments to load in parallel
-      final paymentsEntries = await Future.wait(paymentsFutures);
-      for (final entry in paymentsEntries) {
-        paymentsMap[entry.key] = entry.value;
-      }
-      
-      // Wait for clients to load
-      final clients = await clientsFuture;
-      
-      // Create client name map
-      final clientNames = <String, String>{};
-      for (final client in clients) {
-        clientNames[client.id] = client.fullName;
+        
+        // For now, keep payments empty since we have summary data
+        // Individual payments will be loaded only when needed (on expand)
+        paymentsMap[installment.id] = [];
       }
       
       setState(() {
@@ -148,7 +137,9 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         _isLoading = false;
       });
       
-      _fadeController.forward();
+      if (mounted) {
+        _fadeController.forward();
+      }
       
       // Performance logging
       stopwatch.stop();
@@ -203,34 +194,25 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         return;
       }
       
-      // Get all installments first
+      // Get all installments with pre-calculated fields (single optimized call!)
       final installments = await _installmentRepository.getAllInstallments(currentUser.id);
       
-      // Get all clients in parallel
-      final clientsFuture = _clientRepository.getAllClients(currentUser.id);
-      
-      // Get all payments for all installments in parallel
+      // Extract pre-calculated data from optimized response
+      final clientNames = <String, String>{};
       final paymentsMap = <String, List<InstallmentPayment>>{};
       
-      final paymentsFutures = installments.map((installment) async {
-        try {
-          final payments = await _installmentRepository.getPaymentsByInstallmentId(installment.id);
-          return MapEntry(installment.id, payments);
-        } catch (e) {
-          return MapEntry(installment.id, <InstallmentPayment>[]);
+      for (final installment in installments) {
+        // Client names are now included in the installment data
+        if (installment is InstallmentModel && installment.clientName != null) {
+          clientNames[installment.clientId] = installment.clientName!;
         }
-      });
-      
-      final paymentsEntries = await Future.wait(paymentsFutures);
-      for (final entry in paymentsEntries) {
-        paymentsMap[entry.key] = entry.value;
-      }
-      
-      final clients = await clientsFuture;
-      
-      final clientNames = <String, String>{};
-      for (final client in clients) {
-        clientNames[client.id] = client.fullName;
+        
+        // Keep existing payments if already loaded, otherwise empty
+        if (!_installmentPayments.containsKey(installment.id)) {
+          paymentsMap[installment.id] = [];
+        } else {
+          paymentsMap[installment.id] = _installmentPayments[installment.id]!;
+        }
       }
       
       setState(() {
@@ -247,11 +229,33 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     }
   }
 
+  /// Load payments for a specific installment (lazy loading)
+  Future<void> _loadPaymentsForInstallment(String installmentId) async {
+    // Set loading state
+    setState(() {
+      _loadingPayments.add(installmentId);
+    });
+    
+    try {
+      final payments = await _installmentRepository.getPaymentsByInstallmentId(installmentId);
+      setState(() {
+        _installmentPayments[installmentId] = payments;
+        _loadingPayments.remove(installmentId);
+      });
+    } catch (e) {
+      print('Failed to load payments for installment $installmentId: $e');
+      setState(() {
+        _loadingPayments.remove(installmentId);
+      });
+      // Don't show error to user for individual payment loading failures
+    }
+  }
+
   List<Installment> get _filteredAndSortedInstallments {
     var filtered = _installments.where((installment) {
       if (_searchQuery.isEmpty) return true;
       
-      final clientName = _clientNames[installment.clientId]?.toLowerCase() ?? '';
+      final clientName = installment is InstallmentModel ? (installment.clientName?.toLowerCase() ?? '') : '';
       final productName = installment.productName.toLowerCase();
       final query = _searchQuery.toLowerCase();
       
@@ -261,13 +265,10 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     // Sort
     switch (_sortBy) {
       case 'status':
-        // Sort by payment status - priority order: просрочено, к оплате, предстоящий, оплачено
+        // Sort by payment status using pre-calculated status - priority order: просрочено, к оплате, предстоящий, оплачено
         filtered.sort((a, b) {
-          final paymentsA = _installmentPayments[a.id] ?? [];
-          final paymentsB = _installmentPayments[b.id] ?? [];
-          
-          final statusA = InstallmentListItem.getOverallStatus(context, paymentsA);
-          final statusB = InstallmentListItem.getOverallStatus(context, paymentsB);
+          final statusA = a is InstallmentModel ? (a.paymentStatus ?? 'предстоящий') : 'предстоящий';
+          final statusB = b is InstallmentModel ? (b.paymentStatus ?? 'предстоящий') : 'предстоящий';
           
           // Define priority order for statuses
           final statusPriority = {
@@ -288,8 +289,8 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         break;
       case 'client':
         filtered.sort((a, b) {
-          final nameA = _clientNames[a.clientId] ?? '';
-          final nameB = _clientNames[b.clientId] ?? '';
+          final nameA = a is InstallmentModel ? (a.clientName ?? '') : '';
+          final nameB = b is InstallmentModel ? (b.clientName ?? '') : '';
           return nameA.compareTo(nameB);
         });
         break;
@@ -328,10 +329,9 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     setState(() {
       _selectedInstallmentIds.clear();
       
-      // Find all installments with overdue status
+      // Find all installments with overdue status using pre-calculated status
       for (final installment in _filteredAndSortedInstallments) {
-        final payments = _installmentPayments[installment.id] ?? [];
-        final status = InstallmentListItem.getOverallStatus(context, payments);
+        final status = installment is InstallmentModel ? (installment.paymentStatus ?? 'предстоящий') : 'предстоящий';
         
         // Add to selection if status is overdue
         if (status == 'просрочено') {
@@ -431,6 +431,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         for (final id in _selectedInstallmentIds) {
           _installmentPayments.remove(id);
           _expandedStates.remove(id);
+          _loadingPayments.remove(id);
         }
       });
       
@@ -845,18 +846,41 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                     itemBuilder: (context, index) {
                                       final installment = _filteredAndSortedInstallments[index];
                                       final payments = _installmentPayments[installment.id] ?? [];
-                                      final clientName = _clientNames[installment.clientId] ?? AppLocalizations.of(context)?.unknown ?? 'Unknown';
-                                      double paidAmount = 0;
+                                      
+                                      // Use pre-calculated values from optimized response
+                                      final clientName = installment is InstallmentModel ? (installment.clientName ?? AppLocalizations.of(context)?.unknown ?? 'Unknown') : (AppLocalizations.of(context)?.unknown ?? 'Unknown');
+                                      final paidAmount = installment is InstallmentModel ? (installment.paidAmount ?? 0.0) : 0.0;
+                                      final leftAmount = installment is InstallmentModel ? (installment.remainingAmount ?? installment.installmentPrice) : installment.installmentPrice;
+                                      
+                                      // Create next payment from optimized data
                                       InstallmentPayment? nextPayment;
-                                      for (final payment in payments) {
-                                        if (payment.isPaid) {
-                                          paidAmount += payment.expectedAmount;
+                                      if (installment is InstallmentModel && installment.nextPaymentDate != null) {
+                                        // Determine payment number: 0 for down payment, 1+ for monthly payments
+                                        int paymentNumber;
+                                        if (installment.downPayment > 0 && installment.nextPaymentDate == installment.downPaymentDate) {
+                                          paymentNumber = 0; // Down payment
+                                        } else {
+                                          // Calculate which monthly payment this is based on paid payments
+                                          // If down payment exists, subtract 1 from paid payments to get monthly payment number
+                                          int monthlyPaymentsPaid = installment.paidPayments ?? 0;
+                                          if (installment.downPayment > 0) {
+                                            monthlyPaymentsPaid = monthlyPaymentsPaid - 1; // Subtract down payment
+                                          }
+                                          paymentNumber = monthlyPaymentsPaid + 1; // Next monthly payment number
                                         }
-                                        if (nextPayment == null && !payment.isPaid) {
-                                          nextPayment = payment;
-                                        }
+                                        
+                                        nextPayment = InstallmentPayment(
+                                          id: '${installment.id}_next',
+                                          installmentId: installment.id,
+                                          paymentNumber: paymentNumber,
+                                          dueDate: installment.nextPaymentDate!,
+                                          expectedAmount: installment.nextPaymentAmount ?? 0.0,
+                                          isPaid: false,
+                                          paidDate: null,
+                                          createdAt: DateTime.now(),
+                                          updatedAt: DateTime.now(),
+                                        );
                                       }
-                                      final leftAmount = installment.installmentPrice - paidAmount;
                                       return AnimatedContainer(
                                         duration: Duration(milliseconds: 100 + (index * 50)),
                                         curve: Curves.easeOutCubic,
@@ -869,14 +893,38 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                                           payments: payments,
                                           nextPayment: nextPayment,
                                           isExpanded: _expandedStates[installment.id] ?? false,
+                                          isLoadingPayments: _loadingPayments.contains(installment.id),
                                           onTap: _isSelectionMode 
                                               ? () => _toggleSelection(installment.id)
                                               : () => context.go('/installments/${installment.id}'),
                                           onClientTap: () => context.go('/clients/${installment.clientId}'),
-                                          onExpansionChanged: (expanded) => setState(() {
-                                            _expandedStates[installment.id] = expanded;
-                                          }),
+                                          onExpansionChanged: (expanded) {
+                                            setState(() {
+                                              _expandedStates[installment.id] = expanded;
+                                            });
+                                            
+                                            // Load payments only when expanding and if not already loaded
+                                            if (expanded && (_installmentPayments[installment.id]?.isEmpty ?? true)) {
+                                              _loadPaymentsForInstallment(installment.id);
+                                            }
+                                          },
                                           onDataChanged: () => _loadData(),
+                                          onInstallmentUpdated: (updatedInstallment) {
+                                            setState(() {
+                                              // Find and update the specific installment in the list
+                                              final index = _installments.indexWhere((i) => i.id == updatedInstallment.id);
+                                              if (index != -1) {
+                                                // Update the installment
+                                                _installments[index] = updatedInstallment;
+                                                
+                                                // Set expansion state to collapsed since the widget will rebuild and collapse
+                                                _expandedStates[updatedInstallment.id] = false;
+                                                
+                                                // Clear the payments since the installment collapsed
+                                                _installmentPayments[updatedInstallment.id] = [];
+                                              }
+                                            });
+                                          },
                                           onDelete: () => _deleteInstallment(installment),
                                           onSelect: () => _toggleSelection(installment.id),
                                           isSelected: _selectedInstallmentIds.contains(installment.id),
@@ -936,6 +984,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           _installments.removeWhere((i) => i.id == installment.id);
           _installmentPayments.remove(installment.id);
           _expandedStates.remove(installment.id);
+          _loadingPayments.remove(installment.id);
         });
         
         // Also reload data from server to ensure consistency

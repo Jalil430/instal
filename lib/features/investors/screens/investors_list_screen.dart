@@ -72,11 +72,15 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     try {
       // Get current user from authentication
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
+      
+      if (!mounted) return;
       
       if (currentUser == null) {
         // Redirect to login if not authenticated
@@ -88,13 +92,19 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
       
       final investors = await _investorRepository.getAllInvestors(currentUser.id);
       
+      if (!mounted) return;
+      
       setState(() {
         _investors = investors;
         _isLoading = false;
       });
       
-      _fadeController.forward();
+      if (mounted) {
+        _fadeController.forward();
+      }
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -17,7 +17,7 @@ abstract class InstallmentLocalDataSource {
   Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(String installmentId);
   Future<InstallmentPaymentModel?> getPaymentById(String id);
   Future<String> createPayment(InstallmentPaymentModel payment);
-  Future<void> updatePayment(InstallmentPaymentModel payment);
+  Future<InstallmentModel?> updatePayment(InstallmentPaymentModel payment);
   Future<void> deletePayment(String id);
   Future<List<InstallmentPaymentModel>> getOverduePayments(String userId);
   Future<List<InstallmentPaymentModel>> getDuePayments(String userId);
@@ -190,7 +190,7 @@ class InstallmentLocalDataSourceImpl implements InstallmentLocalDataSource {
   }
 
   @override
-  Future<void> updatePayment(InstallmentPaymentModel payment) async {
+  Future<InstallmentModel?> updatePayment(InstallmentPaymentModel payment) async {
     final db = await _databaseHelper.database;
     await db.update(
       'installment_payments',
@@ -198,6 +198,10 @@ class InstallmentLocalDataSourceImpl implements InstallmentLocalDataSource {
       where: 'id = ?',
       whereArgs: [payment.id],
     );
+    
+    // Local datasource doesn't have updated installment data, return null
+    // The repository will use the remote data source result
+    return null;
   }
 
   @override

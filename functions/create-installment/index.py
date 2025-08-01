@@ -137,6 +137,66 @@ def handler(event, context):
                 # Current timestamp
                 now = datetime.utcnow()
                 
+                # Create a transaction first
+                tx = session.transaction(ydb.SerializableReadWrite())
+                
+                # First, get client and investor names for calculated fields
+                client_query = """
+                DECLARE $client_id AS Utf8;
+                SELECT full_name FROM clients WHERE id = $client_id;
+                """
+                client_result = tx.execute(session.prepare(client_query), {'$client_id': body['client_id']})
+                client_name = client_result[0].rows[0].full_name if client_result[0].rows else 'Unknown Client'
+                
+                investor_query = """
+                DECLARE $investor_id AS Utf8;
+                SELECT full_name FROM investors WHERE id = $investor_id;
+                """
+                investor_result = tx.execute(session.prepare(investor_query), {'$investor_id': body['investor_id']})
+                investor_name = investor_result[0].rows[0].full_name if investor_result[0].rows else 'Unknown Investor'
+                
+                # Calculate initial values for calculated fields
+                installment_price = Decimal(str(body['installment_price']))
+                down_payment = Decimal(str(body['down_payment']))
+                term_months = int(body['term_months'])
+                
+                # For new installments, paid_amount is 0, remaining_amount is full installment_price
+                paid_amount = Decimal('0')
+                remaining_amount = installment_price
+                
+                # Calculate next payment and status correctly
+                today = datetime.utcnow().date()
+                
+                if down_payment > 0:
+                    # If there's a down payment, it's the next payment
+                    next_payment_date = down_payment_date
+                    next_payment_amount = down_payment
+                    
+                    # Status based on down payment date
+                    if down_payment_date < today:
+                        payment_status = 'просрочено'  # Down payment is overdue
+                    elif down_payment_date <= today:
+                        payment_status = 'к оплате'  # Down payment is due today
+                    else:
+                        payment_status = 'предстоящий'  # Down payment is in future
+                else:
+                    # No down payment, first monthly payment is next
+                    next_payment_date = installment_start_date
+                    next_payment_amount = Decimal(str(body['monthly_payment']))
+                    
+                    # Status based on first monthly payment date
+                    if installment_start_date < today:
+                        payment_status = 'просрочено'  # First payment is overdue
+                    elif installment_start_date <= today:
+                        payment_status = 'к оплате'  # First payment is due today
+                    else:
+                        payment_status = 'предстоящий'  # First payment is in future
+                
+                # Calculate total payments count
+                total_payments = term_months  # down payment (if any) + monthly payments
+                paid_payments = 0
+                overdue_count = 0
+                
                 query = """
                 DECLARE $id AS Utf8;
                 DECLARE $user_id AS Utf8;
@@ -153,6 +213,16 @@ def handler(event, context):
                 DECLARE $monthly_payment AS Decimal(22,9);
                 DECLARE $created_at AS Timestamp;
                 DECLARE $updated_at AS Timestamp;
+                DECLARE $client_name AS Utf8;
+                DECLARE $investor_name AS Utf8;
+                DECLARE $paid_amount AS Decimal(22,9);
+                DECLARE $remaining_amount AS Decimal(22,9);
+                DECLARE $next_payment_date AS Date;
+                DECLARE $next_payment_amount AS Decimal(22,9);
+                DECLARE $payment_status AS Utf8;
+                DECLARE $overdue_count AS Int32;
+                DECLARE $total_payments AS Int32;
+                DECLARE $paid_payments AS Int32;
                 
                 INSERT INTO installments (
                     id,
@@ -169,7 +239,17 @@ def handler(event, context):
                     installment_end_date,
                     monthly_payment,
                     created_at,
-                    updated_at
+                    updated_at,
+                    client_name,
+                    investor_name,
+                    paid_amount,
+                    remaining_amount,
+                    next_payment_date,
+                    next_payment_amount,
+                    payment_status,
+                    overdue_count,
+                    total_payments,
+                    paid_payments
                 )
                 VALUES (
                     $id,
@@ -186,12 +266,19 @@ def handler(event, context):
                     $installment_end_date,
                     $monthly_payment,
                     $created_at,
-                    $updated_at
+                    $updated_at,
+                    $client_name,
+                    $investor_name,
+                    $paid_amount,
+                    $remaining_amount,
+                    $next_payment_date,
+                    $next_payment_amount,
+                    $payment_status,
+                    $overdue_count,
+                    $total_payments,
+                    $paid_payments
                 );
                 """
-                
-                # Create a transaction
-                tx = session.transaction(ydb.SerializableReadWrite())
                 
                 # Execute the query to create the installment
                 tx.execute(
@@ -203,15 +290,25 @@ def handler(event, context):
                         '$investor_id': body['investor_id'],
                         '$product_name': body['product_name'],
                         '$cash_price': Decimal(str(body['cash_price'])),
-                        '$installment_price': Decimal(str(body['installment_price'])),
-                        '$down_payment': Decimal(str(body['down_payment'])),
-                        '$term_months': int(body['term_months']),
+                        '$installment_price': installment_price,
+                        '$down_payment': down_payment,
+                        '$term_months': term_months,
                         '$down_payment_date': down_payment_date,
                         '$installment_start_date': installment_start_date,
                         '$installment_end_date': installment_end_date,
                         '$monthly_payment': Decimal(str(body['monthly_payment'])),
                         '$created_at': now,
-                        '$updated_at': now
+                        '$updated_at': now,
+                        '$client_name': client_name,
+                        '$investor_name': investor_name,
+                        '$paid_amount': paid_amount,
+                        '$remaining_amount': remaining_amount,
+                        '$next_payment_date': next_payment_date,
+                        '$next_payment_amount': next_payment_amount,
+                        '$payment_status': payment_status,
+                        '$overdue_count': overdue_count,
+                        '$total_payments': total_payments,
+                        '$paid_payments': paid_payments
                     }
                 )
 
