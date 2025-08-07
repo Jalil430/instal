@@ -1,111 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
+import 'responsive_layout.dart';
+import 'dialogs/desktop/custom_contextual_dialog_desktop.dart';
+import 'dialogs/mobile/custom_contextual_dialog_mobile.dart';
 
 class CustomContextualDialog {
   static Future<T?> show<T>({
     required BuildContext context,
-    required Offset position,
     required Widget child,
+    Offset? position,
     double width = 300.0,
     double estimatedHeight = 140.0,
     bool dismissible = true,
   }) async {
-    return await showDialog<T>(
-      context: context,
-      barrierColor: Colors.transparent,
-      barrierDismissible: dismissible,
-      builder: (context) => _ContextualDialogWrapper<T>(
-        position: position,
+    final isDesktop = MediaQuery.of(context).size.width >= mobileBreakpoint;
+    
+    if (isDesktop) {
+      // For desktop mode, we need a position - if not provided, use screen center
+      final pos = position ?? Offset(
+        MediaQuery.of(context).size.width / 2,
+        MediaQuery.of(context).size.height / 2,
+      );
+      
+      return await CustomContextualDialogDesktop.show<T>(
+        context: context,
+        position: pos,
+        child: child,
         width: width,
         estimatedHeight: estimatedHeight,
         dismissible: dismissible,
+      );
+    } else {
+      // For mobile mode, position is ignored - we show a bottom sheet
+      return await CustomContextualDialogMobile.show<T>(
+        context: context,
         child: child,
-      ),
-    );
-  }
-}
-
-class _ContextualDialogWrapper<T> extends StatelessWidget {
-  final Offset position;
-  final double width;
-  final double estimatedHeight;
-  final bool dismissible;
-  final Widget child;
-
-  const _ContextualDialogWrapper({
-    required this.position,
-    required this.width,
-    required this.estimatedHeight,
-    required this.dismissible,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Get screen bounds
-    final screenSize = MediaQuery.of(context).size;
-    
-    // Calculate adjusted position to keep dialog in bounds
-    double left = position.dx - (width / 2);
-    double top = position.dy + 10;
-    
-    // Adjust horizontal position
-    if (left < 16) {
-      left = 16; // Keep margin from left edge
-    } else if (left + width > screenSize.width - 16) {
-      left = screenSize.width - width - 16; // Keep margin from right edge
+        width: double.infinity, // Full width for mobile
+        dismissible: dismissible,
+      );
     }
-    
-    // Adjust vertical position
-    if (top + estimatedHeight > screenSize.height - 16) {
-      top = position.dy - estimatedHeight - 10; // Show above cursor
-    }
-    
-    // Ensure top doesn't go negative
-    if (top < 16) {
-      top = 16;
-    }
-
-    return Stack(
-      children: [
-        // Invisible barrier to close dialog
-        if (dismissible)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-        // Dialog content
-        Positioned(
-          left: left,
-          top: top,
-          child: Material(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: width,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppTheme.subtleBorderColor,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: child,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -113,33 +47,48 @@ class _ContextualDialogWrapper<T> extends StatelessWidget {
 abstract class ContextualDialogContent extends StatelessWidget {
   const ContextualDialogContent({super.key});
 
-  /// Override this to provide custom keyboard handling
-  Widget buildFocusWrapper({required Widget child}) {
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= mobileBreakpoint;
+    
+    if (isDesktop) {
+      return _buildDesktopContent(context);
+    } else {
+      return _buildMobileContent(context);
+    }
+  }
+  
+  // Build desktop version
+  Widget _buildDesktopContent(BuildContext context) {
     return RawKeyboardListener(
       autofocus: true,
       focusNode: FocusNode(),
       onKey: (RawKeyEvent event) {
         if (event is RawKeyDownEvent) {
-          onKeyDown(event);
+          _onKeyDown(event, context);
         }
       },
-      child: child,
-    );
-  }
-
-  /// Override this to handle keyboard events
-  void onKeyDown(RawKeyDownEvent event) {
-    // Default implementation does nothing
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return buildFocusWrapper(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: buildContent(context),
       ),
     );
+  }
+  
+  // Build mobile version
+  Widget _buildMobileContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: buildContent(context),
+    );
+  }
+  
+  // Handle keyboard events
+  void _onKeyDown(RawKeyDownEvent event, BuildContext context) {
+    // Add standard keyboard navigation
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      Navigator.of(context).pop();
+    }
   }
 
   /// Override this to build the dialog content

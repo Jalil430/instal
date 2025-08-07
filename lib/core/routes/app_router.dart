@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
-import '../../shared/navigation/main_layout.dart';
+import '../../shared/navigation/responsive_main_layout.dart';
 import '../../features/installments/screens/installments_list_screen.dart';
 import '../../features/installments/screens/installment_details_screen.dart';
 import '../../features/clients/screens/clients_list_screen.dart';
@@ -42,7 +42,7 @@ class AppRouter {
         name: 'installments',
         pageBuilder: (context, state) => MaterialPage(
           child: AuthGuard(
-            child: MainLayout(child: const InstallmentsListScreen()),
+            child: ResponsiveMainLayout(child: const InstallmentsListScreen()),
           ),
         ),
       ),
@@ -51,7 +51,7 @@ class AppRouter {
         name: 'analytics',
         pageBuilder: (context, state) => MaterialPage(
           child: AuthGuard(
-            child: MainLayout(child: const AnalyticsScreen()),
+            child: ResponsiveMainLayout(child: const AnalyticsScreen()),
           ),
         ),
       ),
@@ -62,7 +62,7 @@ class AppRouter {
           final id = state.pathParameters['id']!;
           return MaterialPage(
             child: AuthGuard(
-              child: MainLayout(child: InstallmentDetailsScreen(installmentId: id)),
+              child: ResponsiveMainLayout(child: InstallmentDetailsScreen(installmentId: id)),
             ),
           );
         },
@@ -74,7 +74,7 @@ class AppRouter {
         name: 'clients',
         pageBuilder: (context, state) => MaterialPage(
           child: AuthGuard(
-            child: MainLayout(child: const ClientsListScreen()),
+            child: ResponsiveMainLayout(child: const ClientsListScreen()),
           ),
         ),
       ),
@@ -85,7 +85,7 @@ class AppRouter {
           final id = state.pathParameters['id']!;
           return MaterialPage(
             child: AuthGuard(
-              child: MainLayout(child: ClientDetailsScreen(clientId: id)),
+              child: ResponsiveMainLayout(child: ClientDetailsScreen(clientId: id)),
             ),
           );
         },
@@ -97,7 +97,7 @@ class AppRouter {
         name: 'investors',
         pageBuilder: (context, state) => MaterialPage(
           child: AuthGuard(
-            child: MainLayout(child: const InvestorsListScreen()),
+            child: ResponsiveMainLayout(child: const InvestorsListScreen()),
           ),
         ),
       ),
@@ -108,7 +108,7 @@ class AppRouter {
           final id = state.pathParameters['id']!;
           return MaterialPage(
             child: AuthGuard(
-              child: MainLayout(child: InvestorDetailsScreen(investorId: id)),
+              child: ResponsiveMainLayout(child: InvestorDetailsScreen(investorId: id)),
             ),
           );
         },
@@ -119,7 +119,7 @@ class AppRouter {
         name: 'settings',
         pageBuilder: (context, state) => MaterialPage(
           child: AuthGuard(
-            child: MainLayout(child: const SettingsScreen()),
+            child: ResponsiveMainLayout(child: const SettingsScreen()),
           ),
         ),
       ),

@@ -21,6 +21,7 @@ class AppTheme {
   static const Color successColor = Color(0xFF10B981);
   static const Color warningColor = Color(0xFFF59E0B);
   static const Color errorColor = Color(0xFFEF4444);
+  static const Color infoColor = Color(0xFF3B82F6); // Blue for information
   static const Color pendingColor = primaryColor; // Use primary color for consistent blue
   
   // Border and divider colors

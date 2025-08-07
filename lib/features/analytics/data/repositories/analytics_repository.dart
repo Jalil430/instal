@@ -14,7 +14,6 @@ class AnalyticsRepository {
   AnalyticsRepository(this._installmentRepository);
 
   Future<AnalyticsData> getAnalyticsData(String userId) async {
-    // Check cache first
     final cacheKey = CacheService.analyticsKey(userId);
     final cachedAnalytics = _cache.get<AnalyticsData>(cacheKey);
     if (cachedAnalytics != null) {
@@ -22,10 +21,25 @@ class AnalyticsRepository {
     }
 
     try {
+      // Send current date to ensure server uses same date as client
+      final now = DateTime.now();
+      final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      
+      // TEMPORARY DEBUG: Print the date being sent to the backend.
+      print('--- ANALYTICS DEBUG: Sending client_date to backend: $dateStr ---');
+
       // Use optimized analytics endpoint that calculates everything in single database queries
       // Use longer timeout for analytics as it involves complex calculations
-      final response = await ApiClient.get('/analytics-optimized?user_id=$userId', 
-          timeout: const Duration(seconds: 30));
+      final uri = Uri(
+        path: '/analytics-optimized',
+        queryParameters: {
+          'user_id': userId,
+          'client_date': dateStr,
+        },
+      ).toString();
+      
+      print('--- ANALYTICS DEBUG: Final URI: $uri ---');
+      final response = await ApiClient.get(uri, timeout: const Duration(seconds: 30));
       ApiClient.handleResponse(response);
       
       final Map<String, dynamic> data = json.decode(response.body);
@@ -37,8 +51,8 @@ class AnalyticsRepository {
         installmentDetails: _parseInstallmentDetails(data['installment_details']),
       );
 
-      // Cache the result for 3 minutes (longer since it's more expensive to calculate)
-      _cache.set(cacheKey, analyticsData, duration: const Duration(minutes: 3));
+      // Cache the result for a short time to allow quick refresh when date changes
+      _cache.set(cacheKey, analyticsData, duration: const Duration(seconds: 5));
 
       return analyticsData;
     } catch (e) {

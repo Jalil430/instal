@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:instal_app/features/analytics/domain/entities/analytics_data.dart';
 import 'package:instal_app/features/analytics/widgets/metric_item.dart';
@@ -6,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/analytics_card.dart';
+import '../../../shared/widgets/responsive_layout.dart';
 
 class KeyMetricsSection extends StatelessWidget {
   final KeyMetricsData data;
@@ -20,68 +20,74 @@ class KeyMetricsSection extends StatelessWidget {
 
     return AnalyticsCard(
       padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: MetricItem(
-                      title: l10n.totalRevenue,
-                      value: currencyFormatter.format(data.totalRevenue),
-                      change: data.totalRevenueChange,
-                      chartData: data.totalRevenueChartData,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmallScreen = constraints.maxWidth < 400;
+          
+          return Column(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmallScreen ? 12.0 : 20.0),
+                        child: MetricItem(
+                          title: l10n.totalRevenue,
+                          value: currencyFormatter.format(data.totalRevenue),
+                          change: data.totalRevenueChange,
+                          isCompact: isSmallScreen,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                VerticalDivider(width: 1, color: AppTheme.subtleBorderColor),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: MetricItem(
-                      title: l10n.newInstallments,
-                      value: data.newInstallments.toString(),
-                      change: data.newInstallmentsChange,
-                      chartData: data.newInstallmentsChartData,
+                    VerticalDivider(width: 1, color: AppTheme.subtleBorderColor),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmallScreen ? 12.0 : 20.0),
+                        child: MetricItem(
+                          title: l10n.newInstallments,
+                          value: data.newInstallments.toString(),
+                          change: data.newInstallmentsChange,
+                          isCompact: isSmallScreen,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: AppTheme.subtleBorderColor),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: MetricItem(
-                      title: l10n.collectionRate,
-                      value: '${data.collectionRate.toStringAsFixed(1)}%',
-                      change: data.collectionRateChange,
-                      chartData: data.collectionRateChartData,
+              ),
+              Divider(height: 1, color: AppTheme.subtleBorderColor),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmallScreen ? 12.0 : 20.0),
+                        child: MetricItem(
+                          title: l10n.collectionRate,
+                          value: '${data.collectionRate.toStringAsFixed(1)}%',
+                          change: data.collectionRateChange,
+                          isCompact: isSmallScreen,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                VerticalDivider(width: 1, color: AppTheme.subtleBorderColor),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: MetricItem(
-                      title: l10n.portfolioGrowth,
-                      value: currencyFormatter.format(data.portfolioGrowth),
-                      change: data.portfolioGrowthChange,
-                      chartData: data.portfolioGrowthChartData,
+                    VerticalDivider(width: 1, color: AppTheme.subtleBorderColor),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmallScreen ? 12.0 : 20.0),
+                        child: MetricItem(
+                          title: l10n.portfolioGrowth,
+                          value: currencyFormatter.format(data.portfolioGrowth),
+                          change: data.portfolioGrowthChange,
+                          isCompact: isSmallScreen,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        }
       ),
     );
   }

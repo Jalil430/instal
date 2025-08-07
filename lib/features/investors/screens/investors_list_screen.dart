@@ -14,66 +14,89 @@ import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../../../core/api/cache_service.dart';
 import '../../../shared/widgets/create_edit_investor_dialog.dart';
+import '../../../shared/widgets/responsive_layout.dart';
+import 'desktop/investors_list_screen_desktop.dart';
+import 'mobile/investors_list_screen_mobile.dart';
 
 class InvestorsListScreen extends StatefulWidget {
   const InvestorsListScreen({super.key});
 
   @override
-  State<InvestorsListScreen> createState() => _InvestorsListScreenState();
+  State<InvestorsListScreen> createState() => InvestorsListScreenState();
 }
 
-class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerProviderStateMixin {
-  final _searchController = TextEditingController();
-  String _searchQuery = '';
-  String? _sortBy = 'creationDate';
-  late InvestorRepository _investorRepository;
-  List<Investor> _investors = [];
-  bool _isLoading = true;
-  bool _isInitialized = false;
-  bool _isSelectionMode = false;
-  final Set<String> _selectedInvestorIds = {};
+class InvestorsListScreenState extends State<InvestorsListScreen> with TickerProviderStateMixin {
+  final searchController = TextEditingController();
+  String searchQuery = '';
+  String? sortBy = 'creationDate';
+  late InvestorRepository investorRepository;
+  List<Investor> investors = [];
+  bool isLoading = true;
+  bool isInitialized = false;
+  bool isSelectionMode = false;
+  final Set<String> selectedInvestorIds = {};
   
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
+  late AnimationController fadeController;
+  late Animation<double> fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
+    fadeController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: fadeController, curve: Curves.easeInOut),
     );
     
-    _initializeRepository();
+    initializeRepository();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInitialized) {
-      _loadData();
-      _isInitialized = true;
+    if (!isInitialized) {
+      loadData();
+      isInitialized = true;
+    }
+
+    // Check if we need to refresh the data (e.g., coming back from details page)
+    try {
+      final GoRouterState goState = GoRouterState.of(context);
+      if (goState.extra != null && goState.extra is Map<String, dynamic>) {
+        final Map<String, dynamic> extra = goState.extra as Map<String, dynamic>;
+        print('Got navigation extra: $extra');
+        if (extra['refresh'] == true) {
+          print('Refreshing investors list because refresh parameter was true');
+          // Add a small delay to ensure the widget tree is built
+          Future.delayed(Duration.zero, () {
+            if (mounted) {
+              loadData();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking navigation extras: $e');
     }
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
+    fadeController.dispose();
     super.dispose();
   }
 
-  void _initializeRepository() {
-    _investorRepository = InvestorRepositoryImpl(
+  void initializeRepository() {
+    investorRepository = InvestorRepositoryImpl(
       InvestorRemoteDataSourceImpl(),
     );
   }
 
-  Future<void> _loadData() async {
+  Future<void> loadData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
     
     try {
       // Get current user from authentication
@@ -90,22 +113,22 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
         return;
       }
       
-      final investors = await _investorRepository.getAllInvestors(currentUser.id);
+      final loadedInvestors = await investorRepository.getAllInvestors(currentUser.id);
       
       if (!mounted) return;
       
       setState(() {
-        _investors = investors;
-        _isLoading = false;
+        investors = loadedInvestors;
+        isLoading = false;
       });
       
       if (mounted) {
-        _fadeController.forward();
+        fadeController.forward();
       }
     } catch (e) {
       if (!mounted) return;
       
-      setState(() => _isLoading = false);
+      setState(() => isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
@@ -114,19 +137,19 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
     }
   }
 
-  List<Investor> get _filteredAndSortedInvestors {
-    var filtered = _investors.where((investor) {
-      if (_searchQuery.isEmpty) return true;
+  List<Investor> get filteredAndSortedInvestors {
+    var filtered = investors.where((investor) {
+      if (searchQuery.isEmpty) return true;
       
       final fullName = investor.fullName.toLowerCase();
-      final query = _searchQuery.toLowerCase();
+      final query = searchQuery.toLowerCase();
       
       return fullName.contains(query);
     }).toList();
     
     // Sort
-    if (_sortBy != null) {
-      switch (_sortBy) {
+    if (sortBy != null) {
+      switch (sortBy) {
         case 'name':
           filtered.sort((a, b) => a.fullName.compareTo(b.fullName));
           break;
@@ -143,37 +166,37 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
   }
   
   // Selection methods
-  void _toggleSelection(String investorId) {
+  void toggleSelection(String investorId) {
     setState(() {
-      if (_selectedInvestorIds.contains(investorId)) {
-        _selectedInvestorIds.remove(investorId);
-        if (_selectedInvestorIds.isEmpty) {
-          _isSelectionMode = false;
+      if (selectedInvestorIds.contains(investorId)) {
+        selectedInvestorIds.remove(investorId);
+        if (selectedInvestorIds.isEmpty) {
+          isSelectionMode = false;
         }
       } else {
-        _selectedInvestorIds.add(investorId);
-        _isSelectionMode = true;
+        selectedInvestorIds.add(investorId);
+        isSelectionMode = true;
       }
     });
   }
 
-  void _selectAll() {
+  void selectAll() {
     setState(() {
-      _selectedInvestorIds.clear();
-      _selectedInvestorIds.addAll(_filteredAndSortedInvestors.map((i) => i.id));
-      _isSelectionMode = true;
+      selectedInvestorIds.clear();
+      selectedInvestorIds.addAll(filteredAndSortedInvestors.map((i) => i.id));
+      isSelectionMode = true;
     });
   }
 
-  void _clearSelection() {
+  void clearSelection() {
     setState(() {
-      _selectedInvestorIds.clear();
-      _isSelectionMode = false;
+      selectedInvestorIds.clear();
+      isSelectionMode = false;
     });
   }
   
-  Future<void> _deleteBulkInvestors() async {
-    if (_selectedInvestorIds.isEmpty) return;
+  Future<void> deleteBulkInvestors() async {
+    if (selectedInvestorIds.isEmpty) return;
     
     final l10n = AppLocalizations.of(context);
     
@@ -181,9 +204,9 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
     final confirmed = await showCustomConfirmationDialog(
       context: context,
       title: l10n?.deleteInvestorTitle ?? 'Delete Investor',
-      content: _selectedInvestorIds.length == 1
-          ? l10n?.deleteInvestorConfirmation(_filteredAndSortedInvestors.firstWhere((i) => i.id == _selectedInvestorIds.first).fullName) ?? 'Are you sure you want to delete this investor?'
-          : '${l10n?.deleteInvestorsConfirmation ?? 'Are you sure you want to delete these investors?'} (${_selectedInvestorIds.length})',
+      content: selectedInvestorIds.length == 1
+          ? l10n?.deleteInvestorConfirmation(filteredAndSortedInvestors.firstWhere((i) => i.id == selectedInvestorIds.first).fullName) ?? 'Are you sure you want to delete this investor?'
+          : '${l10n?.deleteInvestorsConfirmation ?? 'Are you sure you want to delete these investors?'} (${selectedInvestorIds.length})',
     );
     
     if (confirmed != true) return;
@@ -221,9 +244,9 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
       );
       
       // Delete all selected investors
-      for (final id in _selectedInvestorIds) {
+      for (final id in selectedInvestorIds) {
         cache.remove(CacheService.investorKey(id));
-        await _investorRepository.deleteInvestor(id);
+        await investorRepository.deleteInvestor(id);
       }
       
       // Clear the current snackbar
@@ -231,20 +254,20 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
       
       // Immediately remove from local state to update UI
       setState(() {
-        _investors.removeWhere((i) => _selectedInvestorIds.contains(i.id));
+        investors.removeWhere((i) => selectedInvestorIds.contains(i.id));
       });
       
       // Clear selection
-      _clearSelection();
+      clearSelection();
       
       // Also reload data from server to ensure consistency
-      _loadData();
+      loadData();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _selectedInvestorIds.length == 1
+              selectedInvestorIds.length == 1
                   ? l10n?.investorDeleted ?? 'Investor deleted'
                   : l10n?.investorsDeleted ?? 'Investors deleted',
             ),
@@ -262,276 +285,51 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
           ),
         );
         // Reload data on error to ensure UI consistency
-        _loadData();
+        loadData();
       }
     }
   }
 
+  // Force a complete refresh by reinitializing all data
+  void forceRefresh() {
+    if (!mounted) return;
+    
+    // Clear data and show loading
+    setState(() {
+      isLoading = true;
+      investors = [];
+      selectedInvestorIds.clear();
+    });
+    
+    // First clear the cache to ensure fresh data from API
+    final cacheService = CacheService();
+    // Get current user to build cache key
+    AuthServiceProvider.of(context).getCurrentUser().then((user) {
+      if (user != null) {
+        // Clear all related caches
+        cacheService.clear(); // Clear entire cache to be safe
+        print('🔄 Cache cleared for full refresh');
+        
+        // Wait a moment before reloading to ensure UI shows loading state
+        Future.delayed(Duration(milliseconds: 300), () {
+          if (mounted) {
+            print('🔄 Force-refreshing investors data from API');
+            loadData();
+          }
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        children: [
-          // Enhanced Header with search and sort
-          Container(
-            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-            ),
-            child: Column(
-              children: [
-                // Title and Actions Row
-                Row(
-                  children: [
-                    // Title without Icon
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n?.investors ?? 'Инвесторы',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        Text(
-                          _isSelectionMode
-                              ? '${l10n?.selectedItems ?? 'Selected'}: ${_selectedInvestorIds.length}'
-                              : '${_filteredAndSortedInvestors.length} ${_getInvestorsCountText(_filteredAndSortedInvestors.length)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: _isSelectionMode ? AppTheme.primaryColor : AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    // Show different controls based on selection mode
-                    if (_isSelectionMode) ...[
-                      // Clear selection button - light grey
-                      CustomButton(
-                        text: l10n?.cancelSelection ?? 'Cancel Selection',
-                        onPressed: _clearSelection,
-                        color: Colors.grey[100],
-                        textColor: AppTheme.textSecondary,
-                        showIcon: false,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(width: 8),
-                      // Select All button - subtle style
-                      CustomButton(
-                        text: l10n?.selectAll ?? 'Select All',
-                        onPressed: _selectAll,
-                        color: AppTheme.subtleBackgroundColor,
-                        textColor: AppTheme.primaryColor,
-                        showIcon: false,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(width: 8),
-                      // Delete button - error color
-                      CustomButton(
-                        text: l10n?.deleteAction ?? 'Delete',
-                        onPressed: _selectedInvestorIds.isNotEmpty ? _deleteBulkInvestors : null,
-                        color: AppTheme.errorColor,
-                        icon: Icons.delete_outline,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                    ] else ...[
-                      // Regular mode controls
-                      // Enhanced Search field
-                      CustomSearchBar(
-                        value: _searchQuery,
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.investors ?? 'инвесторы').toLowerCase()}...',
-                        width: 320,
-                      ),
-                      const SizedBox(width: 16),
-                      // Enhanced Sort dropdown
-                      CustomDropdown<String>(
-                        value: _sortBy,
-                        width: 200,
-                        items: {
-                          'creationDate': l10n?.creationDate ?? 'Дата создания',
-                          'name': l10n?.sortByName ?? 'Имени',
-                          'investment': l10n?.sortByInvestment ?? 'Инвестиции',
-                        },
-                        onChanged: (value) => setState(() => _sortBy = value),
-                      ),
-                      const SizedBox(width: 16),
-                      // Custom Add button
-                      CustomButton(
-                        text: l10n?.addInvestor ?? 'Добавить инвестора',
-                        onPressed: () => _showCreateInvestorDialog(),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Continuous Table Section
-          Expanded(
-            child: Container(
-              color: AppTheme.surfaceColor,
-              child: _isLoading
-                  ? Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            offset: const Offset(0, 1),
-                            blurRadius: 3,
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Table Header
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.subtleBackgroundColor,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                              ),
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppTheme.subtleBorderColor,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(
-                                    l10n?.fullName ?? 'Полное имя',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    l10n?.investmentAmount ?? 'Сумма инвестиции',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    l10n?.investorShareHeader ?? 'Процент инвестора',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    l10n?.userShareHeader ?? 'Процент пользователя',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    l10n?.creationDate ?? 'Дата создания',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Table Content
-                          Expanded(
-                            child: _filteredAndSortedInvestors.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      l10n?.notFound ?? 'Ничего не найдено',
-                                      style: TextStyle(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    itemCount: _filteredAndSortedInvestors.length,
-                                    itemBuilder: (context, index) {
-                                      final investor = _filteredAndSortedInvestors[index];
-                                      return InvestorListItem(
-                                        investor: investor,
-                                        onTap: _isSelectionMode 
-                                            ? () => _toggleSelection(investor.id)
-                                            : () => context.go('/investors/${investor.id}'),
-                                        onEdit: () => _showEditInvestorDialog(investor),
-                                        onDelete: () => _deleteInvestor(investor),
-                                        onSelect: () => _toggleSelection(investor.id),
-                                        onSelectionToggle: () => _toggleSelection(investor.id),
-                                        isSelected: _selectedInvestorIds.contains(investor.id),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
+    return ResponsiveLayout(
+      mobile: InvestorsListScreenMobile(state: this),
+      desktop: InvestorsListScreenDesktop(state: this),
     );
   }
 
-  String _getInvestorsCountText(int count) {
+  String getInvestorsCountText(int count) {
     final l10n = AppLocalizations.of(context)!;
     if (count % 10 == 1 && count % 100 != 11) {
       return l10n.investor_one;
@@ -542,7 +340,7 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
     }
   }
 
-  Future<void> _deleteInvestor(Investor investor) async {
+  Future<void> deleteInvestor(Investor investor) async {
     final confirmed = await showCustomConfirmationDialog(
       context: context,
       title: AppLocalizations.of(context)!.deleteInvestorTitle,
@@ -562,9 +360,9 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
         }
         cache.remove(CacheService.investorKey(investor.id));
         
-        await _investorRepository.deleteInvestor(investor.id);
+        await investorRepository.deleteInvestor(investor.id);
         // Immediately refresh the list after deletion
-        await _loadData();
+        await loadData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -586,22 +384,26 @@ class _InvestorsListScreenState extends State<InvestorsListScreen> with TickerPr
     }
   }
 
-  void _showCreateInvestorDialog() {
+  void showCreateInvestorDialog() {
     showDialog(
       context: context,
       builder: (context) => CreateEditInvestorDialog(
-        onSuccess: _loadData,
+        onSuccess: loadData,
       ),
     );
   }
 
-  void _showEditInvestorDialog(Investor investor) {
+  void showEditInvestorDialog(Investor investor) {
     showDialog(
       context: context,
       builder: (context) => CreateEditInvestorDialog(
         investor: investor,
-        onSuccess: _loadData,
+        onSuccess: loadData,
       ),
     );
+  }
+  
+  void setStateWrapper(VoidCallback fn) {
+    setState(fn);
   }
 } 

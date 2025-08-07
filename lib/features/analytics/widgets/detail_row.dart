@@ -4,34 +4,35 @@ import '../../../core/theme/app_theme.dart';
 class DetailRow extends StatelessWidget {
   final String label;
   final String value;
+  final bool isCompact;
 
-  const DetailRow({super.key, required this.label, required this.value});
+  const DetailRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.isCompact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w400,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 12 : 14,
+            color: AppTheme.textSecondary,
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isCompact ? 13 : 15,
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 } 

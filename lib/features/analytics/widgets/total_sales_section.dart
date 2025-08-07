@@ -17,28 +17,43 @@ class TotalSalesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final currencyFormatter =
-        NumberFormat.currency(locale: 'ru_RU', symbol: '₽');
+        NumberFormat.currency(locale: 'ru_RU', symbol: '₽', decimalDigits: 0);
     final chartData = data.weeklySales;
     final averageSales = data.averageSales;
 
     return AnalyticsCard(
       title: l10n.paymentsThisWeek,
       header: _buildHeader(l10n, currencyFormatter, averageSales, data.percentageChange),
-      child: SizedBox(
-        height: 300,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: BarChart(
-            BarChartData(
-              maxY: chartData.reduce(max) * 1.2,
-              barTouchData: _barTouchData(currencyFormatter),
-              titlesData: _titlesData(l10n),
-              borderData: FlBorderData(show: false),
-              gridData: const FlGridData(show: false),
-              alignment: BarChartAlignment.spaceAround,
-              barGroups: _barGroups(chartData),
-            ),
-          ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isSmallScreen = constraints.maxWidth < 400;
+            
+            // Calculate max Y value with safety checks
+            double maxY = 0;
+            if (chartData.isNotEmpty) {
+              maxY = chartData.reduce(max);
+              // Ensure we have a non-zero value to avoid rendering issues
+              if (maxY <= 0) maxY = 10;
+              // Add padding for better visualization
+              maxY *= 1.2;
+            } else {
+              maxY = 100; // Default if no data
+            }
+            
+            return BarChart(
+              BarChartData(
+                maxY: maxY,
+                barTouchData: _barTouchData(currencyFormatter),
+                titlesData: _titlesData(l10n, isSmallScreen),
+                borderData: FlBorderData(show: false),
+                gridData: const FlGridData(show: false),
+                alignment: BarChartAlignment.spaceAround,
+                barGroups: _barGroups(chartData, isSmallScreen),
+              ),
+            );
+          }
         ),
       ),
     );
@@ -129,19 +144,19 @@ class TotalSalesSection extends StatelessWidget {
         ),
       );
 
-  FlTitlesData _titlesData(AppLocalizations l10n) => FlTitlesData(
+  FlTitlesData _titlesData(AppLocalizations l10n, bool isSmallScreen) => FlTitlesData(
         show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
             getTitlesWidget: (value, meta) =>
-                _bottomTitles(value, meta, l10n),
+                _bottomTitles(value, meta, l10n, isSmallScreen),
           ),
         ),
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
-            showTitles: true,
+            showTitles: !isSmallScreen,
             reservedSize: 40,
             getTitlesWidget: (value, meta) => _leftTitles(value, meta, l10n),
           ),
@@ -151,7 +166,7 @@ class TotalSalesSection extends StatelessWidget {
             const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       );
 
-  List<BarChartGroupData> _barGroups(List<double> chartData) {
+  List<BarChartGroupData> _barGroups(List<double> chartData, bool isSmallScreen) {
     final currentDayIndex = DateTime.now().weekday - 1;
     return List.generate(7, (index) {
       return BarChartGroupData(
@@ -162,7 +177,7 @@ class TotalSalesSection extends StatelessWidget {
             color: index == currentDayIndex
                 ? AppTheme.primaryColor
                 : AppTheme.primaryColor.withOpacity(0.3),
-            width: 16,
+            width: isSmallScreen ? 12 : 16,
             borderRadius: BorderRadius.circular(8),
           )
         ],
@@ -196,16 +211,26 @@ class TotalSalesSection extends StatelessWidget {
   }
 
   Widget _bottomTitles(
-      double value, TitleMeta meta, AppLocalizations l10n) {
-    final titles = [
-      l10n.dayMon,
-      l10n.dayTue,
-      l10n.dayWed,
-      l10n.dayThu,
-      l10n.dayFri,
-      l10n.daySat,
-      l10n.daySun,
-    ];
+      double value, TitleMeta meta, AppLocalizations l10n, bool isSmallScreen) {
+    final titles = isSmallScreen 
+      ? [
+          'Пн',
+          'Вт',
+          'Ср',
+          'Чт',
+          'Пт',
+          'Сб',
+          'Вс',
+        ]
+      : [
+          l10n.dayMon,
+          l10n.dayTue,
+          l10n.dayWed,
+          l10n.dayThu,
+          l10n.dayFri,
+          l10n.daySat,
+          l10n.daySun,
+        ];
 
     return SideTitleWidget(
       axisSide: meta.axisSide,

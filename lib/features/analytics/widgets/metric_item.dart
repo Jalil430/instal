@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
@@ -9,7 +8,7 @@ class MetricItem extends StatelessWidget {
   final String value;
   final double? change;
   final bool higherIsBetter;
-  final List<FlSpot> chartData;
+  final bool isCompact;
 
   const MetricItem({
     super.key,
@@ -17,7 +16,7 @@ class MetricItem extends StatelessWidget {
     required this.value,
     this.change,
     this.higherIsBetter = true,
-    required this.chartData,
+    this.isCompact = false,
   });
 
   @override
@@ -40,112 +39,56 @@ class MetricItem extends StatelessWidget {
     final changeText = hasChange ? '${change!.abs().toStringAsFixed(1)}%' : '— %';
     final color = isGood ? AppTheme.successColor : AppTheme.errorColor;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 26),
-              Row(
-                children: [
-                  if (hasChange)
-                    Icon(
-                      change! >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                      color: color,
-                      size: 14,
-                    ),
-                  if (hasChange) const SizedBox(width: 4),
-                  Text(
-                    changeText,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: hasChange ? color : AppTheme.textSecondary,
-                    ),
-                  ),
-                  if (hasChange) const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      l10n.vsPreview28days,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            color: AppTheme.textSecondary,
           ),
         ),
-        SizedBox(
-          width: 80,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (chartData.isNotEmpty)
-                SizedBox(
-                  height: 40,
-                  child: LineChart(
-                    LineChartData(
-                      lineTouchData: const LineTouchData(enabled: false),
-                      gridData: const FlGridData(show: false),
-                      titlesData: const FlTitlesData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: chartData,
-                          isCurved: true,
-                          curveSmoothness: 0.2,
-                          color: color,
-                          barWidth: 1.5,
-                          isStrokeCapRound: true,
-                          dotData: const FlDotData(show: false),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            gradient: LinearGradient(
-                              colors: [
-                                color.withOpacity(0.3),
-                                color.withOpacity(0.0),
-                              ],
-                              stops: const [0.5, 1.0],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                          shadow: Shadow(
-                            blurRadius: 8,
-                            color: color.withOpacity(0.3),
-                          ),
-                        ),
-                      ],
-                      minY: 0,
-                      maxY: 10,
-                    ),
-                  ),
-                ),
-            ],
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isCompact ? 22 : 27,
+            fontWeight: FontWeight.w600,
           ),
+        ),
+        SizedBox(height: isCompact ? 8 : 16),
+        Row(
+          children: [
+            if (hasChange)
+              Icon(
+                change! >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                color: color,
+                size: 14,
+              ),
+            if (hasChange) const SizedBox(width: 4),
+            Text(
+              changeText,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: hasChange ? color : AppTheme.textSecondary,
+              ),
+            ),
+            if (hasChange) const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                l10n.vsPreview28days,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ],
     );

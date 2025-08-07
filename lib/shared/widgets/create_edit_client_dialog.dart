@@ -7,6 +7,9 @@ import '../../features/clients/domain/repositories/client_repository.dart';
 import '../../features/clients/data/repositories/client_repository_impl.dart';
 import '../../features/clients/data/datasources/client_remote_datasource.dart';
 import '../../features/auth/presentation/widgets/auth_service_provider.dart';
+import '../widgets/responsive_layout.dart';
+import 'dialogs/desktop/create_edit_client_dialog_desktop.dart';
+import 'dialogs/mobile/create_edit_client_dialog_mobile.dart';
 import 'custom_button.dart';
 
 class CreateEditClientDialog extends StatefulWidget {
@@ -170,167 +173,35 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Dialog(
-      backgroundColor: AppTheme.surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+    return ResponsiveLayout(
+      mobile: CreateEditClientDialogMobile(
+        formKey: _formKey,
+        fullNameController: _fullNameController,
+        contactNumberController: _contactNumberController,
+        passportNumberController: _passportNumberController,
+        addressController: _addressController,
+        fullNameFocus: _fullNameFocus,
+        contactNumberFocus: _contactNumberFocus,
+        passportNumberFocus: _passportNumberFocus,
+        addressFocus: _addressFocus,
+        isSaving: _isSaving,
+        isEditing: _isEditing,
+        onSave: _saveClient,
       ),
-      child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Text(
-                    _isEditing 
-                        ? (l10n?.editClient ?? 'Edit Client')
-                        : (l10n?.addClient ?? 'Add Client'),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppTheme.subtleBackgroundColor,
-                      foregroundColor: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              
-              // Form Fields
-              _buildTextField(
-                controller: _fullNameController,
-                focusNode: _fullNameFocus,
-                nextFocusNode: _contactNumberFocus,
-                label: l10n?.fullName ?? 'Full Name',
-                validator: (value) => value?.isEmpty == true ? l10n?.enterFullName ?? 'Enter full name' : null,
-              ),
-              const SizedBox(height: 16),
-              
-              _buildTextField(
-                controller: _contactNumberController,
-                focusNode: _contactNumberFocus,
-                nextFocusNode: _passportNumberFocus,
-                label: l10n?.contactNumber ?? 'Contact Number',
-                keyboardType: TextInputType.phone,
-                validator: (value) => value?.isEmpty == true ? l10n?.enterContactNumber ?? 'Enter contact number' : null,
-              ),
-              const SizedBox(height: 16),
-              
-              _buildTextField(
-                controller: _passportNumberController,
-                focusNode: _passportNumberFocus,
-                nextFocusNode: _addressFocus,
-                label: l10n?.passportNumber ?? 'Passport Number',
-                validator: (value) => value?.isEmpty == true ? l10n?.enterPassportNumber ?? 'Enter passport number' : null,
-              ),
-              const SizedBox(height: 16),
-              
-              _buildTextField(
-                controller: _addressController,
-                focusNode: _addressFocus,
-                label: l10n?.address ?? 'Address (Optional)',
-                isLast: true,
-                onSubmit: _saveClient,
-              ),
-              const SizedBox(height: 24),
-              
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                    child: Text(
-                      l10n?.cancel ?? 'Cancel',
-                      style: TextStyle(color: AppTheme.textSecondary),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  CustomButton(
-                    text: l10n?.save ?? 'Save',
-                    onPressed: _isSaving ? null : _saveClient,
-                    showIcon: false,
-                    width: 120,
-                    height: 40,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      desktop: CreateEditClientDialogDesktop(
+        formKey: _formKey,
+        fullNameController: _fullNameController,
+        contactNumberController: _contactNumberController,
+        passportNumberController: _passportNumberController,
+        addressController: _addressController,
+        fullNameFocus: _fullNameFocus,
+        contactNumberFocus: _contactNumberFocus,
+        passportNumberFocus: _passportNumberFocus,
+        addressFocus: _addressFocus,
+        isSaving: _isSaving,
+        isEditing: _isEditing,
+        onSave: _saveClient,
       ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    FocusNode? nextFocusNode,
-    required String label,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    bool isLast = false,
-    VoidCallback? onSubmit,
-  }) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: keyboardType,
-      textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
-      onFieldSubmitted: (_) {
-        if (isLast) {
-          onSubmit?.call();
-        } else if (nextFocusNode != null) {
-          nextFocusNode.requestFocus();
-        }
-      },
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: AppTheme.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.borderColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.errorColor),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ),
-      validator: validator,
     );
   }
 }

@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/localization/app_localizations.dart';
-import '../../main.dart';
-import '../../shared/widgets/custom_button.dart';
-import '../../shared/widgets/custom_dropdown.dart';
 import '../auth/presentation/widgets/auth_service_provider.dart';
 import '../auth/domain/entities/user.dart';
 import '../../shared/widgets/edit_profile_dialog.dart';
+import '../../shared/widgets/responsive_layout.dart';
 import 'data/services/whatsapp_api_service.dart';
-import 'presentation/widgets/whatsapp_integration_section.dart';
 import 'presentation/widgets/whatsapp_setup_dialog.dart';
 import 'presentation/widgets/whatsapp_credentials_dialog.dart';
 import 'presentation/widgets/whatsapp_templates_dialog.dart';
+import '../../main.dart';
+import '../../core/localization/app_localizations.dart';
+import 'screens/desktop/settings_screen_desktop.dart';
+import 'screens/mobile/settings_screen_mobile.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loadingUser = true;
   bool _isInitialized = false;
   
-  // WhatsApp settings state - CLEAN AND SIMPLE
+  // WhatsApp settings state
   bool _isWhatsAppEnabled = false;
   bool _isWhatsAppLoading = true;
   bool _isWhatsAppConfigured = false;
@@ -150,7 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppTheme.successColor,
+        backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -160,7 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppTheme.errorColor,
+        backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -198,7 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocalizations.of(context)?.errorLoadingUserData ?? 'Error loading user data'}: $e'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -218,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocalizations.of(context)?.errorDuringLogout ?? 'Error during logout'}: $e'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -242,220 +241,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     localeSetter?.setLocale(locale);
   }
 
-  Widget _buildProfileView(User user) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Icon(
-                Icons.person,
-                size: 32,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.fullName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  if (user.phone != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      user.phone!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        
-        // Buttons - same style as WhatsApp integration section
-        SizedBox(
-          width: 350, // Same width as language dropdown and WhatsApp buttons
-          child: CustomButton(
-            onPressed: _showEditProfileDialog,
-            text: AppLocalizations.of(context)?.editProfile ?? 'Edit Profile',
-            icon: Icons.edit,
-            showIcon: true,
-            height: 44, // Same height as WhatsApp buttons
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: 350, // Same width as language dropdown and WhatsApp buttons
-          child: CustomButton(
-            onPressed: _logout,
-            text: AppLocalizations.of(context)?.logout ?? 'Logout',
-            icon: Icons.logout,
-            showIcon: true,
-            color: AppTheme.errorColor,
-            height: 44, // Same height as WhatsApp buttons
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
-            color: AppTheme.surfaceColor,
-            child: Row(
-              children: [
-                const SizedBox(width: 4),
-                Text(
-                  AppLocalizations.of(context)?.settings ?? 'Настройки',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile Section
-                  Text(
-                    AppLocalizations.of(context)?.profile ?? 'Profile',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_loadingUser)
-                    const SizedBox(
-                      height: 100,
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (_currentUser != null)
-                    _buildProfileView(_currentUser!)
-                  else ...[
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 48,
-                              color: AppTheme.textSecondary,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                AppLocalizations.of(context)?.unableToLoadProfileInfo ?? 'Unable to load profile information',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: 300, // Same width as other buttons
-                          child: CustomButton(
-                            onPressed: _logout,
-                            text: AppLocalizations.of(context)?.logout ?? 'Logout',
-                            icon: Icons.logout,
-                            showIcon: true,
-                            color: AppTheme.errorColor,
-                            height: 44, // Same height as WhatsApp buttons
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 32),
-                  
-                  // Language Section
-                  Text(
-                    AppLocalizations.of(context)?.language ?? 'Language',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  CustomDropdown<String>(
-                    value: _selectedLanguage,
-                    items: {
-                      'ru': AppLocalizations.of(context)?.languageRussian ?? 'Русский',
-                      'en': AppLocalizations.of(context)?.languageEnglish ?? 'English',
-                    },
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        _changeLanguage(newValue);
-                      }
-                    },
-                    width: 250,
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // WhatsApp Integration Section - COMPLETELY CLEAN
-                  WhatsAppIntegrationSection(
-                    isConfigured: _isWhatsAppConfigured,
-                    isLoading: _isWhatsAppLoading,
-                    onSetupPressed: _showSetupDialog,
-                    onCredentialsPressed: _showCredentialsDialog,
-                    onTemplatesPressed: _showTemplatesDialog,
-                  ),
-                  
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ],
+    return ResponsiveLayout(
+      mobile: SettingsScreenMobile(
+        currentUser: _currentUser,
+        loadingUser: _loadingUser,
+        selectedLanguage: _selectedLanguage,
+        isWhatsAppConfigured: _isWhatsAppConfigured,
+        isWhatsAppLoading: _isWhatsAppLoading,
+        onEditProfilePressed: _showEditProfileDialog,
+        onLogoutPressed: _logout,
+        onLanguageChanged: _changeLanguage,
+        onSetupPressed: _showSetupDialog,
+        onCredentialsPressed: _showCredentialsDialog,
+        onTemplatesPressed: _showTemplatesDialog,
+      ),
+      desktop: SettingsScreenDesktop(
+        currentUser: _currentUser,
+        loadingUser: _loadingUser,
+        selectedLanguage: _selectedLanguage,
+        isWhatsAppConfigured: _isWhatsAppConfigured,
+        isWhatsAppLoading: _isWhatsAppLoading,
+        onEditProfilePressed: _showEditProfileDialog,
+        onLogoutPressed: _logout,
+        onLanguageChanged: _changeLanguage,
+        onSetupPressed: _showSetupDialog,
+        onCredentialsPressed: _showCredentialsDialog,
+        onTemplatesPressed: _showTemplatesDialog,
       ),
     );
   }

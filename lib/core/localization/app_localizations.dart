@@ -73,6 +73,9 @@ class AppLocalizations {
   String get installment_many =>
       locale.languageCode == 'ru' ? 'рассрочек' : 'installments';
 
+  String get refresh => locale.languageCode == 'ru' ? 'Обновить' : 'Refresh';
+
+
   // ===== Entities (Client, Investor, Installment) =====
   String get client => locale.languageCode == 'ru' ? 'Клиент' : 'Client';
   String get investor => locale.languageCode == 'ru' ? 'Инвестор' : 'Investor';
@@ -145,6 +148,12 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Предстоящий' : 'Upcoming';
   String get dueToPay => locale.languageCode == 'ru' ? 'К оплате' : 'Due to Pay';
   String get overdue => locale.languageCode == 'ru' ? 'Просрочено' : 'Overdue';
+
+
+  String get all => locale.languageCode == 'ru' ? 'Все' : 'All';
+
+  String get filterByStatus => locale.languageCode == 'ru' ? 'Фильтр по статусу' : 'Filter by status';
+
 
   // ===== Actions & Buttons =====
   String get addInstallment =>
@@ -439,9 +448,9 @@ class AppLocalizations {
   // ===== Analytics =====
   String get totalRevenue => locale.languageCode == 'ru' ? 'Общая выручка' : 'Total Revenue';
   String get newInstallments => locale.languageCode == 'ru' ? 'Новые рассрочки' : 'New Installments';
-  String get collectionRate => locale.languageCode == 'ru' ? 'Эффективность сборов' : 'Collection Rate';
+  String get collectionRate => locale.languageCode == 'ru' ? 'Эффективность' : 'Collection Rate';
   String get portfolioGrowth => locale.languageCode == 'ru' ? 'Рост портфеля' : 'Portfolio Growth';
-  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Выручка за неделю' : 'Revenue this Week';
+  String get paymentsThisWeek => locale.languageCode == 'ru' ? 'Выручка за 7 дней' : 'Revenue Last 7 Days';
   String get installmentStatus => locale.languageCode == 'ru' ? 'Статус рассрочек' : 'Installment Status';
   String get activeInstallments => locale.languageCode == 'ru' ? 'Активные рассрочки' : 'Active Installments';
   String get totalPortfolio => locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
@@ -667,16 +676,18 @@ class AppLocalizations {
   String get sevenDaysBefore => locale.languageCode == 'ru' ? 'За 7 дней' : '7 Days Before';
   String get advanceReminder => locale.languageCode == 'ru' ? 'Предварительное напоминание' : 'Advance reminder';
   String get dueToday => locale.languageCode == 'ru' ? 'Сегодня' : 'Due Today';
-  String get dueDateReminder => locale.languageCode == 'ru' ? 'Напоминание о сроке' : 'Due date reminder';
+  String get dueDateReminder => locale.languageCode == 'ru' ? 'Напоминание в день оплаты' : 'Due date reminder';
   String get manual => locale.languageCode == 'ru' ? 'Ручное' : 'Manual';
   String get manualReminder => locale.languageCode == 'ru' ? 'Ручное напоминание' : 'Manual reminder';
-  String get sevenDayAdvanceReminder => locale.languageCode == 'ru' ? '7-дневное предварительное напоминание' : '7-day advance reminder';
-  String get templateFor => locale.languageCode == 'ru' ? 'Шаблон для' : 'Template for';
+  String get sevenDayAdvanceReminder => locale.languageCode == 'ru' ? 'Напоминание за 7 дней' : '7-day advance reminder';
   String get enterMessageTemplate => locale.languageCode == 'ru' ? 'Введите шаблон сообщения здесь...' : 'Enter your message template here...';
   String get preview => locale.languageCode == 'ru' ? 'Предварительный просмотр:' : 'Preview:';
   String get templatePreviewPlaceholder => locale.languageCode == 'ru' ? 'Предварительный просмотр шаблона появится здесь...' : 'Template preview will appear here...';
   String get availableVariables => locale.languageCode == 'ru' ? 'Доступные переменные:' : 'Available Variables:';
   String get templateIssues => locale.languageCode == 'ru' ? 'Проблемы шаблона:' : 'Template Issues:';
+  String get hideVariables => locale.languageCode == 'ru' ? 'Спрятать переменные' : 'Hide Variables';
+  String get showVariables => locale.languageCode == 'ru' ? 'Показать переменные' : 'Show Variables';
+
   
   // Selection mode
   String get selectAll => locale.languageCode == 'ru' ? 'Выбрать все' : 'Select All';

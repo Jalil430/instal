@@ -185,6 +185,7 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
+                                  color: AppTheme.primaryColor,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

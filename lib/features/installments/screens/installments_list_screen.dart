@@ -1,96 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:intl/intl.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/responsive_main_layout.dart';
+import '../../../shared/widgets/analytics_card.dart';
+import '../../../shared/widgets/create_installment_dialog.dart';
+import '../../../shared/widgets/custom_button.dart';
+import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../shared/widgets/custom_dropdown.dart';
+import '../../../shared/widgets/custom_icon_button.dart';
 import '../../../shared/widgets/custom_search_bar.dart';
-import '../widgets/installment_list_item.dart';
+import '../../../shared/widgets/responsive_layout.dart';
+import '../../auth/domain/entities/user.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
+import '../../clients/data/datasources/client_remote_datasource.dart';
+import '../../clients/data/repositories/client_repository_impl.dart';
+import '../../clients/domain/repositories/client_repository.dart';
+import 'desktop/installments_list_screen_desktop.dart';
+import 'mobile/installments_list_screen_mobile.dart';
+import '../data/datasources/installment_remote_datasource.dart';
+import '../data/models/installment_model.dart';
+import '../data/repositories/installment_repository_impl.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
-import '../data/repositories/installment_repository_impl.dart';
-import '../data/datasources/installment_remote_datasource.dart';
-import '../data/models/installment_model.dart';
-import '../../clients/domain/repositories/client_repository.dart';
-import '../../clients/data/repositories/client_repository_impl.dart';
-import '../../clients/data/datasources/client_remote_datasource.dart';
-import '../../../shared/widgets/custom_button.dart';
-import '../../../shared/widgets/custom_confirmation_dialog.dart';
-import '../../../core/api/cache_service.dart';
-import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../services/reminder_service.dart';
-import '../../../shared/widgets/create_installment_dialog.dart';
-import '../../../core/error/global_error_handler.dart';
+import '../../../core/api/cache_service.dart';
 
 class InstallmentsListScreen extends StatefulWidget {
   const InstallmentsListScreen({super.key});
 
   @override
-  State<InstallmentsListScreen> createState() => _InstallmentsListScreenState();
+  InstallmentsListScreenState createState() => InstallmentsListScreenState();
 }
 
-class _InstallmentsListScreenState extends State<InstallmentsListScreen> with TickerProviderStateMixin {
+class InstallmentsListScreenState extends State<InstallmentsListScreen>
+    with TickerProviderStateMixin {
   // WhatsApp brand color - static so it can be accessed from dialog
   static const Color whatsAppColor = Color(0xFF25D366);
   
-  String _searchQuery = '';
-  String _sortBy = 'status';
-  late InstallmentRepository _installmentRepository;
-  late ClientRepository _clientRepository;
-  List<Installment> _installments = [];
-  Map<String, String> _clientNames = {};
-  Map<String, List<InstallmentPayment>> _installmentPayments = {};
-  final Map<String, bool> _expandedStates = {}; // Track expansion state by installment ID
-  final Set<String> _selectedInstallmentIds = {}; // Track selected installments
-  final Set<String> _loadingPayments = {}; // Track which installments are loading payments
-  bool _isLoading = true;
-  bool _isInitialized = false;
-  bool _isSelectionMode = false;
-  
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
+  String searchQuery = '';
+  String statusFilter = 'all'; // Changed from sortBy to statusFilter with default 'all'
+  String sortBy = 'status'; // Keep sortBy separate from filtering
+  late InstallmentRepository installmentRepository;
+  late ClientRepository clientRepository;
+  List<Installment> installments = [];
+  Map<String, String> clientNames = {};
+  Map<String, List<InstallmentPayment>> installmentPayments = {};
+  final Map<String, bool> expandedStates = {}; // Track expansion state by installment ID
+  final Set<String> selectedInstallmentIds = {}; // Track selected installments
+  final Set<String> loadingPayments = {}; // Track which installments are loading payments
+  bool isLoading = true;
+  bool isInitialized = false;
+  bool isSelectionMode = false;
+
+  // Available status filters
+  static const Map<String, String> statusFilters = {
+    'all': 'All',
+    'просрочено': 'Overdue',
+    'к оплате': 'Due to Pay',
+    'предстоящий': 'Upcoming',
+    'оплачено': 'Paid',
+  };
+
+  late AnimationController fadeController;
+  late Animation<double> fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
+    fadeController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: fadeController, curve: Curves.easeInOut),
     );
     
-    _initializeRepositories();
+    initializeRepositories();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInitialized) {
-    _loadData();
-      _isInitialized = true;
+    if (!isInitialized) {
+      loadData();
+      isInitialized = true;
+    }
+
+    // Check if we need to refresh the data (e.g., coming back from details page)
+    try {
+      final GoRouterState goState = GoRouterState.of(context);
+      if (goState.extra != null && goState.extra is Map<String, dynamic>) {
+        final Map<String, dynamic> extra = goState.extra as Map<String, dynamic>;
+        print('Got navigation extra: $extra');
+        if (extra['refresh'] == true) {
+          print('Refreshing installments list because refresh parameter was true');
+          // Add a small delay to ensure the widget tree is built
+          Future.delayed(Duration.zero, () {
+            if (mounted) {
+              loadData();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking navigation extras: $e');
     }
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
+    fadeController.dispose();
     super.dispose();
   }
 
-  void _initializeRepositories() {
-    _installmentRepository = InstallmentRepositoryImpl(
+  // Get translated status filter names
+  Map<String, String> getTranslatedStatusFilters() {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'all': l10n?.all ?? 'Все',
+      'просрочено': l10n?.overdue ?? 'Просрочено',
+      'к оплате': l10n?.dueToPay ?? 'К оплате',
+      'предстоящий': l10n?.upcoming ?? 'Предстоящий',
+      'оплачено': l10n?.paid ?? 'Оплачено',
+    };
+  }
+
+  // Set status filter
+  void setStatusFilter(String value) {
+    setState(() {
+      statusFilter = value;
+    });
+  }
+
+  void initializeRepositories() {
+    installmentRepository = InstallmentRepositoryImpl(
       InstallmentRemoteDataSourceImpl(),
     );
-    _clientRepository = ClientRepositoryImpl(
+    clientRepository = ClientRepositoryImpl(
       ClientRemoteDataSourceImpl(),
     );
   }
 
-  Future<void> _loadData() async {
+  Future<void> loadData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
     
     // Performance measurement
     final stopwatch = Stopwatch()..start();
@@ -111,7 +168,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       }
       
       // Get all installments with pre-calculated fields (single optimized call!)
-      final installments = await _installmentRepository.getAllInstallments(currentUser.id);
+      final loadedInstallments = await installmentRepository.getAllInstallments(currentUser.id);
       
       if (!mounted) return;
       
@@ -119,7 +176,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       final clientNames = <String, String>{};
       final paymentsMap = <String, List<InstallmentPayment>>{};
       
-      for (final installment in installments) {
+      for (final installment in loadedInstallments) {
         // Client names are now included in the installment data
         if (installment is InstallmentModel && installment.clientName != null) {
           clientNames[installment.clientId] = installment.clientName!;
@@ -131,29 +188,29 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       }
       
       setState(() {
-        _installments = installments;
-        _clientNames = clientNames;
-        _installmentPayments = paymentsMap;
-        _isLoading = false;
+        installments = loadedInstallments;
+        this.clientNames = clientNames;
+        installmentPayments = paymentsMap;
+        isLoading = false;
       });
       
       if (mounted) {
-        _fadeController.forward();
+        fadeController.forward();
       }
       
       // Performance logging
       stopwatch.stop();
-      print('🚀 Installments loaded in ${stopwatch.elapsedMilliseconds}ms (${installments.length} installments, ${paymentsMap.values.fold(0, (sum, payments) => sum + payments.length)} payments)');
+      print('🚀 Installments loaded in ${stopwatch.elapsedMilliseconds}ms (${loadedInstallments.length} installments, ${paymentsMap.values.fold(0, (sum, payments) => sum + payments.length)} payments)');
       
     } catch (e) {
       stopwatch.stop();
       print('Error loading installments data: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
-          _installments = [];
-          _clientNames = {};
-          _installmentPayments = {};
+          isLoading = false;
+          installments = [];
+          this.clientNames = {};
+          installmentPayments = {};
         });
         
         // Show more specific error messages
@@ -179,7 +236,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     }
   }
 
-  Future<void> _refreshData() async {
+  Future<void> refreshData() async {
     // Refresh without showing loading spinner - use cached data while loading
     try {
       // Get current user from authentication
@@ -195,30 +252,30 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       }
       
       // Get all installments with pre-calculated fields (single optimized call!)
-      final installments = await _installmentRepository.getAllInstallments(currentUser.id);
+      final loadedInstallments = await installmentRepository.getAllInstallments(currentUser.id);
       
       // Extract pre-calculated data from optimized response
       final clientNames = <String, String>{};
       final paymentsMap = <String, List<InstallmentPayment>>{};
       
-      for (final installment in installments) {
+      for (final installment in loadedInstallments) {
         // Client names are now included in the installment data
         if (installment is InstallmentModel && installment.clientName != null) {
           clientNames[installment.clientId] = installment.clientName!;
         }
         
         // Keep existing payments if already loaded, otherwise empty
-        if (!_installmentPayments.containsKey(installment.id)) {
+        if (!installmentPayments.containsKey(installment.id)) {
           paymentsMap[installment.id] = [];
         } else {
-          paymentsMap[installment.id] = _installmentPayments[installment.id]!;
+          paymentsMap[installment.id] = installmentPayments[installment.id]!;
         }
       }
       
       setState(() {
-        _installments = installments;
-        _clientNames = clientNames;
-        _installmentPayments = paymentsMap;
+        installments = loadedInstallments;
+        this.clientNames = clientNames;
+        installmentPayments = paymentsMap;
       });
     } catch (e) {
       if (mounted) {
@@ -230,40 +287,49 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   }
 
   /// Load payments for a specific installment (lazy loading)
-  Future<void> _loadPaymentsForInstallment(String installmentId) async {
+  Future<void> loadPaymentsForInstallment(String installmentId) async {
     // Set loading state
     setState(() {
-      _loadingPayments.add(installmentId);
+      loadingPayments.add(installmentId);
     });
     
     try {
-      final payments = await _installmentRepository.getPaymentsByInstallmentId(installmentId);
+      final payments = await installmentRepository.getPaymentsByInstallmentId(installmentId);
       setState(() {
-        _installmentPayments[installmentId] = payments;
-        _loadingPayments.remove(installmentId);
+        installmentPayments[installmentId] = payments;
+        loadingPayments.remove(installmentId);
       });
     } catch (e) {
       print('Failed to load payments for installment $installmentId: $e');
       setState(() {
-        _loadingPayments.remove(installmentId);
+        loadingPayments.remove(installmentId);
       });
       // Don't show error to user for individual payment loading failures
     }
   }
 
-  List<Installment> get _filteredAndSortedInstallments {
-    var filtered = _installments.where((installment) {
-      if (_searchQuery.isEmpty) return true;
+  List<Installment> get filteredAndSortedInstallments {
+    // First filter by search query
+    var filtered = installments.where((installment) {
+      if (searchQuery.isEmpty) return true;
       
       final clientName = installment is InstallmentModel ? (installment.clientName?.toLowerCase() ?? '') : '';
       final productName = installment.productName.toLowerCase();
-      final query = _searchQuery.toLowerCase();
+      final query = searchQuery.toLowerCase();
       
       return clientName.contains(query) || productName.contains(query);
     }).toList();
     
-    // Sort
-    switch (_sortBy) {
+    // Then filter by status if not "all"
+    if (statusFilter != 'all') {
+      filtered = filtered.where((installment) {
+        final status = installment is InstallmentModel ? (installment.paymentStatus ?? 'предстоящий') : 'предстоящий';
+        return status == statusFilter;
+      }).toList();
+    }
+    
+    // Then sort
+    switch (sortBy) {
       case 'status':
         // Sort by payment status using pre-calculated status - priority order: просрочено, к оплате, предстоящий, оплачено
         filtered.sort((a, b) {
@@ -303,55 +369,60 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
   }
 
   // Selection methods
-  void _toggleSelection(String installmentId) {
+  void toggleSelection(String installmentId) {
     setState(() {
-      if (_selectedInstallmentIds.contains(installmentId)) {
-        _selectedInstallmentIds.remove(installmentId);
-        if (_selectedInstallmentIds.isEmpty) {
-          _isSelectionMode = false;
+      if (selectedInstallmentIds.contains(installmentId)) {
+        selectedInstallmentIds.remove(installmentId);
+        if (selectedInstallmentIds.isEmpty) {
+          isSelectionMode = false;
         }
       } else {
-        _selectedInstallmentIds.add(installmentId);
-        _isSelectionMode = true;
+        selectedInstallmentIds.add(installmentId);
+        isSelectionMode = true;
       }
     });
   }
 
-  void _selectAll() {
+  // Public setState method for external widgets to call
+  void setStateWrapper(VoidCallback fn) {
+    setState(fn);
+  }
+
+  void selectAll() {
     setState(() {
-      _selectedInstallmentIds.clear();
-      _selectedInstallmentIds.addAll(_filteredAndSortedInstallments.map((i) => i.id));
-      _isSelectionMode = true;
+      selectedInstallmentIds.clear();
+      selectedInstallmentIds.addAll(filteredAndSortedInstallments.map((i) => i.id));
+      isSelectionMode = true;
     });
   }
   
-  void _selectAllOverdue() {
+  void selectAllOverdue() {
     setState(() {
-      _selectedInstallmentIds.clear();
+      selectedInstallmentIds.clear();
       
       // Find all installments with overdue status using pre-calculated status
-      for (final installment in _filteredAndSortedInstallments) {
+      for (final installment in filteredAndSortedInstallments) {
         final status = installment is InstallmentModel ? (installment.paymentStatus ?? 'предстоящий') : 'предстоящий';
         
         // Add to selection if status is overdue
         if (status == 'просрочено') {
-          _selectedInstallmentIds.add(installment.id);
+          selectedInstallmentIds.add(installment.id);
         }
       }
       
-      _isSelectionMode = _selectedInstallmentIds.isNotEmpty;
+      isSelectionMode = selectedInstallmentIds.isNotEmpty;
     });
   }
 
-  void _clearSelection() {
+  void clearSelection() {
     setState(() {
-      _selectedInstallmentIds.clear();
-      _isSelectionMode = false;
+      selectedInstallmentIds.clear();
+      isSelectionMode = false;
     });
   }
 
-  void _sendBulkReminders() async {
-    if (_selectedInstallmentIds.isEmpty) return;
+  void sendBulkReminders() async {
+    if (selectedInstallmentIds.isEmpty) return;
     
     // Show confirmation dialog
     final confirmed = await _showBulkReminderConfirmationDialog();
@@ -359,16 +430,16 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     
     await ReminderService.sendBulkReminders(
       context: context,
-      installmentIds: _selectedInstallmentIds.toList(),
+      installmentIds: selectedInstallmentIds.toList(),
       templateType: 'manual',
     );
     
     // Clear selection after sending
-    _clearSelection();
+    clearSelection();
   }
 
-  Future<void> _deleteBulkInstallments() async {
-    if (_selectedInstallmentIds.isEmpty) return;
+  Future<void> deleteBulkInstallments() async {
+    if (selectedInstallmentIds.isEmpty) return;
     
     final l10n = AppLocalizations.of(context);
     
@@ -376,9 +447,9 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     final confirmed = await showCustomConfirmationDialog(
       context: context,
       title: l10n?.deleteInstallmentTitle ?? 'Delete Installment',
-      content: _selectedInstallmentIds.length == 1
+      content: selectedInstallmentIds.length == 1
           ? l10n?.deleteInstallmentConfirmation ?? 'Are you sure you want to delete this installment?'
-          : '${l10n?.deleteInstallmentConfirmation ?? 'Are you sure you want to delete these installments?'} (${_selectedInstallmentIds.length})',
+          : '${l10n?.deleteInstallmentConfirmation ?? 'Are you sure you want to delete these installments?'} (${selectedInstallmentIds.length})',
     );
     
     if (confirmed != true) return;
@@ -416,10 +487,10 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       );
       
       // Delete all selected installments
-      for (final id in _selectedInstallmentIds) {
+      for (final id in selectedInstallmentIds) {
         cache.remove(CacheService.installmentKey(id));
         cache.remove(CacheService.paymentsKey(id));
-        await _installmentRepository.deleteInstallment(id);
+        await installmentRepository.deleteInstallment(id);
       }
       
       // Clear the current snackbar
@@ -427,25 +498,25 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
       
       // Immediately remove from local state to update UI
       setState(() {
-        _installments.removeWhere((i) => _selectedInstallmentIds.contains(i.id));
-        for (final id in _selectedInstallmentIds) {
-          _installmentPayments.remove(id);
-          _expandedStates.remove(id);
-          _loadingPayments.remove(id);
+        installments.removeWhere((i) => selectedInstallmentIds.contains(i.id));
+        for (final id in selectedInstallmentIds) {
+          installmentPayments.remove(id);
+          expandedStates.remove(id);
+          loadingPayments.remove(id);
         }
       });
       
       // Clear selection
-      _clearSelection();
+      clearSelection();
       
       // Also reload data from server to ensure consistency
-      _loadData();
+      loadData();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _selectedInstallmentIds.length == 1
+              selectedInstallmentIds.length == 1
                   ? l10n?.installmentDeleted ?? 'Installment deleted'
                   : l10n?.installmentsDeleted ?? 'Installments deleted',
             ),
@@ -463,7 +534,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           ),
         );
         // Reload data on error to ensure UI consistency
-        _loadData();
+        loadData();
       }
     }
   }
@@ -480,16 +551,17 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n?.sendReminderConfirmation ?? 'Are you sure you want to send reminders to the selected installments?',
+              l10n?.sendReminderConfirmation ??
+                  'Are you sure you want to send reminders to the selected installments?',
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _InstallmentsListScreenState.whatsAppColor.withOpacity(0.1),
+                color: whatsAppColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _InstallmentsListScreenState.whatsAppColor.withOpacity(0.3),
+                  color: whatsAppColor.withOpacity(0.3),
                   width: 1,
                 ),
               ),
@@ -497,15 +569,16 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: _InstallmentsListScreenState.whatsAppColor,
+                    color: whatsAppColor,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      l10n?.sendReminderInfo ?? 'This will send individual messages to each client.',
+                      l10n?.sendReminderInfo ??
+                          'This will send individual messages to each client.',
                       style: TextStyle(
-                        color: _InstallmentsListScreenState.whatsAppColor,
+                        color: whatsAppColor,
                         fontSize: 12,
                       ),
                     ),
@@ -526,425 +599,26 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _InstallmentsListScreenState.whatsAppColor,
+              backgroundColor: whatsAppColor,
               foregroundColor: Colors.white,
             ),
             child: Text(l10n?.confirm ?? 'Send'),
           ),
         ],
       ),
-    ) ?? false;
+    ) ??
+    false;
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        children: [
-          // Enhanced Header with search and sort
-          Container(
-            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  offset: const Offset(0, 2),
-                  blurRadius: 8,
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Title and Actions Row
-                Row(
-                  children: [
-                    // Title without Icon
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n?.installments ?? 'Рассрочки',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        Text(
-                          _isSelectionMode
-                              ? '${l10n?.selectedItems ?? 'Selected'}: ${_selectedInstallmentIds.length}'
-                              : '${_filteredAndSortedInstallments.length} ${_getItemsText(_filteredAndSortedInstallments.length)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: _isSelectionMode ? AppTheme.primaryColor : AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    // Show different controls based on selection mode
-                    if (_isSelectionMode) ...[
-                      // Clear selection button - light grey (at the very left)
-                      CustomButton(
-                        text: l10n?.cancelSelection ?? 'Cancel Selection',
-                        onPressed: _clearSelection,
-                        color: Colors.grey[100],
-                        textColor: AppTheme.textSecondary,
-                        showIcon: false,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(width: 8),
-                      // Select All button - subtle style
-                      CustomButton(
-                        text: l10n?.selectAll ?? 'Select All',
-                        onPressed: _selectAll,
-                        color: AppTheme.subtleBackgroundColor,
-                        textColor: AppTheme.primaryColor,
-                        showIcon: false,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(width: 8),
-                      // Select All Overdue button - same style as Select All
-                      CustomButton(
-                        text: l10n?.selectAllOverdue ?? 'Select All Overdue',
-                        onPressed: _selectAllOverdue,
-                        color: AppTheme.subtleBackgroundColor,
-                        textColor: AppTheme.primaryColor,
-                        showIcon: false,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(width: 8),
-                      // Delete button - error color
-                      CustomButton(
-                        text: l10n?.deleteAction ?? 'Delete',
-                        onPressed: _selectedInstallmentIds.isNotEmpty ? _deleteBulkInstallments : null,
-                        color: AppTheme.errorColor,
-                        icon: Icons.delete_outline,
-                        height: 36,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(width: 8),
-                      // Send WhatsApp Reminders button - primary action
-                      CustomButton(
-                        text: l10n?.sendWhatsAppReminder ?? 'Send Reminder',
-                        onPressed: _sendBulkReminders,
-                        color: whatsAppColor,
-                        icon: Icons.chat_bubble_outline,
-                      ),
-                    ] else ...[
-                      // Regular mode controls
-                      // Enhanced Search field
-                      CustomSearchBar(
-                        value: _searchQuery,
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        hintText: '${l10n?.search ?? 'Поиск'} ${_getItemsText(0)}...',
-                        width: 320,
-                      ),
-                      const SizedBox(width: 16),
-                      // Enhanced Sort dropdown
-                      CustomDropdown(
-                        value: _sortBy,
-                        width: 200,
-                        items: {
-                          'creationDate': l10n?.creationDate ?? 'Дата создания',
-                          'status': l10n?.status ?? 'Статус',
-                          'amount': l10n?.amount ?? 'Сумма',
-                          'client': l10n?.client ?? 'Клиент',
-                        },
-                        onChanged: (value) => setState(() => _sortBy = value!),
-                      ),
-                      const SizedBox(width: 16),
-                      // Custom Add button
-                      CustomButton(
-                        text: l10n?.addInstallment ?? 'Добавить рассрочку',
-                        onPressed: () => _showCreateInstallmentDialog(),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Continuous Table Section
-          Expanded(
-            child: Container(
-              color: AppTheme.surfaceColor,
-              child: _isLoading
-                  ? Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.brightPrimaryColor),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            offset: const Offset(0, 1),
-                            blurRadius: 3,
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Table Header
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.subtleBackgroundColor,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                              ),
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppTheme.subtleBorderColor,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                // No checkbox column - using background color for selection
-                                Expanded(
-                                  flex: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.client ?? l10n?.client ?? 'Клиент').toUpperCase(),
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.productName ?? l10n?.productNameHeader ?? 'Название товара').toUpperCase(),
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.paidAmount ?? 'Оплачено').toUpperCase(),
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.leftAmount ?? 'Осталось').toUpperCase(),
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.dueDate ?? 'Срок оплаты').toUpperCase(),
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.status ?? l10n?.statusHeader ?? 'Статус').toUpperCase(),
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  width: 160,
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Text(
-                                    l10n?.nextPaymentHeader ?? 'СЛЕДУЮЩИЙ ПЛАТЕЖ',
-                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                          color: AppTheme.textSecondary,
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 12,
-                                          letterSpacing: 0.5,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          // Table Content
-                          Expanded(
-                            child: _filteredAndSortedInstallments.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      l10n?.notFound ?? 'Ничего не найдено',
-                                      style: TextStyle(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    itemCount: _filteredAndSortedInstallments.length,
-                                    itemBuilder: (context, index) {
-                                      final installment = _filteredAndSortedInstallments[index];
-                                      final payments = _installmentPayments[installment.id] ?? [];
-                                      
-                                      // Use pre-calculated values from optimized response
-                                      final clientName = installment is InstallmentModel ? (installment.clientName ?? AppLocalizations.of(context)?.unknown ?? 'Unknown') : (AppLocalizations.of(context)?.unknown ?? 'Unknown');
-                                      final paidAmount = installment is InstallmentModel ? (installment.paidAmount ?? 0.0) : 0.0;
-                                      final leftAmount = installment is InstallmentModel ? (installment.remainingAmount ?? installment.installmentPrice) : installment.installmentPrice;
-                                      
-                                      // Create next payment from optimized data
-                                      InstallmentPayment? nextPayment;
-                                      if (installment is InstallmentModel && installment.nextPaymentDate != null) {
-                                        // Determine payment number: 0 for down payment, 1+ for monthly payments
-                                        int paymentNumber;
-                                        if (installment.downPayment > 0 && installment.nextPaymentDate == installment.downPaymentDate) {
-                                          paymentNumber = 0; // Down payment
-                                        } else {
-                                          // Calculate which monthly payment this is based on paid payments
-                                          // If down payment exists, subtract 1 from paid payments to get monthly payment number
-                                          int monthlyPaymentsPaid = installment.paidPayments ?? 0;
-                                          if (installment.downPayment > 0) {
-                                            monthlyPaymentsPaid = monthlyPaymentsPaid - 1; // Subtract down payment
-                                          }
-                                          paymentNumber = monthlyPaymentsPaid + 1; // Next monthly payment number
-                                        }
-                                        
-                                        nextPayment = InstallmentPayment(
-                                          id: '${installment.id}_next',
-                                          installmentId: installment.id,
-                                          paymentNumber: paymentNumber,
-                                          dueDate: installment.nextPaymentDate!,
-                                          expectedAmount: installment.nextPaymentAmount ?? 0.0,
-                                          isPaid: false,
-                                          paidDate: null,
-                                          createdAt: DateTime.now(),
-                                          updatedAt: DateTime.now(),
-                                        );
-                                      }
-                                      return AnimatedContainer(
-                                        duration: Duration(milliseconds: 100 + (index * 50)),
-                                        curve: Curves.easeOutCubic,
-                                        child: InstallmentListItem(
-                                          installment: installment,
-                                          clientName: clientName,
-                                          productName: installment.productName,
-                                          paidAmount: paidAmount,
-                                          leftAmount: leftAmount,
-                                          payments: payments,
-                                          nextPayment: nextPayment,
-                                          isExpanded: _expandedStates[installment.id] ?? false,
-                                          isLoadingPayments: _loadingPayments.contains(installment.id),
-                                          onTap: _isSelectionMode 
-                                              ? () => _toggleSelection(installment.id)
-                                              : () => context.go('/installments/${installment.id}'),
-                                          onClientTap: () => context.go('/clients/${installment.clientId}'),
-                                          onExpansionChanged: (expanded) {
-                                            setState(() {
-                                              _expandedStates[installment.id] = expanded;
-                                            });
-                                            
-                                            // Load payments only when expanding and if not already loaded
-                                            if (expanded && (_installmentPayments[installment.id]?.isEmpty ?? true)) {
-                                              _loadPaymentsForInstallment(installment.id);
-                                            }
-                                          },
-                                          onDataChanged: () => _loadData(),
-                                          onInstallmentUpdated: (updatedInstallment) {
-                                            setState(() {
-                                              // Find and update the specific installment in the list
-                                              final index = _installments.indexWhere((i) => i.id == updatedInstallment.id);
-                                              if (index != -1) {
-                                                // Update the installment
-                                                _installments[index] = updatedInstallment;
-                                                
-                                                // Set expansion state to collapsed since the widget will rebuild and collapse
-                                                _expandedStates[updatedInstallment.id] = false;
-                                                
-                                                // Clear the payments since the installment collapsed
-                                                _installmentPayments[updatedInstallment.id] = [];
-                                              }
-                                            });
-                                          },
-                                          onDelete: () => _deleteInstallment(installment),
-                                          onSelect: () => _toggleSelection(installment.id),
-                                          isSelected: _selectedInstallmentIds.contains(installment.id),
-                                          onSelectionToggle: () => _toggleSelection(installment.id),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
+    return ResponsiveLayout(
+      mobile: InstallmentsListScreenMobile(state: this),
+      desktop: InstallmentsListScreenDesktop(state: this),
     );
   }
 
-  String _getItemsText(int count) {
+  String getItemsText(int count) {
     final l10n = AppLocalizations.of(context)!;
     if (count % 10 == 1 && count % 100 != 11) {
       return l10n.installment_one;
@@ -955,7 +629,7 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
     }
   }
 
-  Future<void> _deleteInstallment(Installment installment) async {
+  Future<void> deleteInstallment(Installment installment) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showCustomConfirmationDialog(
       context: context,
@@ -977,18 +651,18 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
         cache.remove(CacheService.paymentsKey(installment.id));
         
         // Delete from server
-        await _installmentRepository.deleteInstallment(installment.id);
+        await installmentRepository.deleteInstallment(installment.id);
         
         // Immediately remove from local state to update UI
         setState(() {
-          _installments.removeWhere((i) => i.id == installment.id);
-          _installmentPayments.remove(installment.id);
-          _expandedStates.remove(installment.id);
-          _loadingPayments.remove(installment.id);
+          installments.removeWhere((i) => i.id == installment.id);
+          installmentPayments.remove(installment.id);
+          expandedStates.remove(installment.id);
+          loadingPayments.remove(installment.id);
         });
         
         // Also reload data from server to ensure consistency
-        _loadData();
+        loadData();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1007,18 +681,52 @@ class _InstallmentsListScreenState extends State<InstallmentsListScreen> with Ti
             ),
           );
           // Reload data on error to ensure UI consistency
-          _loadData();
+          loadData();
         }
       }
     }
   }
 
-  void _showCreateInstallmentDialog() {
+  void showCreateInstallmentDialog() {
     showDialog(
       context: context,
       builder: (context) => CreateInstallmentDialog(
-        onSuccess: _loadData,
+        onSuccess: loadData,
       ),
     );
+  }
+
+  // Force a complete refresh by reinitializing all data
+  void forceRefresh() {
+    if (!mounted) return;
+    
+    // Clear data and show loading
+    setState(() {
+      isLoading = true;
+      installments = [];
+      clientNames = {};
+      installmentPayments = {};
+      expandedStates.clear();
+      selectedInstallmentIds.clear();
+    });
+    
+    // First clear the cache to ensure fresh data from API
+    final cacheService = CacheService();
+    // Get current user to build cache key
+    AuthServiceProvider.of(context).getCurrentUser().then((user) {
+      if (user != null) {
+        // Clear all related caches
+        cacheService.clear(); // Clear entire cache to be safe
+        print('🔄 Cache cleared for full refresh');
+        
+        // Wait a moment before reloading to ensure UI shows loading state
+        Future.delayed(Duration(milliseconds: 300), () {
+          if (mounted) {
+            print('🔄 Force-refreshing installments data from API');
+            loadData();
+          }
+        });
+      }
+    });
   }
 } 

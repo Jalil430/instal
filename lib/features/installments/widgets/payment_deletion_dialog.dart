@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -71,6 +72,8 @@ class _PaymentDeletionState extends StatefulWidget {
 class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
   late InstallmentRepository _repository;
   bool _isLoading = false;
+  // Add focus node
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -78,6 +81,16 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
     _repository = InstallmentRepositoryImpl(
       InstallmentRemoteDataSourceImpl(),
     );
+    // Request focus when dialog is shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose(); // Clean up the focus node
+    super.dispose();
   }
 
   @override
@@ -88,8 +101,10 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
       symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 0,
     );
+    final isDesktop = MediaQuery.of(context).size.width >= 650;
 
-    return Column(
+    // Main content widget
+    Widget content = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -102,7 +117,7 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
                     ? (l10n?.downPaymentFull ?? 'Первоначальный взнос')
                     : '${l10n?.monthLabel ?? 'Месяц'} ${widget.payment.paymentNumber}',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: isDesktop ? 14 : 16,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.textPrimary,
                 ),
@@ -111,7 +126,7 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
             Text(
               currencyFormat.format(widget.payment.expectedAmount),
               style: TextStyle(
-                fontSize: 14,
+                fontSize: isDesktop ? 14 : 16,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.textSecondary,
               ),
@@ -119,11 +134,14 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
           ],
         ),
         
-        const SizedBox(height: 12),
+        SizedBox(height: isDesktop ? 12 : 16),
         
         // Simple confirmation message (replaces date picker)
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 12 : 16, 
+            vertical: isDesktop ? 8 : 12
+          ),
           decoration: BoxDecoration(
             color: AppTheme.errorColor.withOpacity(0.05),
             border: Border.all(color: AppTheme.errorColor.withOpacity(0.2)),
@@ -132,14 +150,14 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
           child: Text(
             l10n?.cancelPaymentQuestion ?? 'Отменить оплату этого платежа?',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: isDesktop ? 13 : 16,
               fontWeight: FontWeight.w400,
               color: AppTheme.errorColor,
             ),
           ),
         ),
         
-        const SizedBox(height: 12),
+        SizedBox(height: isDesktop ? 12 : 20),
         
         // Buttons - matches registration dialog layout
         Row(
@@ -148,7 +166,7 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
               child: TextButton(
                 onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: isDesktop ? 8 : 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -156,19 +174,19 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
                 child: Text(
                   l10n?.cancel ?? 'Отмена',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: isDesktop ? 14 : 16,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.textSecondary,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: isDesktop ? 8 : 12),
             Expanded(
               flex: 2,
               child: _isLoading
                   ? Container(
-                      height: 30,
+                      height: isDesktop ? 30 : 45,
                       decoration: BoxDecoration(
                         color: AppTheme.errorColor,
                         borderRadius: BorderRadius.circular(12),
@@ -177,18 +195,18 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
-                            width: 16,
-                            height: 16,
+                            width: isDesktop ? 16 : 20,
+                            height: isDesktop ? 16 : 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: isDesktop ? 8 : 10),
                           Text(
                             'Обработка...',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isDesktop ? 14 : 16,
                               fontWeight: FontWeight.w500,
                               color: Colors.white,
                             ),
@@ -196,23 +214,69 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
                         ],
                       ),
                     )
-                  : CustomButton(
-                      onPressed: _isLoading ? null : _handleDeletion,
-                      text: l10n?.cancelPayment ?? 'Отменить',
-                      icon: Icons.keyboard_return_rounded,
-                      iconRight: true,
-                      showIcon: true,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.errorColor,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      height: 30,
-                    ),
+                  : isDesktop 
+                    ? CustomButton(
+                        onPressed: _isLoading ? null : _handleDeletion,
+                        text: l10n?.cancelPayment ?? 'Отменить',
+                        icon: Icons.keyboard_return_rounded,
+                        iconRight: true,
+                        showIcon: true,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.errorColor,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        height: 30,
+                      )
+                    : SizedBox(
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleDeletion,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.errorColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            l10n?.cancelPayment ?? 'Отменить',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
             ),
           ],
         ),
       ],
     );
+
+    // Apply focus node to the content widget
+    if (isDesktop) {
+      return Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        canRequestFocus: true,
+        skipTraversal: false,
+        includeSemantics: true,
+        onKeyEvent: (FocusNode node, KeyEvent event) {
+          if (event is KeyDownEvent && 
+              event.logicalKey == LogicalKeyboardKey.enter && 
+              !_isLoading) {
+            _handleDeletion();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: content,
+      );
+    } else {
+      return content;
+    }
   }
 
   Future<void> _handleDeletion() async {

@@ -16,6 +16,9 @@ import '../../features/investors/domain/repositories/investor_repository.dart';
 import '../../features/investors/data/repositories/investor_repository_impl.dart';
 import '../../features/investors/data/datasources/investor_remote_datasource.dart';
 import '../../features/auth/presentation/widgets/auth_service_provider.dart';
+import '../widgets/responsive_layout.dart';
+import 'dialogs/desktop/create_installment_dialog_desktop.dart';
+import 'dialogs/mobile/create_installment_dialog_mobile.dart';
 import 'custom_button.dart';
 import 'custom_dropdown.dart';
 import 'keyboard_navigable_dropdown.dart';
@@ -70,14 +73,10 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   
   // Navigation state
   int _currentStep = 0; // 0: client, 1: investor, 2: product name, etc.
-  String _clientSearchQuery = '';
-  String _investorSearchQuery = '';
   
   // Keys for keyboard navigation
   final GlobalKey<KeyboardNavigableDropdownState<Client>> _clientDropdownKey = GlobalKey();
   final GlobalKey<KeyboardNavigableDropdownState<Investor?>> _investorDropdownKey = GlobalKey();
-
-
 
   @override
   void initState() {
@@ -181,8 +180,6 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       // Note: Can't show SnackBar here as context might not be ready
     }
   }
-
-
 
   void _focusClientDropdown() {
     setState(() => _currentStep = 0);
@@ -347,319 +344,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    
     print('🎨 Dialog build called - _isLoadingData: $_isLoadingData, clients: ${_clients.length}, investors: ${_investors.length}');
-
-
-
-    return Dialog(
-      backgroundColor: AppTheme.surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 700),
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Text(
-                    l10n?.addInstallment ?? 'Add Installment',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppTheme.subtleBackgroundColor,
-                      foregroundColor: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              
-              // Scrollable Form Content
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Client and Investor Selection
-                      Row(
-                        children: [
-                          Expanded(child: _buildClientDropdown()),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildInvestorDropdown()),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Product Name
-                      _buildTextField(
-                        controller: _productNameController,
-                        focusNode: _productNameFocus,
-                        nextFocusNode: _cashPriceFocus,
-                        label: l10n?.productName ?? 'Product Name',
-                        validator: (value) => value?.isEmpty == true ? l10n?.enterProductName ?? 'Enter product name' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Prices
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _cashPriceController,
-                              focusNode: _cashPriceFocus,
-                              nextFocusNode: _installmentPriceFocus,
-                              label: l10n?.cashPrice ?? 'Cash Price',
-                              keyboardType: TextInputType.number,
-                              suffix: '₽',
-                              validator: (value) => _validateNumber(value, l10n?.enterValidPrice ?? 'Enter valid price'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _installmentPriceController,
-                              focusNode: _installmentPriceFocus,
-                              nextFocusNode: _termFocus,
-                              label: l10n?.installmentPrice ?? 'Installment Price',
-                              keyboardType: TextInputType.number,
-                              suffix: '₽',
-                              validator: (value) => _validateNumber(value, l10n?.enterValidPrice ?? 'Enter valid price'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Term and Down Payment
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _termController,
-                              focusNode: _termFocus,
-                              nextFocusNode: _downPaymentFocus,
-                              label: l10n?.term ?? 'Term (months)',
-                              keyboardType: TextInputType.number,
-                              suffix: l10n?.monthShort ?? 'mo.',
-                              validator: (value) => _validateNumber(value, l10n?.enterValidTerm ?? 'Enter valid term'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _downPaymentController,
-                              focusNode: _downPaymentFocus,
-                              label: l10n?.downPaymentFull ?? 'Down Payment',
-                              keyboardType: TextInputType.number,
-                              suffix: '₽',
-                              validator: (value) => _validateNumber(value, l10n?.enterValidDownPayment ?? 'Enter valid down payment', allowZero: true),
-                              isLast: true,
-                              onSubmit: _saveInstallment,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Monthly Payment (calculated)
-                      _buildTextField(
-                        controller: _monthlyPaymentController,
-                        focusNode: _monthlyPaymentFocus,
-                        label: l10n?.monthlyPayment ?? 'Monthly Payment',
-                        keyboardType: TextInputType.number,
-                        suffix: '₽',
-                        readOnly: true,
-                        validator: (value) => _validateNumber(value, l10n?.validateMonthlyPayment ?? 'Monthly payment must be greater than 0'),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Dates
-                      Row(
-                        children: [
-                          Expanded(child: _buildDateField(
-                            label: l10n?.buyingDate ?? 'Buying Date',
-                            value: _buyingDate,
-                            onChanged: (date) => setState(() => _buyingDate = date),
-                          )),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildDateField(
-                            label: l10n?.installmentStartDate ?? 'Installment Start Date',
-                            value: _installmentStartDate,
-                            onChanged: (date) => setState(() => _installmentStartDate = date),
-                          )),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                    child: Text(
-                      l10n?.cancel ?? 'Cancel',
-                      style: TextStyle(color: AppTheme.textSecondary),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  CustomButton(
-                    text: l10n?.save ?? 'Save',
-                    onPressed: _isSaving ? null : _saveInstallment,
-                    showIcon: false,
-                    width: 120,
-                    height: 40,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClientDropdown() {
-    final l10n = AppLocalizations.of(context)!;
-    
-    if (_isLoadingData) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.client ?? 'Client',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.subtleBackgroundColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Loading clients...',
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return KeyboardNavigableDropdown<Client>(
-      key: _clientDropdownKey,
-      value: _selectedClient,
-      items: _clients,
-      getDisplayText: (client) => client.fullName,
-      getSearchText: (client) => client.fullName,
-      onChanged: (client) {
-        setState(() => _selectedClient = client);
-        _focusInvestorDropdown();
-      },
-      onNext: _focusInvestorDropdown,
-      label: l10n.client ?? 'Client',
-      hint: '${l10n.search ?? 'Search'}...',
-      noItemsMessage: 'No clients found',
-      onCreateNew: _showCreateClientDialog,
-      autoFocus: _currentStep == 0 && !_isLoadingData,
-    );
-  }
-
-  Widget _buildInvestorDropdown() {
-    final l10n = AppLocalizations.of(context)!;
-    
-    if (_isLoadingData) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.investorOptional ?? 'Investor (Optional)',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.subtleBackgroundColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Loading investors...',
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
 
     // Create a list with "Without Investor" option
     final investorOptions = <Investor?>[
@@ -667,166 +352,95 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       ..._investors,
     ];
 
-    return KeyboardNavigableDropdown<Investor?>(
-      key: _investorDropdownKey,
-      value: _selectedInvestor,
-      items: investorOptions,
-      getDisplayText: (investor) => investor?.fullName ?? (l10n.withoutInvestor ?? 'Without Investor'),
-      getSearchText: (investor) => investor?.fullName ?? (l10n.withoutInvestor ?? 'Without Investor'),
-      onChanged: (investor) {
-        setState(() => _selectedInvestor = investor);
-        _focusProductName();
-      },
-      onNext: _focusProductName,
-      label: l10n.investorOptional ?? 'Investor (Optional)',
-      hint: '${l10n.search ?? 'Search'}...',
-      noItemsMessage: 'No investors found',
-      onCreateNew: _showCreateInvestorDialog,
-      autoFocus: _currentStep == 1 && !_isLoadingData,
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    FocusNode? nextFocusNode,
-    required String label,
-    TextInputType? keyboardType,
-    String? suffix,
-    String? Function(String?)? validator,
-    bool readOnly = false,
-    bool isLast = false,
-    VoidCallback? onSubmit,
-  }) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
-      onFieldSubmitted: (_) {
-        if (isLast) {
-          onSubmit?.call();
-        } else if (nextFocusNode != null) {
-          nextFocusNode.requestFocus();
-        }
-      },
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: readOnly ? AppTheme.textSecondary : AppTheme.textPrimary,
+    return ResponsiveLayout(
+      mobile: CreateInstallmentDialogMobile(
+        formKey: _formKey,
+        clients: _clients,
+        investorOptions: investorOptions,
+        selectedClient: _selectedClient,
+        selectedInvestor: _selectedInvestor,
+        productNameController: _productNameController,
+        cashPriceController: _cashPriceController,
+        installmentPriceController: _installmentPriceController,
+        termController: _termController,
+        downPaymentController: _downPaymentController,
+        monthlyPaymentController: _monthlyPaymentController,
+        productNameFocus: _productNameFocus,
+        cashPriceFocus: _cashPriceFocus,
+        installmentPriceFocus: _installmentPriceFocus,
+        termFocus: _termFocus,
+        downPaymentFocus: _downPaymentFocus,
+        monthlyPaymentFocus: _monthlyPaymentFocus,
+        buyingDate: _buyingDate,
+        installmentStartDate: _installmentStartDate,
+        isLoadingData: _isLoadingData,
+        isSaving: _isSaving,
+        currentStep: _currentStep,
+        onClientSelected: (client) {
+          if (client != null) {
+            setState(() => _selectedClient = client);
+            _focusInvestorDropdown();
+          }
+        },
+        onInvestorSelected: (investor) {
+          setState(() => _selectedInvestor = investor);
+          _focusProductName();
+        },
+        onClientDropdownFocus: _focusClientDropdown,
+        onInvestorDropdownFocus: _focusInvestorDropdown,
+        onProductNameFocus: _focusProductName,
+        onCreateClient: _showCreateClientDialog,
+        onCreateInvestor: _showCreateInvestorDialog,
+        onSave: _saveInstallment,
+        onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
+        onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
+        clientDropdownKey: _clientDropdownKey,
+        investorDropdownKey: _investorDropdownKey,
       ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: AppTheme.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
-        suffixText: suffix,
-        suffixStyle: TextStyle(
-          color: AppTheme.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
-        filled: true,
-        fillColor: readOnly ? AppTheme.subtleBackgroundColor : Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.borderColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.errorColor),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      desktop: CreateInstallmentDialogDesktop(
+        formKey: _formKey,
+        clients: _clients,
+        investorOptions: investorOptions,
+        selectedClient: _selectedClient,
+        selectedInvestor: _selectedInvestor,
+        productNameController: _productNameController,
+        cashPriceController: _cashPriceController,
+        installmentPriceController: _installmentPriceController,
+        termController: _termController,
+        downPaymentController: _downPaymentController,
+        monthlyPaymentController: _monthlyPaymentController,
+        productNameFocus: _productNameFocus,
+        cashPriceFocus: _cashPriceFocus,
+        installmentPriceFocus: _installmentPriceFocus,
+        termFocus: _termFocus,
+        downPaymentFocus: _downPaymentFocus,
+        monthlyPaymentFocus: _monthlyPaymentFocus,
+        buyingDate: _buyingDate,
+        installmentStartDate: _installmentStartDate,
+        isLoadingData: _isLoadingData,
+        isSaving: _isSaving,
+        currentStep: _currentStep,
+        onClientSelected: (client) {
+          if (client != null) {
+            setState(() => _selectedClient = client);
+            _focusInvestorDropdown();
+          }
+        },
+        onInvestorSelected: (investor) {
+          setState(() => _selectedInvestor = investor);
+          _focusProductName();
+        },
+        onClientDropdownFocus: _focusClientDropdown,
+        onInvestorDropdownFocus: _focusInvestorDropdown,
+        onProductNameFocus: _focusProductName,
+        onCreateClient: _showCreateClientDialog,
+        onCreateInvestor: _showCreateInvestorDialog,
+        onSave: _saveInstallment,
+        onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
+        onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
+        clientDropdownKey: _clientDropdownKey,
+        investorDropdownKey: _investorDropdownKey,
       ),
-      validator: validator,
-      inputFormatters: keyboardType == TextInputType.number
-          ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))]
-          : null,
     );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime? value,
-    required Function(DateTime) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: () async {
-            final date = await showDatePicker(
-              context: context,
-              initialDate: value ?? DateTime.now(),
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2030),
-            );
-            if (date != null) {
-              onChanged(date);
-            }
-          },
-          child: Container(
-            width: double.infinity,
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    value != null
-                        ? '${value.day.toString().padLeft(2, '0')}.${value.month.toString().padLeft(2, '0')}.${value.year}'
-                        : AppLocalizations.of(context)?.selectDate ?? 'Select date',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: value != null ? AppTheme.textPrimary : AppTheme.textHint,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.calendar_today,
-                  color: AppTheme.textSecondary,
-                  size: 18,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String? _validateNumber(String? value, String message, {bool allowZero = false}) {
-    if (value?.isEmpty == true) return message;
-    final number = double.tryParse(value!);
-    if (number == null) return message;
-    if (!allowZero && number <= 0) return message;
-    if (allowZero && number < 0) return message;
-    return null;
   }
 }

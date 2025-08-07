@@ -114,7 +114,7 @@ class _InvestorListItemState extends State<InvestorListItem> with TickerProvider
                   children: [
                     // Full Name
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 16),
                         child: Text(
@@ -129,7 +129,7 @@ class _InvestorListItemState extends State<InvestorListItem> with TickerProvider
                     ),
                     // Investment Amount
                     Expanded(
-                      flex: 1,
+                      flex: 2,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 20),
                         child: Text(
@@ -145,7 +145,7 @@ class _InvestorListItemState extends State<InvestorListItem> with TickerProvider
                     ),
                     // Investor Percentage
                     Expanded(
-                      flex: 1,
+                      flex: 2,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 20),
                         child: Text(
@@ -161,7 +161,7 @@ class _InvestorListItemState extends State<InvestorListItem> with TickerProvider
                     ),
                     // User Percentage
                     Expanded(
-                      flex: 1,
+                      flex: 2,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 20),
                         child: Text(
@@ -173,19 +173,6 @@ class _InvestorListItemState extends State<InvestorListItem> with TickerProvider
                           textAlign: TextAlign.start,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ),
-                    // Created Date
-                    Expanded(
-                      flex: 1,
-                      child: Text(
-                        dateFormat.format(widget.investor.createdAt),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: AppTheme.textSecondary,
-                        ),
-                        textAlign: TextAlign.start,
                       ),
                     ),
                   ],

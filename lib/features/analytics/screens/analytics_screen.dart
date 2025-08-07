@@ -5,15 +5,11 @@ import 'package:instal_app/features/analytics/domain/entities/analytics_data.dar
 import 'package:instal_app/features/analytics/domain/usecases/get_analytics_data.dart';
 import 'package:instal_app/features/installments/data/datasources/installment_remote_datasource.dart';
 import 'package:instal_app/features/installments/data/repositories/installment_repository_impl.dart';
-import '../../../core/localization/app_localizations.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/api/cache_service.dart';
-import '../../../shared/widgets/custom_icon_button.dart';
-import '../widgets/total_sales_section.dart';
-import '../widgets/key_metrics_section.dart';
-import '../widgets/installment_details_section.dart';
-import '../widgets/installment_status_section.dart';
+import '../../../shared/widgets/responsive_layout.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
+import 'desktop/analytics_screen_desktop.dart';
+import 'mobile/analytics_screen_mobile.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -43,7 +39,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     super.didChangeDependencies();
     if (!_isInitialized) {
       _isInitialized = true;
-    _loadAnalyticsData();
+      _loadAnalyticsData();
     }
   }
 
@@ -131,151 +127,91 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      backgroundColor: AppTheme.surfaceColor,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceColor,
-            ),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.analytics,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.5,
-                      ),
+    return FutureBuilder<AnalyticsData>(
+      future: _analyticsDataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting || snapshot.connectionState == ConnectionState.none) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.analytics_outlined, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Ошибка загрузки аналитики',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
-                const Spacer(),
-                // Refresh button
-                CustomIconButton(
-                  icon: Icons.refresh_rounded,
-                  onPressed: _refreshAnalytics,
-                  size: 36,
-                  animate: _isRefreshing,
-                  rotation: _isRefreshing ? 1.0 : 0.0,
-                  animationDuration: const Duration(milliseconds: 1000),
-                  interactive: !_isRefreshing,
-                ),
-              ],
-            ),
-          ),
-
-          // Main Content
-          Expanded(
-            child: FutureBuilder<AnalyticsData>(
-              future: _analyticsDataFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting || snapshot.connectionState == ConnectionState.none) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.analytics_outlined, size: 64, color: AppTheme.textSecondary),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Ошибка загрузки аналитики',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Попробуйте обновить данные или добавьте рассрочки',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _refreshAnalytics,
-                          child: Text('Повторить'),
-                        ),
-                      ],
-                    ),
-                  );
-                } else if (snapshot.data != null && _isAnalyticsDataEmpty(snapshot.data!)) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.analytics_outlined, size: 64, color: AppTheme.textSecondary),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Нет данных для аналитики',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Добавьте рассрочки для просмотра аналитики',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final analyticsData = snapshot.data!;
-
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: TotalSalesSection(data: analyticsData.totalSales)),
-                            const SizedBox(width: 16),
-                            Expanded(child: KeyMetricsSection(data: analyticsData.keyMetrics)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: InstallmentDetailsSection(data: analyticsData.installmentDetails)),
-                            const SizedBox(width: 16),
-                            Expanded(child: InstallmentStatusSection(data: analyticsData.installmentStatus)),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
-                );
-              },
+                  const SizedBox(height: 8),
+                  Text(
+                    'Попробуйте обновить данные или добавьте рассрочки',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _refreshAnalytics,
+                    child: Text('Повторить'),
+                  ),
+                ],
+              ),
             ),
+          );
+        } else if (snapshot.data != null && _isAnalyticsDataEmpty(snapshot.data!)) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.analytics_outlined, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Нет данных для аналитики',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Добавьте рассрочки для просмотра аналитики',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final analyticsData = snapshot.data!;
+
+        return ResponsiveLayout(
+          mobile: AnalyticsScreenMobile(
+            analyticsData: analyticsData,
+            isRefreshing: _isRefreshing,
+            refreshAnalytics: _refreshAnalytics,
           ),
-        ],
-      ),
+          desktop: AnalyticsScreenDesktop(
+            analyticsData: analyticsData,
+            isRefreshing: _isRefreshing,
+            refreshAnalytics: _refreshAnalytics,
+          ),
+        );
+      },
     );
   }
 }

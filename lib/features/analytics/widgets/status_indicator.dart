@@ -1,73 +1,68 @@
 import 'package:flutter/material.dart';
-
 import '../../../core/theme/app_theme.dart';
 
 class StatusIndicator extends StatelessWidget {
   final Color color;
   final String text;
   final String countText;
+  final bool isCompact;
 
   const StatusIndicator({
     super.key,
     required this.color,
     required this.text,
     required this.countText,
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final statusText = text.substring(0, text.indexOf('(') - 1);
-    final percentageText = text.substring(text.indexOf('('));
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: EdgeInsets.symmetric(vertical: isCompact ? 2.0 : 4.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 10,
-            height: 10,
+            width: isCompact ? 9 : 10,
+            height: isCompact ? 9 : 10,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: color,
-                width: 1.5,
-              ),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                    fontFamily: 'Inter',
+          SizedBox(width: isCompact ? 6 : 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: isCompact ? 11 : 14,
+                    fontWeight: FontWeight.w500,
+                    height: isCompact ? 1.1 : 1.2,
                   ),
-                  children: [
-                    TextSpan(text: '$statusText '),
-                    TextSpan(
-                      text: percentageText,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: color,
-                      ),
-                    ),
-                  ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                countText,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
+                if (!isCompact) const SizedBox(height: 2),
+                Text(
+                  countText,
+                  style: TextStyle(
+                    fontSize: isCompact ? 10 : 12,
+                    color: Colors.grey[600],
+                    height: isCompact ? 1.0 : 1.2,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
