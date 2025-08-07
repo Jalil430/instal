@@ -173,9 +173,9 @@ class InstallmentsListScreenMobile extends StatelessWidget {
                           ? (installment.remainingAmount ?? installment.installmentPrice)
                           : installment.installmentPrice;
                       
-                      // Get payment status
+                      // Get payment status using dynamic calculation
                       final status = installment is InstallmentModel
-                          ? (installment.paymentStatus ?? 'предстоящий')
+                          ? installment.dynamicStatus
                           : 'предстоящий';
                       
                       // Create next payment from optimized data
@@ -229,9 +229,25 @@ class InstallmentsListScreenMobile extends StatelessWidget {
   ) {
     final l10n = AppLocalizations.of(context);
     
-    // Determine status color and text
+    // Determine status color and text with days count
     Color statusColor;
     String statusText;
+    
+    // Calculate days difference for overdue and upcoming statuses
+    String? daysText;
+    if (nextPayment != null && (status == 'просрочено' || status == 'предстоящий')) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final dueDate = nextPayment.dueDate;
+      final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+      final daysDifference = due.difference(today).inDays;
+      
+      if (status == 'просрочено' && daysDifference < 0) {
+        daysText = l10n?.daysShort(daysDifference) ?? '${daysDifference.abs()}d';
+      } else if (status == 'предстоящий' && daysDifference > 0) {
+        daysText = l10n?.daysShort(daysDifference) ?? '${daysDifference}d';
+      }
+    }
     
     switch (status) {
       case 'просрочено':
@@ -295,20 +311,43 @@ class InstallmentsListScreenMobile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: statusColor,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Days count on the left
+                      if (daysText != null) ...[
+                        Text(
+                          daysText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      // Status badge with desktop styling but smaller
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), // Slightly bigger padding
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10), // Same as desktop
+                          border: Border.all(
+                            color: statusColor.withOpacity(0.2), // Same as desktop
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 12, // Same as desktop now
+                            fontWeight: FontWeight.w400, // Same as desktop
+                            color: statusColor,
+                          ),
+                          textAlign: TextAlign.center, // Same as desktop
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

@@ -66,9 +66,9 @@ class LoginScreenDesktop extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Sign in to your account',
-                    style: TextStyle(
+                  Text(
+                    l10n?.signInToAccount ?? 'Sign in to your account',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.textSecondary,
@@ -87,16 +87,16 @@ class LoginScreenDesktop extends StatelessWidget {
                   children: [
                     CustomTextField(
                       controller: emailController,
-                      label: 'Email',
-                      hintText: 'Enter your email',
+                      label: l10n?.email ?? 'Email',
+                      hintText: l10n?.enterEmail ?? 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
                       prefixIcon: Icons.email_outlined,
                       validator: (value) {
                         if (value?.isEmpty == true) {
-                          return 'Email is required';
+                          return l10n?.emailRequired ?? 'Email is required';
                         }
                         if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
-                          return 'Please enter a valid email';
+                          return l10n?.emailInvalid ?? 'Please enter a valid email';
                         }
                         return null;
                       },
@@ -106,18 +106,18 @@ class LoginScreenDesktop extends StatelessWidget {
                     
                     CustomTextField(
                       controller: passwordController,
-                      label: 'Password',
-                      hintText: 'Enter your password',
+                      label: l10n?.password ?? 'Password',
+                      hintText: l10n?.enterPassword ?? 'Enter your password',
                       obscureText: obscurePassword,
                       prefixIcon: Icons.lock_outline,
                       suffixIcon: obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                       onSuffixIconPressed: onPasswordVisibilityToggle,
                       validator: (value) {
                         if (value?.isEmpty == true) {
-                          return 'Password is required';
+                          return l10n?.passwordRequired ?? 'Password is required';
                         }
                         if (value!.length < 6) {
-                          return 'Password must be at least 6 characters';
+                          return l10n?.passwordTooShort ?? 'Password must be at least 6 characters';
                         }
                         return null;
                       },
@@ -127,7 +127,7 @@ class LoginScreenDesktop extends StatelessWidget {
                     
                     // Login Button
                     CustomButton(
-                      text: 'Sign In',
+                      text: l10n?.signIn ?? 'Sign In',
                       onPressed: isLoading ? null : onLogin,
                       showIcon: false,
                       height: 48,
@@ -154,15 +154,15 @@ class LoginScreenDesktop extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "Don't have an account? ",
-                    style: TextStyle(
+                  Text(
+                    l10n?.dontHaveAccount ?? "Don't have an account? ",
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppTheme.textSecondary,
                     ),
                   ),
                   _HoverableText(
-                    text: 'Sign Up',
+                    text: l10n?.signUp ?? 'Sign Up',
                     onTap: () => context.go('/auth/register'),
                   ),
                 ],

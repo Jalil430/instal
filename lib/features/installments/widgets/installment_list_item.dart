@@ -58,34 +58,31 @@ class InstallmentListItem extends StatefulWidget {
     BuildContext context,
     List<InstallmentPayment> payments,
   ) {
-    // NOTE: These status strings MUST match the values returned by
-    // `InstallmentPayment.status` to ensure correct logic.
-    const statusOverdue = 'просрочено';
-    const statusPaid = 'оплачено';
-    const statusUpcoming = 'предстоящий';
-
     // If no payments, return a default status.
-    if (payments.isEmpty) return statusUpcoming;
+    if (payments.isEmpty) return 'предстоящий';
 
     // First, check for any overdue payments, as this has the highest priority.
-    if (payments.any((p) => p.status == statusOverdue)) {
-      return statusOverdue;
+    if (payments.any((p) => p.status == 'просрочено')) {
+      return 'просрочено';
+    }
+
+    // Check for any due today payments
+    if (payments.any((p) => p.status == 'к оплате')) {
+      return 'к оплате';
     }
 
     // Filter out paid payments to find the next one.
     final unpaidPayments =
-        payments.where((p) => p.status != statusPaid).toList();
+        payments.where((p) => p.status != 'оплачено').toList();
 
     // If all payments are paid, the installment is considered paid.
     if (unpaidPayments.isEmpty) {
-      return statusPaid;
+      return 'оплачено';
     }
 
-    // Sort the remaining payments by due date to find the next upcoming payment.
-    unpaidPayments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
-    
-    // The overall status is determined by the status of the next unpaid payment.
-    return unpaidPayments.first.status;
+    // If we have unpaid payments but none are overdue or due today, 
+    // then they must be upcoming
+    return 'предстоящий';
   }
 
   @override
@@ -162,7 +159,11 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
   Widget _buildOverdueCount(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final overduePayments = widget.payments.where((p) => p.status == 'просрочено').toList();
-    final overallStatus = InstallmentListItem.getOverallStatus(context, widget.payments);
+    final overallStatus = widget.payments.isEmpty 
+        ? (widget.installment is InstallmentModel 
+            ? (widget.installment as InstallmentModel).dynamicStatus
+            : 'предстоящий')
+        : InstallmentListItem.getOverallStatus(context, widget.payments);
 
     if (overallStatus == 'просрочено' && overduePayments.length > 1) {
       return Padding(
@@ -389,14 +390,14 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 CustomStatusBadge(
-                                  status: widget.installment is InstallmentModel 
-                                      ? (widget.installment as InstallmentModel).paymentStatus ?? 'предстоящий'
-                                      : (widget.payments.isEmpty 
-                                          ? 'предстоящий'
-                                          : InstallmentListItem.getOverallStatus(
-                                              context,
-                                              widget.payments,
-                                            )),
+                                  status: widget.payments.isEmpty 
+                                      ? (widget.installment is InstallmentModel 
+                                          ? (widget.installment as InstallmentModel).dynamicStatus
+                                          : 'предстоящий')
+                                      : InstallmentListItem.getOverallStatus(
+                                          context,
+                                          widget.payments,
+                                        ),
                                   width: 110,
                                 ),
                                 _buildOverdueCount(context),

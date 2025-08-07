@@ -47,9 +47,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_passwordController.text != _confirmPasswordController.text) {
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
+        SnackBar(
+          content: Text(l10n?.passwordsDoNotMatch ?? 'Passwords do not match'),
           backgroundColor: AppTheme.errorColor,
         ),
       );
@@ -72,9 +73,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration failed: $e'),
+            content: Text('${l10n?.registrationFailed ?? 'Registration failed'}: $e'),
             backgroundColor: AppTheme.errorColor,
           ),
         );

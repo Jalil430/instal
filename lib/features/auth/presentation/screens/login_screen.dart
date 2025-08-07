@@ -52,9 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: $e'),
+            content: Text('${l10n?.loginFailed ?? 'Login failed'}: $e'),
             backgroundColor: AppTheme.errorColor,
           ),
         );

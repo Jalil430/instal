@@ -27,11 +27,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
   // Form controllers
   final _fullNameController = TextEditingController();
-  final _phoneController = TextEditingController();
 
   // Focus nodes for automatic navigation
   final _fullNameFocus = FocusNode();
-  final _phoneFocus = FocusNode();
 
   bool _isSaving = false;
 
@@ -48,15 +46,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
   void _initializeForm() {
     _fullNameController.text = widget.user.fullName;
-    _phoneController.text = widget.user.phone ?? '';
   }
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _phoneController.dispose();
     _fullNameFocus.dispose();
-    _phoneFocus.dispose();
     super.dispose();
   }
 
@@ -71,7 +66,6 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       await authService.updateUser(
         userId: widget.user.id,
         fullName: _fullNameController.text,
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text,
       );
       
       if (mounted) {
@@ -106,9 +100,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       mobile: EditProfileDialogMobile(
         user: widget.user,
         fullNameController: _fullNameController,
-        phoneController: _phoneController,
         fullNameFocus: _fullNameFocus,
-        phoneFocus: _phoneFocus,
         formKey: _formKey,
         isSaving: _isSaving,
         onSave: _saveProfile,
@@ -117,9 +109,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       desktop: EditProfileDialogDesktop(
         user: widget.user,
         fullNameController: _fullNameController,
-        phoneController: _phoneController,
         fullNameFocus: _fullNameFocus,
-        phoneFocus: _phoneFocus,
         formKey: _formKey,
         isSaving: _isSaving,
         onSave: _saveProfile,

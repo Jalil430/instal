@@ -42,7 +42,7 @@ class WhatsAppIntegrationSectionDesktop extends StatelessWidget {
         // Conditional content based on configuration status
         if (!isConfigured) 
           SizedBox(
-            width: 350, // Fixed width for desktop
+            width: 350, // Same width as profile buttons
             child: CustomButton(
               onPressed: onSetupPressed,
               text: AppLocalizations.of(context)?.setUpWhatsAppIntegration ?? 'Set Up WhatsApp Integration',
@@ -52,11 +52,12 @@ class WhatsAppIntegrationSectionDesktop extends StatelessWidget {
             ),
           )
         else ...[
-          // Buttons in horizontal layout for desktop
-          Row(
+          // Buttons in vertical layout for desktop
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 230, // Smaller width for first button
+                width: 350, // Same width as profile buttons
                 child: CustomButton(
                   onPressed: onCredentialsPressed,
                   text: AppLocalizations.of(context)?.changeCredentials ?? 'Change Credentials',
@@ -65,9 +66,9 @@ class WhatsAppIntegrationSectionDesktop extends StatelessWidget {
                   height: 44,
                 ),
               ),
-              const SizedBox(width: 16), // Spacing between buttons
+              const SizedBox(height: 12), // Vertical spacing between buttons
               SizedBox(
-                width: 230, // Smaller width for second button
+                width: 350, // Same width as profile buttons
                 child: CustomButton(
                   onPressed: onTemplatesPressed,
                   text: AppLocalizations.of(context)?.changeTemplates ?? 'Change Templates',

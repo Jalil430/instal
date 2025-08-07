@@ -65,9 +65,9 @@ class RegisterScreenDesktop extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Create Account',
-                      style: TextStyle(
+                    Text(
+                      l10n?.createAccount ?? 'Create Account',
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -75,9 +75,9 @@ class RegisterScreenDesktop extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Sign up to get started',
-                      style: TextStyle(
+                    Text(
+                      l10n?.signUpToGetStarted ?? 'Sign up to get started',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
                         color: AppTheme.textSecondary,
@@ -97,15 +97,15 @@ class RegisterScreenDesktop extends StatelessWidget {
                       CustomTextField(
                         controller: nameController,
                         label: l10n?.fullName ?? 'Full Name',
-                        hintText: 'Enter your full name',
+                        hintText: l10n?.enterFullName ?? 'Enter your full name',
                         keyboardType: TextInputType.name,
                         prefixIcon: Icons.person_outline,
                         validator: (value) {
                           if (value?.isEmpty == true) {
-                            return 'Name is required';
+                            return l10n?.nameRequired ?? 'Name is required';
                           }
                           if (value!.length < 2) {
-                            return 'Name must be at least 2 characters';
+                            return l10n?.nameTooShort ?? 'Name must be at least 2 characters';
                           }
                           return null;
                         },
@@ -115,37 +115,39 @@ class RegisterScreenDesktop extends StatelessWidget {
                       
                       CustomTextField(
                         controller: emailController,
-                        label: 'Email',
-                        hintText: 'Enter your email',
+                        label: l10n?.email ?? 'Email',
+                        hintText: l10n?.enterEmail ?? 'Enter your email',
                         keyboardType: TextInputType.emailAddress,
                         prefixIcon: Icons.email_outlined,
                         validator: (value) {
                           if (value?.isEmpty == true) {
-                            return 'Email is required';
+                            return l10n?.emailRequired ?? 'Email is required';
                           }
                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
-                            return 'Please enter a valid email';
+                            return l10n?.emailInvalid ?? 'Please enter a valid email';
                           }
                           return null;
                         },
                       ),
                       
+
+                      
                       const SizedBox(height: 20),
                       
                       CustomTextField(
                         controller: passwordController,
-                        label: 'Password',
-                        hintText: 'Enter your password',
+                        label: l10n?.password ?? 'Password',
+                        hintText: l10n?.enterPassword ?? 'Enter your password',
                         obscureText: obscurePassword,
                         prefixIcon: Icons.lock_outline,
                         suffixIcon: obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                         onSuffixIconPressed: onPasswordVisibilityToggle,
                         validator: (value) {
                           if (value?.isEmpty == true) {
-                            return 'Password is required';
+                            return l10n?.passwordRequired ?? 'Password is required';
                           }
                           if (value!.length < 6) {
-                            return 'Password must be at least 6 characters';
+                            return l10n?.passwordTooShort ?? 'Password must be at least 6 characters';
                           }
                           return null;
                         },
@@ -155,18 +157,18 @@ class RegisterScreenDesktop extends StatelessWidget {
                       
                       CustomTextField(
                         controller: confirmPasswordController,
-                        label: 'Confirm Password',
-                        hintText: 'Enter your password again',
+                        label: l10n?.confirmPassword ?? 'Confirm Password',
+                        hintText: l10n?.enterPasswordAgain ?? 'Enter your password again',
                         obscureText: obscureConfirmPassword,
                         prefixIcon: Icons.lock_outline,
                         suffixIcon: obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                         onSuffixIconPressed: onConfirmPasswordVisibilityToggle,
                         validator: (value) {
                           if (value?.isEmpty == true) {
-                            return 'Please confirm your password';
+                            return l10n?.confirmPasswordRequired ?? 'Please confirm your password';
                           }
                           if (value != passwordController.text) {
-                            return 'Passwords do not match';
+                            return l10n?.passwordsDoNotMatch ?? 'Passwords do not match';
                           }
                           return null;
                         },
@@ -176,7 +178,7 @@ class RegisterScreenDesktop extends StatelessWidget {
                       
                       // Register Button
                       CustomButton(
-                        text: 'Create Account',
+                        text: l10n?.createAccount ?? 'Create Account',
                         onPressed: isLoading ? null : onRegister,
                         showIcon: false,
                         height: 48,
@@ -203,15 +205,15 @@ class RegisterScreenDesktop extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'Already have an account? ',
-                      style: TextStyle(
+                    Text(
+                      l10n?.alreadyHaveAccount ?? 'Already have an account? ',
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
                       ),
                     ),
                     _HoverableText(
-                      text: 'Sign In',
+                      text: l10n?.signIn ?? 'Sign In',
                       onTap: () => context.go('/auth/login'),
                     ),
                   ],

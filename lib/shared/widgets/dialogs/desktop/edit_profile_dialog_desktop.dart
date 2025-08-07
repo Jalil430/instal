@@ -7,9 +7,7 @@ import '../../../widgets/custom_button.dart';
 class EditProfileDialogDesktop extends StatelessWidget {
   final User user;
   final TextEditingController fullNameController;
-  final TextEditingController phoneController;
   final FocusNode fullNameFocus;
-  final FocusNode phoneFocus;
   final GlobalKey<FormState> formKey;
   final bool isSaving;
   final VoidCallback onSave;
@@ -19,9 +17,7 @@ class EditProfileDialogDesktop extends StatelessWidget {
     super.key,
     required this.user,
     required this.fullNameController,
-    required this.phoneController,
     required this.fullNameFocus,
-    required this.phoneFocus,
     required this.formKey,
     required this.isSaving,
     required this.onSave,
@@ -107,18 +103,8 @@ class EditProfileDialogDesktop extends StatelessWidget {
               _buildTextField(
                 controller: fullNameController,
                 focusNode: fullNameFocus,
-                nextFocusNode: phoneFocus,
                 label: l10n?.fullName ?? 'Full Name',
                 validator: (value) => value?.isEmpty == true ? l10n?.enterFullName ?? 'Enter full name' : null,
-                context: context,
-              ),
-              const SizedBox(height: 16),
-              
-              _buildTextField(
-                controller: phoneController,
-                focusNode: phoneFocus,
-                label: l10n?.phone ?? 'Phone (Optional)',
-                keyboardType: TextInputType.phone,
                 isLast: true,
                 onSubmit: onSave,
                 context: context,

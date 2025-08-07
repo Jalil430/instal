@@ -154,6 +154,21 @@ class WhatsAppSetupDialogDesktop extends StatelessWidget {
             // Footer buttons
             Row(
               children: [
+                // Cancel button (always visible)
+                Expanded(
+                  flex: 2,
+                  child: CustomButton(
+                    onPressed: onCancel,
+                    text: AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                    icon: Icons.close,
+                    showIcon: true,
+                    color: Colors.white,
+                    textColor: AppTheme.textSecondary,
+                    height: 44,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
                 if (currentStep == SetupStep.templates) ...[
                   Expanded(
                     flex: 2, // Smaller flex for back button

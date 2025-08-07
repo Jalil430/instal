@@ -410,6 +410,32 @@ class AppLocalizations {
   String get saving => locale.languageCode == 'ru' ? 'Сохранение...' : 'Saving...';
   String get saveChanges => locale.languageCode == 'ru' ? 'Сохранить изменения' : 'Save Changes';
 
+  // ===== Authentication & Registration =====
+  String get createAccount => locale.languageCode == 'ru' ? 'Создать аккаунт' : 'Create Account';
+  String get signUpToGetStarted => locale.languageCode == 'ru' ? 'Зарегистрируйтесь, чтобы начать' : 'Sign up to get started';
+  String get phoneNumber => locale.languageCode == 'ru' ? 'Номер телефона' : 'Phone Number';
+  String get enterPhoneNumber => locale.languageCode == 'ru' ? 'Введите номер телефона' : 'Enter your phone number';
+  String get phoneRequired => locale.languageCode == 'ru' ? 'Номер телефона обязателен' : 'Phone number is required';
+  String get phoneInvalidLength => locale.languageCode == 'ru' ? 'Введите корректный номер телефона' : 'Please enter a valid phone number';
+  String get password => locale.languageCode == 'ru' ? 'Пароль' : 'Password';
+  String get enterPassword => locale.languageCode == 'ru' ? 'Введите пароль' : 'Enter your password';
+  String get passwordRequired => locale.languageCode == 'ru' ? 'Пароль обязателен' : 'Password is required';
+  String get passwordTooShort => locale.languageCode == 'ru' ? 'Пароль должен содержать минимум 6 символов' : 'Password must be at least 6 characters';
+  String get confirmPassword => locale.languageCode == 'ru' ? 'Подтвердите пароль' : 'Confirm Password';
+  String get enterPasswordAgain => locale.languageCode == 'ru' ? 'Введите пароль еще раз' : 'Enter your password again';
+  String get confirmPasswordRequired => locale.languageCode == 'ru' ? 'Подтвердите пароль' : 'Please confirm your password';
+  String get passwordsDoNotMatch => locale.languageCode == 'ru' ? 'Пароли не совпадают' : 'Passwords do not match';
+  String get alreadyHaveAccount => locale.languageCode == 'ru' ? 'Уже есть аккаунт? ' : 'Already have an account? ';
+  String get signIn => locale.languageCode == 'ru' ? 'Войти' : 'Sign In';
+  String get registrationFailed => locale.languageCode == 'ru' ? 'Ошибка регистрации' : 'Registration failed';
+  String get nameRequired => locale.languageCode == 'ru' ? 'Имя обязательно' : 'Name is required';
+  String get nameTooShort => locale.languageCode == 'ru' ? 'Имя должно содержать минимум 2 символа' : 'Name must be at least 2 characters';
+  String get signInToAccount => locale.languageCode == 'ru' ? 'Войдите в свой аккаунт' : 'Sign in to your account';
+  String get enterCredentials => locale.languageCode == 'ru' ? 'Введите данные для входа' : 'Enter your credentials to continue';
+  String get loginFailed => locale.languageCode == 'ru' ? 'Ошибка входа' : 'Login failed';
+  String get dontHaveAccount => locale.languageCode == 'ru' ? 'Нет аккаунта? ' : "Don't have an account? ";
+  String get signUp => locale.languageCode == 'ru' ? 'Зарегистрироваться' : 'Sign Up';
+
   // Month/term labels
   String get month => locale.languageCode == 'ru' ? 'Месяц' : 'Month';
   String get monthShort => locale.languageCode == 'ru' ? 'мес.' : 'mo.';

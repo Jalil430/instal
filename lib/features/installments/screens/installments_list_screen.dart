@@ -323,7 +323,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
     // Then filter by status if not "all"
     if (statusFilter != 'all') {
       filtered = filtered.where((installment) {
-        final status = installment is InstallmentModel ? (installment.paymentStatus ?? 'предстоящий') : 'предстоящий';
+        final status = installment is InstallmentModel ? installment.dynamicStatus : 'предстоящий';
         return status == statusFilter;
       }).toList();
     }
@@ -331,10 +331,10 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
     // Then sort
     switch (sortBy) {
       case 'status':
-        // Sort by payment status using pre-calculated status - priority order: просрочено, к оплате, предстоящий, оплачено
+        // Sort by payment status using dynamic status - priority order: просрочено, к оплате, предстоящий, оплачено
         filtered.sort((a, b) {
-          final statusA = a is InstallmentModel ? (a.paymentStatus ?? 'предстоящий') : 'предстоящий';
-          final statusB = b is InstallmentModel ? (b.paymentStatus ?? 'предстоящий') : 'предстоящий';
+          final statusA = a is InstallmentModel ? a.dynamicStatus : 'предстоящий';
+          final statusB = b is InstallmentModel ? b.dynamicStatus : 'предстоящий';
           
           // Define priority order for statuses
           final statusPriority = {
@@ -400,9 +400,9 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
     setState(() {
       selectedInstallmentIds.clear();
       
-      // Find all installments with overdue status using pre-calculated status
+      // Find all installments with overdue status using dynamic status
       for (final installment in filteredAndSortedInstallments) {
-        final status = installment is InstallmentModel ? (installment.paymentStatus ?? 'предстоящий') : 'предстоящий';
+        final status = installment is InstallmentModel ? installment.dynamicStatus : 'предстоящий';
         
         // Add to selection if status is overdue
         if (status == 'просрочено') {

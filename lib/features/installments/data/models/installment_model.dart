@@ -201,6 +201,34 @@ class InstallmentModel extends Installment {
     return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  /// Calculate dynamic status based on current date and next payment date
+  String get dynamicStatus {
+    // If we have a next payment date, calculate status based on it
+    if (nextPaymentDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final due = DateTime(nextPaymentDate!.year, nextPaymentDate!.month, nextPaymentDate!.day);
+      
+      // Calculate days difference
+      final daysDifference = today.difference(due).inDays;
+      
+      if (daysDifference > 0) {
+        // Even 1 day overdue is considered late
+        return 'просрочено';
+      } else if (daysDifference == 0) {
+        // Due today only
+        return 'к оплате';
+      } else {
+        // Future payment
+        return 'предстоящий';
+      }
+    }
+    
+    // If no next payment date, fall back to backend status
+    // This handles completed installments (оплачено) and other edge cases
+    return paymentStatus ?? 'предстоящий';
+  }
+
   @override
   String toString() {
     return 'InstallmentModel(id: $id, productName: $productName, clientId: $clientId)';
