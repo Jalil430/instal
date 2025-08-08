@@ -32,10 +32,10 @@ dart run auto_updater:generate_keys
 - macOS: copy the printed `SUPublicEDKey` into `macos/Runner/Info.plist` under `SUPublicEDKey`.
 - Windows: place the generated public key (e.g., `dsa_pub.pem`) in the repo and reference it in `windows/runner/Runner.rc` if required by your signing mode.
 
-2) Feed URLs
-- Host appcast XML files on your website:
-  - `https://yourdomain.com/downloads/mac/appcast-macos.xml`
-  - `https://yourdomain.com/downloads/win/appcast-windows.xml`
+2) Feed URLs (GitHub Pages option)
+- This repo can host appcasts via GitHub Pages using the `docs/` folder.
+- macOS feed: `https://jalil430.github.io/instal/downloads/mac/appcast-macos.xml`
+- Windows feed: `https://jalil430.github.io/instal/downloads/win/appcast-windows.xml`
 - The app is configured in `lib/core/services/update_service.dart` and initialized in `lib/main.dart`.
 
 3) Signing updates
@@ -67,5 +67,13 @@ dart run auto_updater:sign_update path/to/YourApp-windows-installer.exe
 
 5) Build and upload
 - Build release binaries for macOS and Windows, notarize/sign as needed.
-- Upload binaries and `appcast-*.xml` to your website paths above.
+- Upload binaries to GitHub Releases. Edit `docs/downloads/*/appcast-*.xml` to point to those release asset URLs and commit/push to update the feed.
 - The app will check for updates on startup and every 24 hours, and the Settings screen includes a "Check for updates" button.
+
+### Enable GitHub Pages (once)
+1. Go to your repo on GitHub → Settings → Pages
+2. Source: Deploy from a branch → Branch: `main` and folder: `/docs`
+3. Save. Your site will be at `https://jalil430.github.io/instal/`
+4. Feeds will be:
+   - macOS: `https://jalil430.github.io/instal/downloads/mac/appcast-macos.xml`
+   - Windows: `https://jalil430.github.io/instal/downloads/win/appcast-windows.xml`

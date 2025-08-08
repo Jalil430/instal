@@ -25,8 +25,8 @@ void main() async {
 
   // Initialize auto-updater (feeds to be hosted on your website)
   await UpdateService.initialize(
-    macOsFeedUrl: 'https://yourdomain.com/downloads/mac/appcast-macos.xml',
-    windowsFeedUrl: 'https://yourdomain.com/downloads/win/appcast-windows.xml',
+    macOsFeedUrl: 'https://jalil430.github.io/instal/downloads/mac/appcast-macos.xml',
+    windowsFeedUrl: 'https://jalil430.github.io/instal/downloads/win/appcast-windows.xml',
     scheduledCheckInterval: const Duration(hours: 24),
   );
   // Optional: perform an immediate check on startup
