@@ -25,13 +25,6 @@ class UpdateService {
 
     await au.autoUpdater.setFeedURL(feedUrl);
 
-    // Avoid auto-downloading without user confirmation
-    try {
-      await au.autoUpdater.setAutoDownload(false);
-    } catch (_) {
-      // No-op if not supported on a platform version
-    }
-
     if (scheduledCheckInterval != null) {
       await au.autoUpdater.setScheduledCheckInterval(
         scheduledCheckInterval.inSeconds,
@@ -47,16 +40,6 @@ class UpdateService {
     await au.autoUpdater.checkForUpdates();
   }
 
-  /// Trigger a silent/background update check.
-  /// Shows UI only if an update is available.
-  static Future<void> checkForUpdatesInBackground() async {
-    if (!_initialized) return;
-    try {
-      await au.autoUpdater.checkForUpdatesInBackground();
-    } catch (_) {
-      // Fallback: do nothing if background check isn't supported
-    }
-  }
 }
 
 
