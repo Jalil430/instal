@@ -5,19 +5,7 @@
     <link>https://jalil430.github.io/instal/downloads/win/</link>
     <description>Latest updates for Instal (Windows)</description>
     <language>en</language>
-
-    <!-- Replace this item on each release (newest first) -->
-    <item>
-      <title>Version 1.0.0</title>
-      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
-      <pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>
-      <enclosure
-        url="https://github.com/Jalil430/instal/releases/download/v1.0.0/Instal-1.0.0-setup.exe"
-        sparkle:dsaSignature="REPLACE_WITH_SIGNATURE_FROM_sign_update"
-        length="REPLACE_WITH_FILE_SIZE_BYTES"
-        type="application/octet-stream"/>
-      <sparkle:releaseNotesLink>https://jalil430.github.io/instal/releases/1.0.0.html</sparkle:releaseNotesLink>
-    </item>
+    <!-- No items yet; feed parses fine and indicates no updates available. -->
   </channel>
 </rss>
 
