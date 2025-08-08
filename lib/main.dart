@@ -29,6 +29,8 @@ void main() async {
     windowsFeedUrl: 'https://jalil430.github.io/instal/downloads/win/appcast-windows.xml',
     scheduledCheckInterval: const Duration(hours: 24),
   );
+  // Background (silent) check at startup; dialog only if update exists
+  await UpdateService.checkForUpdatesInBackground();
 
   runApp(InstalApp(
     initialLocale: Locale(languageCode),
