@@ -688,6 +688,10 @@ class AppLocalizations {
   String get unableToLoadProfileInfo => locale.languageCode == 'ru'
       ? 'Не удалось загрузить информацию профиля'
       : 'Unable to load profile information';
+
+  // Updater dialogs (system provided; fallback strings for consistency)
+  String get youAreUpToDate => locale.languageCode == 'ru' ? 'У вас последняя версия!' : "You're up to date!";
+  String get newestVersionInstalled => locale.languageCode == 'ru' ? 'Установлена самая новая версия приложения.' : 'The newest version is already installed.';
       
   // WhatsApp Template Editor
   String get clientFullName => locale.languageCode == 'ru' ? 'Полное имя клиента' : 'Client\'s full name';

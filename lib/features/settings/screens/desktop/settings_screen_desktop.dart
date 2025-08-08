@@ -69,7 +69,6 @@ class SettingsScreenDesktop extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // (Updates section moved to bottom)
                   // Profile Section
                   Text(
                     l10n.profile,
@@ -129,29 +128,6 @@ class SettingsScreenDesktop extends StatelessWidget {
                   ],
                   const SizedBox(height: 32),
 
-                  // Updates Section (bottom)
-                  Text(
-                    l10n.updates,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: 250,
-                    child: CustomButton(
-                      onPressed: () async {
-                        await UpdateService.checkForUpdates();
-                      },
-                      text: l10n.checkForUpdates,
-                      icon: Icons.system_update,
-                      showIcon: true,
-                      height: 44,
-                    ),
-                  ),
-                  
                   // Language Section
                   Text(
                     l10n.language,
@@ -187,6 +163,29 @@ class SettingsScreenDesktop extends StatelessWidget {
                   ),
                   
                   const SizedBox(height: 32),
+
+                  // Updates section
+                  Text(
+                    l10n.updates,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: 250,
+                    child: CustomButton(
+                      onPressed: () async {
+                        await UpdateService.checkForUpdates();
+                      },
+                      text: l10n.checkForUpdates,
+                      icon: Icons.system_update,
+                      showIcon: true,
+                      height: 44,
+                    ),
+                  ),
                 ],
               ),
             ),
