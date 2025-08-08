@@ -46,3 +46,4 @@ app.*.map.json
 
 # Custom
 deploy_env.sh
+dsa_priv.pem
