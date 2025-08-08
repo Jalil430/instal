@@ -5,7 +5,15 @@
     <link>https://jalil430.github.io/instal/downloads/mac/</link>
     <description>Latest updates for Instal (macOS)</description>
     <language>en</language>
-    <!-- No items yet; feed parses fine and indicates no updates available. -->
+    <item>
+      <title>Version 1.0.1</title>
+      <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+      <enclosure
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.1/Instal-1.0.1.zip"
+        sparkle:edSignature="YsGJyOBN/yPXZplrS5lFvaAzkdbNmCXaGmhl9dGtQ2fODXjzGQls5bcqej/0cwzOsw/lJpYN7YPmct39uwD7Bw=="
+        length="23464880"
+        type="application/octet-stream" />
+    </item>
   </channel>
 </rss>
 
