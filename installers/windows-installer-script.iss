@@ -13,9 +13,11 @@ DefaultGroupName=Instal App
 AllowNoIcons=yes
 ; Optional: include license if present
 ; LicenseFile=LICENSE.txt
-OutputDir=installers
+; Output directory relative to the repo root
+OutputDir=..\\installers
 OutputBaseFilename=Instal-Windows-Installer-v1.0.0
-SetupIconFile=windows\runner\resources\app_icon.ico
+; Paths are relative to this script's directory
+SetupIconFile=..\\windows\\runner\\resources\\app_icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -30,7 +32,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\\build\\windows\\x64\\runner\\Release\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
