@@ -7,12 +7,16 @@
     <language>en</language>
     <item>
       <title>Version 1.0.1</title>
+      <sparkle:version>1.0.1</sparkle:version>
       <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+      <pubDate>Fri, 08 Aug 2025 18:20:00 GMT</pubDate>
       <enclosure
-        url="https://github.com/Jalil430/instal/releases/download/v1.0.1/Instal-1.0.1.zip"
-        sparkle:edSignature="YsGJyOBN/yPXZplrS5lFvaAzkdbNmCXaGmhl9dGtQ2fODXjzGQls5bcqej/0cwzOsw/lJpYN7YPmct39uwD7Bw=="
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.1/Instal-MacOS-1.0.1.zip"
+        sparkle:edSignature="XOtGk8AA7qotY3F/IA4gDXNkpJ+YZMZbbdyYtPman2zV/AglJoNiSI7XCLNAZCTNbvpKfExQqXnz+urlGUlKAw=="
+        sparkle:version="2"
         length="23464880"
         type="application/octet-stream" />
+      <sparkle:releaseNotesLink>https://jalil430.github.io/instal/releases/1.0.1.html</sparkle:releaseNotesLink>
     </item>
   </channel>
 </rss>
