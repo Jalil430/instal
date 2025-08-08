@@ -71,7 +71,7 @@ class SettingsScreenDesktop extends StatelessWidget {
                 children: [
                   // Updates Section
                   Text(
-                    l10n.settings,
+                    'Updates',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,

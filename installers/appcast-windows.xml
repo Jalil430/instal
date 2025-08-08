@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Instal App Updates (Windows)</title>
+    <link>https://yourdomain.com/downloads/win/</link>
+    <description>Latest updates for Instal (Windows)</description>
+    <language>en</language>
+
+    <!-- Duplicate <item> blocks for each release, newest first -->
+    <item>
+      <title>Version 1.0.0</title>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>
+      <enclosure
+        url="https://yourdomain.com/downloads/win/Instal-1.0.0-setup.exe"
+        sparkle:dsaSignature="REPLACE_WITH_SIGNATURE_FROM_sign_update"
+        length="REPLACE_WITH_FILE_SIZE"
+        type="application/octet-stream"/>
+      <sparkle:releaseNotesLink>https://yourdomain.com/releases/1.0.0.html</sparkle:releaseNotesLink>
+    </item>
+  </channel>
+</rss>
+
+

@@ -29,6 +29,8 @@ void main() async {
     windowsFeedUrl: 'https://yourdomain.com/downloads/win/appcast-windows.xml',
     scheduledCheckInterval: const Duration(hours: 24),
   );
+  // Optional: perform an immediate check on startup
+  await UpdateService.checkForUpdates();
 
   runApp(InstalApp(
     initialLocale: Locale(languageCode),
