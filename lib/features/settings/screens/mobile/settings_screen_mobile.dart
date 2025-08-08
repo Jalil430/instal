@@ -79,29 +79,7 @@ class SettingsScreenMobile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Updates Section
-                  Text(
-                    'Updates',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      onPressed: () async {
-                        await UpdateService.checkForUpdates();
-                      },
-                      text: 'Check for updates',
-                      icon: Icons.system_update,
-                      showIcon: true,
-                      height: 44,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                  // (Updates section moved to bottom)
                   // Profile Section
                   Text(
                     l10n.profile,
@@ -195,7 +173,30 @@ class SettingsScreenMobile extends StatelessWidget {
                     onTemplatesPressed: onTemplatesPressed,
                   ),
                   
-                  // Add padding at the bottom to ensure content isn't hidden behind bottom nav bar
+                  const SizedBox(height: 32),
+
+                  // Updates Section (bottom)
+                  Text(
+                    l10n.updates,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      onPressed: () async {
+                        await UpdateService.checkForUpdates();
+                      },
+                      text: l10n.checkForUpdates,
+                      icon: Icons.system_update,
+                      showIcon: true,
+                      height: 44,
+                    ),
+                  ),
                   const SizedBox(height: 32),
                 ],
               ),

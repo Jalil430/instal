@@ -380,6 +380,8 @@ class AppLocalizations {
 
   // Settings
   String get language => locale.languageCode == 'ru' ? 'Язык' : 'Language';
+  String get updates => locale.languageCode == 'ru' ? 'Обновления' : 'Updates';
+  String get checkForUpdates => locale.languageCode == 'ru' ? 'Проверить обновления' : 'Check for updates';
   String get languageRussian => locale.languageCode == 'ru' ? 'Русский' : 'Russian';
   String get languageEnglish => locale.languageCode == 'ru' ? 'English' : 'English';
   String get theme => locale.languageCode == 'ru' ? 'Тема' : 'Theme';
