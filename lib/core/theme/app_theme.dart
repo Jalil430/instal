@@ -149,7 +149,7 @@ class AppTheme {
         fontFamily: 'Inter',
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
