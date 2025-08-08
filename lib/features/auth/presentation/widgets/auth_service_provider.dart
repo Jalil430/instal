@@ -87,6 +87,11 @@ class AuthService {
 
   Stream<AuthState> get authStateStream => _repository.authStateStream;
 
+  Future<String?> getToken() async {
+    final authState = await getCurrentAuthState();
+    return authState.isAuthenticated ? authState.accessToken : null;
+  }
+
   void dispose() {
     _repository.dispose();
   }

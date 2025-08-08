@@ -5,6 +5,7 @@ import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../presentation/widgets/whatsapp_integration_section.dart';
+import '../../../../core/services/update_service.dart';
 
 class SettingsScreenMobile extends StatelessWidget {
   final User? currentUser;
@@ -78,6 +79,29 @@ class SettingsScreenMobile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Updates Section
+                  Text(
+                    l10n.settings,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      onPressed: () async {
+                        await UpdateService.checkForUpdates();
+                      },
+                      text: 'Check for updates',
+                      icon: Icons.system_update,
+                      showIcon: true,
+                      height: 44,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   // Profile Section
                   Text(
                     l10n.profile,
@@ -223,16 +247,6 @@ class SettingsScreenMobile extends StatelessWidget {
                       color: AppTheme.textSecondary,
                     ),
                   ),
-                  if (user.phone != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      user.phone!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

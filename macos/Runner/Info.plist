@@ -28,5 +28,8 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- Sparkle public key for update verification: replace with your SUPublicEDKey -->
+	<key>SUPublicEDKey</key>
+	<string>REPLACE_WITH_YOUR_SPARKLE_PUBLIC_ED25519_KEY</string>
 </dict>
 </plist>

@@ -373,6 +373,72 @@ paths:
         function_id: d4ea495odfsc1cvltug4
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
+  /subscription/validate-code:
+    post:
+      summary: Validate and activate subscription code
+      description: Validates a subscription code and activates it for the user
+      operationId: validate-subscription-code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCodeRequest'
+      responses:
+        '200':
+          description: Code validated and activated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCodeResponse'
+        '400':
+          description: Invalid code or request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eut8n056onak8o4uit
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /subscription/status:
+    post:
+      summary: Check subscription status
+      description: Check the current subscription status for a user
+      operationId: check-subscription-status
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckStatusRequest'
+      responses:
+        '200':
+          description: Subscription status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckStatusResponse'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8pkgusps8fmc76klv
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
 components:
   securitySchemes:
     apiKey:
@@ -525,6 +591,107 @@ components:
         attempts:
           type: integer
           description: Number of attempts made
+    ValidateCodeRequest:
+      type: object
+      required:
+        - code
+        - user_id
+      properties:
+        code:
+          type: string
+          description: Subscription code to validate
+          example: "SUB-2025-001-ABC123"
+        user_id:
+          type: string
+          description: ID of the user activating the code
+    ValidateCodeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        subscription:
+          $ref: '#/components/schemas/SubscriptionData'
+    CheckStatusRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          description: ID of the user to check subscription status for
+    CheckStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        subscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionData'
+          description: List of all subscription codes for the user
+    SubscriptionData:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Subscription code
+        subscription_type:
+          type: string
+          enum: [trial, basic, pro]
+          description: Type of subscription
+        duration:
+          type: string
+          enum: [monthly, yearly, 14days]
+          description: Duration of the subscription
+        user_telegram:
+          type: string
+          nullable: true
+          description: User's Telegram handle
+        amount:
+          type: number
+          format: double
+          description: Subscription amount
+        created_date:
+          type: string
+          format: date-time
+          description: When the code was created
+        activated_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the code was activated
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the subscription expires
+        status:
+          type: string
+          enum: [unused, active, expired]
+          description: Current status of the subscription
+        activated_by:
+          type: string
+          nullable: true
+          description: User ID who activated the code
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: "INVALID_CODE"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "The subscription code is invalid or has already been used"
 x-yc-apigateway-cors:
   origin:
     - '*'

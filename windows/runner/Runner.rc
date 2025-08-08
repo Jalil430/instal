@@ -119,3 +119,9 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
+
+// WinSparkle public key for update verification (example placeholder)
+// To enable WinSparkle signature verification, add your public key resource here.
+// Example (if using DSA):
+// DSAPub      DSAPEM      "../../dsa_pub.pem"
+// Ensure the path is correct relative to this file.

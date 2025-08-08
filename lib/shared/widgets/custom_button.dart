@@ -36,7 +36,15 @@ class CustomButton extends StatelessWidget {
     final backgroundColor = color ?? AppTheme.brightPrimaryColor;
     final foregroundColor = textColor ?? Colors.white;
     final iconWidget = Icon(icon, size: fontSize == 16 ? 20 : 18, color: foregroundColor);
-    final textWidget = Text(text, style: TextStyle(color: foregroundColor));
+    final textWidget = Flexible(
+      child: Text(
+        text,
+        style: TextStyle(color: foregroundColor),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        softWrap: false,
+      ),
+    );
     
     return SizedBox(
       width: width,
@@ -67,7 +75,7 @@ class CustomButton extends StatelessWidget {
                         iconWidget,
                       ],
                     )
-                  : Row(
+                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         iconWidget,
@@ -92,7 +100,10 @@ class CustomButton extends StatelessWidget {
                   fontWeight: fontWeight,
                 ),
               ),
-              child: textWidget,
+               child: Row(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [textWidget],
+               ),
             ),
     );
   }

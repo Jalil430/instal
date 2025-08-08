@@ -7,6 +7,9 @@ import 'core/localization/app_localizations.dart';
 import 'shared/database/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/auth/presentation/widgets/auth_service_provider.dart';
+import 'features/subscription/presentation/widgets/subscription_service_provider.dart';
+import 'features/subscription/presentation/providers/subscription_provider.dart';
+import 'core/services/update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,19 +17,34 @@ void main() async {
   // Initialize database
   await DatabaseHelper.instance.database;
   
-
-  
   final prefs = await SharedPreferences.getInstance();
   final languageCode = prefs.getString('languageCode') ?? 'ru';
 
+  // Initialize services
+  final subscriptionProvider = await SubscriptionServiceFactory.create();
+
+  // Initialize auto-updater (feeds to be hosted on your website)
+  await UpdateService.initialize(
+    macOsFeedUrl: 'https://yourdomain.com/downloads/mac/appcast-macos.xml',
+    windowsFeedUrl: 'https://yourdomain.com/downloads/win/appcast-windows.xml',
+    scheduledCheckInterval: const Duration(hours: 24),
+  );
+
   runApp(InstalApp(
     initialLocale: Locale(languageCode),
+    subscriptionProvider: subscriptionProvider,
   ));
 }
 
 class InstalApp extends StatefulWidget {
   final Locale initialLocale;
-  const InstalApp({super.key, required this.initialLocale});
+  final SubscriptionProvider subscriptionProvider;
+  
+  const InstalApp({
+    super.key, 
+    required this.initialLocale,
+    required this.subscriptionProvider,
+  });
 
   @override
   State<InstalApp> createState() => _InstalAppState();
@@ -56,26 +74,29 @@ class _InstalAppState extends State<InstalApp> {
 
     return AuthServiceProvider(
       authService: authService,
-      child: MaterialApp.router(
-        title: 'Instal',
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        routerConfig: AppRouter.router,
-        locale: _locale,
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        builder: (context, child) {
-          // Pass setLocale down via InheritedWidget or directly if needed
-          return LocaleSetter(
-            setLocale: setLocale,
-            child: child!,
-          );
-        },
+      child: SubscriptionServiceProvider(
+        subscriptionProvider: widget.subscriptionProvider,
+        child: MaterialApp.router(
+          title: 'Instal',
+          theme: AppTheme.lightTheme,
+          debugShowCheckedModeBanner: false,
+          routerConfig: AppRouter.router,
+          locale: _locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          builder: (context, child) {
+            // Pass setLocale down via InheritedWidget or directly if needed
+            return LocaleSetter(
+              setLocale: setLocale,
+              child: child!,
+            );
+          },
+        ),
       ),
     );
   }

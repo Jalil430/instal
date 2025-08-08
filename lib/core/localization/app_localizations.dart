@@ -721,6 +721,92 @@ class AppLocalizations {
   String get selectionMode => locale.languageCode == 'ru' ? 'Режим выбора' : 'Selection Mode';
   String get selectedItems => locale.languageCode == 'ru' ? 'Выбрано' : 'Selected';
   String get cancelSelection => locale.languageCode == 'ru' ? 'Отменить выбор' : 'Cancel Selection';
+  // ===== Subscription System =====
+  String get subscriptionWelcomeTitle => locale.languageCode == 'ru' 
+      ? 'Добро пожаловать в Instal!' 
+      : 'Welcome to Instal!';
+  String get subscriptionWelcomeMessage => locale.languageCode == 'ru'
+      ? 'Для использования приложения необходима активная подписка. Свяжитесь с нами для получения кода активации.'
+      : 'An active subscription is required to use the app. Contact us to get an activation code.';
+  String get subscriptionFreeTrialTitle => locale.languageCode == 'ru'
+      ? '14-дневная бесплатная пробная версия'
+      : '14-Day Free Trial Available';
+  String get subscriptionFreeTrialMessage => locale.languageCode == 'ru'
+      ? 'Мы предоставляем 14-дневную бесплатную пробную версию с полным доступом ко всем функциям.'
+      : 'We offer a 14-day free trial with full access to all features.';
+  String get subscriptionExpiredTitle => locale.languageCode == 'ru'
+      ? 'Подписка истекла'
+      : 'Subscription Expired';
+  String get subscriptionExpiredMessage => locale.languageCode == 'ru'
+      ? 'Ваша подписка истекла. Свяжитесь с нами для продления доступа к приложению.'
+      : 'Your subscription has expired. Contact us to renew your access to the app.';
+  String get subscriptionActiveTitle => locale.languageCode == 'ru'
+      ? 'Подписка активна'
+      : 'Subscription Active';
+  String get subscriptionActiveMessage => locale.languageCode == 'ru'
+      ? 'У вас есть активная подписка. Наслаждайтесь использованием приложения!'
+      : 'You have an active subscription. Enjoy using the app!';
+  String get subscriptionContactTitle => locale.languageCode == 'ru'
+      ? 'Связаться с нами'
+      : 'Contact Us';
+  String subscriptionContactMessage(String telegramHandle) => locale.languageCode == 'ru'
+      ? 'Свяжитесь с нами в Telegram $telegramHandle для получения кода активации или продления подписки.'
+      : 'Contact us on Telegram $telegramHandle to get an activation code or renew your subscription.';
+  String subscriptionContactButton(String telegramHandle) => locale.languageCode == 'ru'
+      ? 'Связаться $telegramHandle'
+      : 'Contact $telegramHandle';
+  String subscriptionTelegramCopied(String telegramHandle) => locale.languageCode == 'ru'
+      ? 'Telegram $telegramHandle скопирован в буфер обмена'
+      : 'Telegram $telegramHandle copied to clipboard';
+  String get subscriptionCodeInputTitle => locale.languageCode == 'ru'
+      ? 'Активировать код подписки'
+      : 'Activate Subscription Code';
+  String get subscriptionCodeInputMessage => locale.languageCode == 'ru'
+      ? 'Введите код активации, который вы получили от нас.'
+      : 'Enter the activation code you received from us.';
+  String get subscriptionCodeLabel => locale.languageCode == 'ru'
+      ? 'Код активации'
+      : 'Activation Code';
+  String get subscriptionCodeHint => locale.languageCode == 'ru'
+      ? 'SUB-2025-001-ABC123'
+      : 'SUB-2025-001-ABC123';
+  String get subscriptionCodeRequired => locale.languageCode == 'ru'
+      ? 'Введите код активации'
+      : 'Please enter an activation code';
+  String get subscriptionActivateButton => locale.languageCode == 'ru'
+      ? 'Активировать подписку'
+      : 'Activate Subscription';
+  String get subscriptionValidating => locale.languageCode == 'ru'
+      ? 'Проверка кода...'
+      : 'Validating code...';
+  String get subscriptionActivatedSuccess => locale.languageCode == 'ru'
+      ? 'Подписка успешно активирована!'
+      : 'Subscription activated successfully!';
+  String get subscriptionUserNotFound => locale.languageCode == 'ru'
+      ? 'Пользователь не найден. Попробуйте войти заново.'
+      : 'User not found. Please try logging in again.';
+  String get subscriptionCheckingStatus => locale.languageCode == 'ru'
+      ? 'Загрузка...'
+      : 'Loading...';
+  // Subscription errors
+  String get subscriptionErrorUnexpected => locale.languageCode == 'ru'
+      ? 'Произошла непредвиденная ошибка. Пожалуйста, попробуйте ещё раз.'
+      : 'An unexpected error occurred. Please try again.';
+  String get subscriptionErrorNetwork => locale.languageCode == 'ru'
+      ? 'Проблема с сетью. Проверьте подключение и повторите попытку.'
+      : 'Network problem. Check your connection and try again.';
+  String get subscriptionErrorInvalidCode => locale.languageCode == 'ru'
+      ? 'Неверный код активации'
+      : 'Invalid activation code';
+  String get subscriptionErrorCodeUsed => locale.languageCode == 'ru'
+      ? 'Этот код уже был использован'
+      : 'This code has already been used';
+  String get subscriptionErrorCodeExpired => locale.languageCode == 'ru'
+      ? 'Срок действия кода истёк'
+      : 'The code has expired';
+  String get subscriptionErrorCheckFailed => locale.languageCode == 'ru'
+      ? 'Не удалось проверить статус подписки. Повторите попытку.'
+      : 'Failed to check subscription status. Please try again.';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

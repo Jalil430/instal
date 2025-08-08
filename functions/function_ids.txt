@@ -22,3 +22,10 @@
 
 # Cron Triggers:
 # whatsapp-auto-reminders-trigger -> send-auto-reminders (daily at 9:00 AM UTC)
+# 
+Subscription Functions
+validate-subscription-code: d4eut8n056onak8o4uit
+  URL: https://functions.yandexcloud.net/d4eut8n056onak8o4uit
+  
+check-subscription-status: d4e8pkgusps8fmc76klv
+  URL: https://functions.yandexcloud.net/d4e8pkgusps8fmc76klv
