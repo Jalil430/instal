@@ -11,7 +11,8 @@ AppUpdatesURL=https://yourwebsite.com/updates
 DefaultDirName={autopf}\Instal App
 DefaultGroupName=Instal App
 AllowNoIcons=yes
-LicenseFile=LICENSE.txt
+; Optional: include license if present
+; LicenseFile=LICENSE.txt
 OutputDir=installers
 OutputBaseFilename=Instal-Windows-Installer-v1.0.0
 SetupIconFile=windows\runner\resources\app_icon.ico

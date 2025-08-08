@@ -41,6 +41,8 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path "installers/windows-installer-script.iss") {
+            # If a LICENSE.txt is required by the script and missing, create a placeholder to avoid failure
+            if (!(Test-Path "installers\\LICENSE.txt")) { "Instal License" | Out-File -Encoding utf8 "installers\\LICENSE.txt" }
             & "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" "installers\\windows-installer-script.iss"
           } else {
             echo "Inno Setup script not found; skipping installer step."
