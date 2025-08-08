@@ -51,7 +51,8 @@ dependencies:
   fl_chart: ^0.68.0
   
   # Utilities
-  intl: ^0.19.0
+  # Don't pin intl; let flutter_localizations decide the compatible version
+  # intl: ^0.19.0 or ^0.20.2 (transitive via flutter_localizations)
   uuid: ^4.2.1
   
   # Navigation
