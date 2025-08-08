@@ -1,0 +1,57 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label to include in artifact name (e.g., 1.0.1)"
+        required: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Windows (release)
+        run: flutter build windows --release
+
+      - name: Upload built app (raw Release folder)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-${{ github.event.inputs.version || 'latest' }}
+          path: build/windows/x64/runner/Release/
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes
+
+      - name: Build installer with Inno Setup (if script exists)
+        shell: pwsh
+        run: |
+          if (Test-Path "installers/windows-installer-script.iss") {
+            & "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" "installers\\windows-installer-script.iss"
+          } else {
+            echo "Inno Setup script not found; skipping installer step."
+          }
+
+      - name: Upload installer (if produced)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-${{ github.event.inputs.version || 'latest' }}
+          path: |
+            installers/**/*.exe
+          if-no-files-found: ignore
+
+
