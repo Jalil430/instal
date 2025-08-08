@@ -121,7 +121,6 @@ flutter:
   # Assets
   assets:
     - assets/icons/
-    - assets/images/
 
   # Fonts
   fonts:
