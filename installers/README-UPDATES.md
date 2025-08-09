@@ -22,8 +22,11 @@ dart run auto_updater:sign_update installers/dist/Instal-1.0.0-setup.exe
 
 3) Publish appcasts and binaries
 
-- Update `installers/appcast-macos.xml` and `installers/appcast-windows.xml` with URLs, file sizes, and signatures.
-- Upload both XML and binaries to your website paths configured in `UpdateService.initialize`.
+- Authoritative appcasts live in `docs/downloads/` (served by GitHub Pages):
+  - macOS: `docs/downloads/mac/appcast-macos.xml`
+  - Windows: `docs/downloads/win/appcast-windows.xml`
+- Update those two files with the new URL, length, signature, version, and pubDate for every release.
+- The `installers/appcast-*.xml` files were early templates and are not used. You may delete them.
 
 4) App integration
 

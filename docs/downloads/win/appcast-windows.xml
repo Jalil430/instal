@@ -13,8 +13,8 @@
       <enclosure
         url="https://github.com/Jalil430/instal/releases/download/v1.0.1/Instal-Windows-Installer-v1.0.1.exe"
         sparkle:version="4"
-        sparkle:edSignature="USNY6yOQi1PHAyacNjSg+09LwRqqGxirod6BYgKR9IQ1TthJg1lqMKIa5cwKgFHb+u6xL6sbYevN/iYLiHRABg=="
-        length="11670237"
+        sparkle:edSignature="QPSHRuch1LZUcyTJTDXH4kFJBHnFAe3e3ckY78C3HNvxiQCY0pFoT1Mox4eqrpOxcZAOmtV3oWalOuYSjvZjCA=="
+        length="11674831"
         type="application/octet-stream" />
       <sparkle:releaseNotesLink>https://github.com/Jalil430/instal/releases/tag/v1.0.1</sparkle:releaseNotesLink>
     </item>
