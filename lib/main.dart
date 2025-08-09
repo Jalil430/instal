@@ -5,6 +5,7 @@ import 'core/routes/app_router.dart';
 import 'core/localization/app_localizations.dart';
 
 import 'shared/database/database_helper.dart';
+import 'dart:io' show Platform;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/auth/presentation/widgets/auth_service_provider.dart';
 import 'features/subscription/presentation/widgets/subscription_service_provider.dart';

@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'dart:io' show Platform;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -14,6 +16,11 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
+    if (Platform.isWindows) {
+      // Initialize FFI for Windows desktop
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
