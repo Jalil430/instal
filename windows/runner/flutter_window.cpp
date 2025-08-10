@@ -2,6 +2,8 @@
 
 #include <optional>
 #include <fstream>
+#include <windows.h>
+#include <string>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -24,13 +26,25 @@ bool FlutterWindow::OnCreate() {
   // Ensure that basic setup of the controller was successful.
   if (!flutter_controller_->engine() || !flutter_controller_->view()) {
     // Write a basic log to help diagnose startup issues on user machines.
+    char temp_path[MAX_PATH];
+    DWORD temp_len = ::GetTempPathA(MAX_PATH, temp_path);
+    std::string log_path = (temp_len > 0 ? std::string(temp_path) : std::string("")) + "InstalLauncher.log";
     std::ofstream log;
-    log.open("C\\InstalLauncher.log", std::ios::app);
+    log.open(log_path.c_str(), std::ios::app);
     if (log.is_open()) {
       log << "[flutter_window] engine/view not available" << std::endl;
       log.close();
     }
     return false;
+  }
+  {
+    char temp_path[MAX_PATH];
+    DWORD temp_len = ::GetTempPathA(MAX_PATH, temp_path);
+    std::string log_path = (temp_len > 0 ? std::string(temp_path) : std::string("")) + "InstalLauncher.log";
+    std::ofstream log(log_path.c_str(), std::ios::app);
+    if (log.is_open()) {
+      log << "[flutter_window] engine/view OK" << std::endl;
+    }
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
@@ -43,6 +57,15 @@ bool FlutterWindow::OnCreate() {
   // registered. The following call ensures a frame is pending to ensure the
   // window is shown. It is a no-op if the first frame hasn't completed yet.
   flutter_controller_->ForceRedraw();
+  {
+    char temp_path[MAX_PATH];
+    DWORD temp_len = ::GetTempPathA(MAX_PATH, temp_path);
+    std::string log_path = (temp_len > 0 ? std::string(temp_path) : std::string("")) + "InstalLauncher.log";
+    std::ofstream log(log_path.c_str(), std::ios::app);
+    if (log.is_open()) {
+      log << "[flutter_window] ForceRedraw called" << std::endl;
+    }
+  }
 
   return true;
 }
