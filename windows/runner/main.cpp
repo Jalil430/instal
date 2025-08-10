@@ -61,7 +61,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Environment diagnostics
   WriteLog(std::string("[launcher] exe dir: ") + GetExeDir());
   char cwd[MAX_PATH];
-  if (_getcwd(cwd, MAX_PATH)) WriteLog(std::string("[launcher] cwd: ") + cwd);
+  DWORD cwd_len = ::GetCurrentDirectoryA(MAX_PATH, cwd);
+  if (cwd_len > 0 && cwd_len < MAX_PATH) {
+    WriteLog(std::string("[launcher] cwd: ") + cwd);
+  }
   char* pathEnv = getenv("PATH");
   if (pathEnv) WriteLog(std::string("[launcher] PATH length: ") + std::to_string(strlen(pathEnv)));
   WriteLog(std::string("[launcher] VC++ redist installed: ") + (IsVC2015_2022RedistInstalled() ? "yes" : "no"));
