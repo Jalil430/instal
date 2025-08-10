@@ -65,8 +65,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (cwd_len > 0 && cwd_len < MAX_PATH) {
     WriteLog(std::string("[launcher] cwd: ") + cwd);
   }
-  char* pathEnv = getenv("PATH");
-  if (pathEnv) WriteLog(std::string("[launcher] PATH length: ") + std::to_string(strlen(pathEnv)));
+  {
+    DWORD needed = ::GetEnvironmentVariableA("PATH", nullptr, 0);
+    if (needed > 0) {
+      std::string pathBuf;
+      pathBuf.resize(needed);
+      DWORD len = ::GetEnvironmentVariableA("PATH", pathBuf.data(), needed);
+      if (len > 0) {
+        WriteLog(std::string("[launcher] PATH length: ") + std::to_string(len));
+      }
+    }
+  }
   WriteLog(std::string("[launcher] VC++ redist installed: ") + (IsVC2015_2022RedistInstalled() ? "yes" : "no"));
 
   // Check key files exist next to EXE
