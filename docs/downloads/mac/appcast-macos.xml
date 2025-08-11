@@ -5,6 +5,23 @@
     <link>https://jalil430.github.io/instal/downloads/mac/</link>
     <description>Latest updates for Instal (macOS)</description>
     <language>en</language>
+
+    <item>
+      <title>Version 1.0.2+1</title>
+      <sparkle:version>1.0.2+1</sparkle:version>
+      <sparkle:shortVersionString>1.0.2+1</sparkle:shortVersionString>
+      <pubDate>Tue, 12 Aug 2025 01:25:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.2/Instal-MacOS-1.0.2.zip"
+        sparkle:edSignature="Q4CQKSh4ZJQoHNmj/fH+qoyVGDEIKZLyBrgHnd0O1pskFfKJyZR1P/7kyjQfXssO5XvYCmuypbMAmoPCnLioBw=="
+        length="23476496"
+        type="application/octet-stream" />
+      <description>
+      - Добавлен Поручитель
+      - Добавлен Номер рассрочки
+      </description>
+    </item>
+
     <item>
       <title>Version 1.0.1+4</title>
       <sparkle:version>1.0.1+4</sparkle:version>
@@ -15,7 +32,7 @@
         sparkle:edSignature="eQPGVRFMDgUt3WSPrAmPbUrBp9oeE27oHzd2xFFiY9IX8JM3JrZY5IlRyoe56jCtVTP9Zs9PNu8vHRr7jaUaBw=="
         length="23464814"
         type="application/octet-stream" />
-      <sparkle:description>Версия номер 1</sparkle:description>
+      <description>Версия номер 1</description>
     </item>
   </channel>
 </rss>
