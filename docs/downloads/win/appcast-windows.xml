@@ -15,7 +15,7 @@
         sparkle:edSignature="c9oDTrzwZDFC8CYOZK2zqLoOqAqcjaJrUzPi62SQBPpZphXDuVmUUiJ52oQV5RTUFsrnSgn7TSqR7yLisFssBg=="
         length="12402394"
         type="application/octet-stream" />
-      <sparkle:releaseNotesLink>https://github.com/Jalil430/instal/releases/tag/v1.0.1</sparkle:releaseNotesLink>
+      <description>Версия номер 1</description>
     </item>
   </channel>
 </rss>
