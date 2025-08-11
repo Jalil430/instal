@@ -207,6 +207,7 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // 1) Payment label - matches first column of item (flex: 2)
           Expanded(
             flex: 2,
             child: Text(
@@ -219,6 +220,7 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
             ),
           ),
+          // 2) Date label - matches second column of item (flex: 2)
           Expanded(
             flex: 2,
             child: Text(
@@ -231,20 +233,14 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
             ),
           ),
+          // 3) Placeholder to align with paid amount column (no title)
+          const Expanded(child: SizedBox()),
+          // 4) Placeholder to align with remaining amount column (no title)
+          const Expanded(child: SizedBox()),
+          // 5) Placeholder to align with due date column (no title)
+          const Expanded(child: SizedBox()),
+          // 6) Status label - matches status badge column
           Expanded(
-            flex: 2,
-            child: Text(
-              l10n?.amountHeader ?? 'СУММА ПЛАТЕЖА',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
             child: Text(
               l10n?.statusHeader ?? 'СТАТУС',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -255,7 +251,20 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
             ),
           ),
-          const SizedBox(width: 40), // Space for action button
+          // 7) Amount label aligned to fixed-width trailing column used by rows
+          Container(
+            width: 160,
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(
+              l10n?.amountHeader ?? 'СУММА ПЛАТЕЖА',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+            ),
+          ),
         ],
       ),
     );
