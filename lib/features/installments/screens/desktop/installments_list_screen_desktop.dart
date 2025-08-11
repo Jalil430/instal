@@ -240,14 +240,32 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                                // Product header
                                 Expanded(
                                   flex: 2,
                                   child: Padding(
                                     padding: const EdgeInsets.only(right: 16),
                                     child: Text(
-                                      (l10n?.productNameHeader ??
-                                              'Название товара')
-                                          .toUpperCase(),
+                                      (l10n?.productNameHeader ?? 'Название товара').toUpperCase(),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium
+                                          ?.copyWith(
+                                            color: AppTheme.textSecondary,
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 12,
+                                            letterSpacing: 0.5,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                // Installment number header right after product
+                                Expanded(
+                                  flex: 1,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Text(
+                                      (l10n?.number ?? 'Number').toUpperCase(),
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelMedium
@@ -441,6 +459,7 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                           installment: installment,
                                           clientName: clientName,
                                           productName: installment.productName,
+                                          installmentNumber: installment.installmentNumber,
                                           paidAmount: paidAmount,
                                           leftAmount: leftAmount,
                                           payments: payments,

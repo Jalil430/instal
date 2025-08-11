@@ -104,14 +104,6 @@ class InvestorDetailsScreenDesktop extends StatelessWidget {
                           color: AppTheme.textPrimary,
                         ),
                       ),
-                      const Spacer(),
-                      CustomButton(
-                        onPressed: () => context.go('/installments/add?investorId=${investor.id}'),
-                        text: l10n?.addInstallment ?? 'Добавить рассрочку',
-                        icon: Icons.add,
-                        showIcon: true,
-                        height: 40
-                      ),
                     ],
                   ),
                   const SizedBox(height: 14),

@@ -16,6 +16,7 @@ class InstallmentListItem extends StatefulWidget {
   final Installment installment;
   final String clientName;
   final String productName;
+  final int? installmentNumber;
   final double paidAmount;
   final double leftAmount;
   final List<InstallmentPayment> payments;
@@ -37,6 +38,7 @@ class InstallmentListItem extends StatefulWidget {
     required this.installment,
     required this.clientName,
     required this.productName,
+    this.installmentNumber,
     required this.paidAmount,
     required this.leftAmount,
     required this.payments,
@@ -318,13 +320,30 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                             ),
                           ),
                         ),
-                        // Product Name - Simple
+                        // Product Name column (reduced flex)
                         Expanded(
                           flex: 2,
                           child: Padding(
                             padding: const EdgeInsets.only(right: 16),
                             child: Text(
                               widget.productName,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        // Installment number column (separate cell, align with header)
+                        Expanded(
+                          flex: 1,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Text(
+                              widget.installmentNumber != null
+                                  ? '${widget.installmentNumber}'
+                                  : '-',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,

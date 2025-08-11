@@ -39,6 +39,12 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Ничего не найдено' : 'Nothing found';
   String get unknown => locale.languageCode == 'ru' ? 'Неизвестно' : 'Unknown';
   String get empty => locale.languageCode == 'ru' ? 'Пусто' : 'Empty';
+  String get leaveEmptyToAuto => locale.languageCode == 'ru'
+      ? 'Оставьте пустым для авто-заполнения'
+      : 'Leave empty for auto‑filling';
+
+  String get number => locale.languageCode == 'ru' ? 'Номер' : 'Number';
+
   String get error => locale.languageCode == 'ru' ? 'Ошибка' : 'Error';
   String get lastUpdated =>
       locale.languageCode == 'ru' ? 'Последнее обновление' : 'Last Updated';
@@ -97,10 +103,23 @@ class AppLocalizations {
 
   String get fullName => locale.languageCode == 'ru' ? 'Полное имя' : 'Full Name';
   String get contactNumber =>
-      locale.languageCode == 'ru' ? 'Контактный номер' : 'Contact Number';
+      locale.languageCode == 'ru' ? 'Телефон' : 'Phone';
   String get passportNumber =>
       locale.languageCode == 'ru' ? 'Номер паспорта' : 'Passport Number';
   String get address => locale.languageCode == 'ru' ? 'Адрес' : 'Address';
+  // Guarantor fields
+  String get gurantor => locale.languageCode == 'ru' ? 'Поручитель' : 'Gurantor';
+  String get guarantorFullName =>
+      locale.languageCode == 'ru' ? 'ФИО поручителя' : 'Guarantor Full Name';
+  String get guarantorContactNumber => locale.languageCode == 'ru'
+      ? 'Телефон поручителя'
+      : 'Guarantor Phone';
+  String get guarantorPassportNumber => locale.languageCode == 'ru'
+      ? 'Паспорт поручителя'
+      : 'Guarantor Passport';
+  String get guarantorAddress => locale.languageCode == 'ru'
+      ? 'Адрес поручителя'
+      : 'Guarantor Address';
 
   String get investmentAmount =>
       locale.languageCode == 'ru' ? 'Сумма инвестиции' : 'Investment Amount';
@@ -128,6 +147,9 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
   String get monthlyPayment =>
       locale.languageCode == 'ru' ? 'Ежемесячный платеж' : 'Monthly Payment';
+  String get installmentNumber => locale.languageCode == 'ru'
+      ? 'Номер рассрочки'
+      : 'Installment Number';
   String get buyingDate =>
       locale.languageCode == 'ru' ? 'Дата покупки' : 'Buying Date';
   String get installmentStartDate => locale.languageCode == 'ru'
@@ -137,7 +159,7 @@ class AppLocalizations {
       ? 'Дата окончания рассрочки'
       : 'Installment End Date';
   String get paidAmount => locale.languageCode == 'ru' ? 'Оплачено' : 'Paid Amount';
-  String get leftAmount => locale.languageCode == 'ru' ? 'Осталось' : 'Amount Left';
+  String get leftAmount => locale.languageCode == 'ru' ? 'Остаток' : 'Remaining';
   String get dueDate => locale.languageCode == 'ru' ? 'Срок оплаты' : 'Due Date';
   String get nextPayment =>
       locale.languageCode == 'ru' ? 'Следующий платеж' : 'Next Payment';

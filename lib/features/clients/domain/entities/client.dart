@@ -5,6 +5,10 @@ class Client {
   final String contactNumber;
   final String passportNumber;
   final String? address;
+  final String? guarantorFullName;
+  final String? guarantorContactNumber;
+  final String? guarantorPassportNumber;
+  final String? guarantorAddress;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +19,10 @@ class Client {
     required this.contactNumber,
     required this.passportNumber,
     this.address,
+    this.guarantorFullName,
+    this.guarantorContactNumber,
+    this.guarantorPassportNumber,
+    this.guarantorAddress,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -26,6 +34,10 @@ class Client {
     String? contactNumber,
     String? passportNumber,
     String? address,
+    String? guarantorFullName,
+    String? guarantorContactNumber,
+    String? guarantorPassportNumber,
+    String? guarantorAddress,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -36,6 +48,10 @@ class Client {
       contactNumber: contactNumber ?? this.contactNumber,
       passportNumber: passportNumber ?? this.passportNumber,
       address: address ?? this.address,
+      guarantorFullName: guarantorFullName ?? this.guarantorFullName,
+      guarantorContactNumber: guarantorContactNumber ?? this.guarantorContactNumber,
+      guarantorPassportNumber: guarantorPassportNumber ?? this.guarantorPassportNumber,
+      guarantorAddress: guarantorAddress ?? this.guarantorAddress,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

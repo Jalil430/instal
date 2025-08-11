@@ -10,10 +10,18 @@ class CreateEditClientDialogMobile extends StatelessWidget {
   final TextEditingController contactNumberController;
   final TextEditingController passportNumberController;
   final TextEditingController addressController;
+  final TextEditingController guarantorFullNameController;
+  final TextEditingController guarantorContactNumberController;
+  final TextEditingController guarantorPassportNumberController;
+  final TextEditingController guarantorAddressController;
   final FocusNode fullNameFocus;
   final FocusNode contactNumberFocus;
   final FocusNode passportNumberFocus;
   final FocusNode addressFocus;
+  final FocusNode guarantorFullNameFocus;
+  final FocusNode guarantorContactNumberFocus;
+  final FocusNode guarantorPassportNumberFocus;
+  final FocusNode guarantorAddressFocus;
   final bool isSaving;
   final bool isEditing;
   final VoidCallback onSave;
@@ -25,10 +33,18 @@ class CreateEditClientDialogMobile extends StatelessWidget {
     required this.contactNumberController,
     required this.passportNumberController,
     required this.addressController,
+    required this.guarantorFullNameController,
+    required this.guarantorContactNumberController,
+    required this.guarantorPassportNumberController,
+    required this.guarantorAddressController,
     required this.fullNameFocus,
     required this.contactNumberFocus,
     required this.passportNumberFocus,
     required this.addressFocus,
+    required this.guarantorFullNameFocus,
+    required this.guarantorContactNumberFocus,
+    required this.guarantorPassportNumberFocus,
+    required this.guarantorAddressFocus,
     required this.isSaving,
     required this.isEditing,
     required this.onSave,
@@ -99,7 +115,8 @@ class CreateEditClientDialogMobile extends StatelessWidget {
                 nextFocusNode: passportNumberFocus,
                 label: l10n?.contactNumber ?? 'Contact Number',
                 keyboardType: TextInputType.phone,
-                validator: (value) => value?.isEmpty == true ? l10n?.enterContactNumber ?? 'Enter contact number' : null,
+                // Optional field; no validator
+                validator: null,
               ),
               const SizedBox(height: 16),
               
@@ -109,7 +126,8 @@ class CreateEditClientDialogMobile extends StatelessWidget {
                 focusNode: passportNumberFocus,
                 nextFocusNode: addressFocus,
                 label: l10n?.passportNumber ?? 'Passport Number',
-                validator: (value) => value?.isEmpty == true ? l10n?.enterPassportNumber ?? 'Enter passport number' : null,
+                // Optional field; no validator
+                validator: null,
               ),
               const SizedBox(height: 16),
               
@@ -118,6 +136,39 @@ class CreateEditClientDialogMobile extends StatelessWidget {
                 controller: addressController,
                 focusNode: addressFocus,
                 label: l10n?.address ?? 'Address (Optional)',
+                nextFocusNode: guarantorFullNameFocus,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                context: context,
+                controller: guarantorFullNameController,
+                focusNode: guarantorFullNameFocus,
+                nextFocusNode: guarantorContactNumberFocus,
+                label: l10n?.guarantorFullName ?? 'Guarantor Full Name (Optional)',
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                context: context,
+                controller: guarantorContactNumberController,
+                focusNode: guarantorContactNumberFocus,
+                nextFocusNode: guarantorPassportNumberFocus,
+                label: l10n?.guarantorContactNumber ?? 'Guarantor Contact Number (Optional)',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                context: context,
+                controller: guarantorPassportNumberController,
+                focusNode: guarantorPassportNumberFocus,
+                nextFocusNode: guarantorAddressFocus,
+                label: l10n?.guarantorPassportNumber ?? 'Guarantor Passport Number (Optional)',
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                context: context,
+                controller: guarantorAddressController,
+                focusNode: guarantorAddressFocus,
+                label: l10n?.guarantorAddress ?? 'Guarantor Address (Optional)',
                 isLast: true,
                 onSubmit: onSave,
               ),

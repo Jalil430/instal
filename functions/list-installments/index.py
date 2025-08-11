@@ -126,6 +126,7 @@ def handler(event, context):
                     id, user_id, client_id, investor_id, product_name,
                     cash_price, installment_price, down_payment, term_months, monthly_payment,
                     down_payment_date, installment_start_date, installment_end_date,
+                    installment_number,
                     created_at, updated_at,
                     -- Pre-calculated fields (eliminates N+1 queries!)
                     COALESCE(client_name, 'Unknown Client') as client_name,
@@ -184,6 +185,7 @@ def handler(event, context):
                         'down_payment_date': convert_date(row.down_payment_date),
                         'installment_start_date': convert_date(row.installment_start_date),
                         'installment_end_date': convert_date(row.installment_end_date),
+                        'installment_number': getattr(row, 'installment_number', None),
                         'monthly_payment': float(row.monthly_payment),
                         'created_at': convert_timestamp(row.created_at),
                         'updated_at': convert_timestamp(row.updated_at),

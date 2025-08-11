@@ -104,14 +104,14 @@ class SecurityValidator:
                 # No pattern restriction - allow any Unicode characters
             },
             'contact_number': {
-                'required': True,
+                'required': False,
                 'type': str,
                 'min_length': 1,
                 'max_length': 50,
                 # No pattern restriction - allow any format
             },
             'passport_number': {
-                'required': True,
+                'required': False,
                 'type': str,
                 'min_length': 1,
                 'max_length': 50,
@@ -123,6 +123,32 @@ class SecurityValidator:
                 'min_length': 0,
                 'max_length': 500,
                 # No pattern restriction - allow any Unicode characters
+            },
+            # Optional new fields
+            # client_number removed per updated requirements
+            'guarantor_full_name': {
+                'required': False,
+                'type': str,
+                'min_length': 0,
+                'max_length': 100,
+            },
+            'guarantor_contact_number': {
+                'required': False,
+                'type': str,
+                'min_length': 0,
+                'max_length': 50,
+            },
+            'guarantor_passport_number': {
+                'required': False,
+                'type': str,
+                'min_length': 0,
+                'max_length': 50,
+            },
+            'guarantor_address': {
+                'required': False,
+                'type': str,
+                'min_length': 0,
+                'max_length': 500,
             }
         }
         
@@ -262,11 +288,23 @@ def handler(event, context):
                 DECLARE $contact_number AS Utf8;
                 DECLARE $passport_number AS Utf8;
                 DECLARE $address AS Utf8?;
+                DECLARE $guarantor_full_name AS Utf8?;
+                DECLARE $guarantor_contact_number AS Utf8?;
+                DECLARE $guarantor_passport_number AS Utf8?;
+                DECLARE $guarantor_address AS Utf8?;
                 DECLARE $created_at AS Timestamp;
                 DECLARE $updated_at AS Timestamp;
                 
-                INSERT INTO clients (id, user_id, full_name, contact_number, passport_number, address, created_at, updated_at) 
-                VALUES ($id, $user_id, $full_name, $contact_number, $passport_number, $address, $created_at, $updated_at);
+                INSERT INTO clients (
+                  id, user_id, full_name, contact_number, passport_number, address,
+                  guarantor_full_name, guarantor_contact_number, guarantor_passport_number, guarantor_address,
+                  created_at, updated_at
+                ) 
+                VALUES (
+                  $id, $user_id, $full_name, $contact_number, $passport_number, $address,
+                  $guarantor_full_name, $guarantor_contact_number, $guarantor_passport_number, $guarantor_address,
+                  $created_at, $updated_at
+                );
                 """
                 
                 prepared_insert = session.prepare(insert_query)
@@ -279,6 +317,10 @@ def handler(event, context):
                         '$contact_number': sanitized_data['contact_number'],
                         '$passport_number': sanitized_data['passport_number'],
                         '$address': sanitized_data.get('address'),
+                        '$guarantor_full_name': sanitized_data.get('guarantor_full_name'),
+                        '$guarantor_contact_number': sanitized_data.get('guarantor_contact_number'),
+                        '$guarantor_passport_number': sanitized_data.get('guarantor_passport_number'),
+                        '$guarantor_address': sanitized_data.get('guarantor_address'),
                         '$created_at': current_time,
                         '$updated_at': current_time
                     },

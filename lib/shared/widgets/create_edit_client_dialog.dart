@@ -37,12 +37,20 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
   final _contactNumberController = TextEditingController();
   final _passportNumberController = TextEditingController();
   final _addressController = TextEditingController();
+  final _guarantorFullNameController = TextEditingController();
+  final _guarantorContactNumberController = TextEditingController();
+  final _guarantorPassportNumberController = TextEditingController();
+  final _guarantorAddressController = TextEditingController();
 
   // Focus nodes for automatic navigation
   final _fullNameFocus = FocusNode();
   final _contactNumberFocus = FocusNode();
   final _passportNumberFocus = FocusNode();
   final _addressFocus = FocusNode();
+  final _guarantorFullNameFocus = FocusNode();
+  final _guarantorContactNumberFocus = FocusNode();
+  final _guarantorPassportNumberFocus = FocusNode();
+  final _guarantorAddressFocus = FocusNode();
 
   bool _isSaving = false;
 
@@ -73,6 +81,10 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
       _contactNumberController.text = client.contactNumber;
       _passportNumberController.text = client.passportNumber;
       _addressController.text = client.address ?? '';
+      _guarantorFullNameController.text = client.guarantorFullName ?? '';
+      _guarantorContactNumberController.text = client.guarantorContactNumber ?? '';
+      _guarantorPassportNumberController.text = client.guarantorPassportNumber ?? '';
+      _guarantorAddressController.text = client.guarantorAddress ?? '';
     } else if (widget.initialName != null) {
       // Pre-fill name when creating from search
       _fullNameController.text = widget.initialName!;
@@ -85,10 +97,18 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
     _contactNumberController.dispose();
     _passportNumberController.dispose();
     _addressController.dispose();
+    _guarantorFullNameController.dispose();
+    _guarantorContactNumberController.dispose();
+    _guarantorPassportNumberController.dispose();
+    _guarantorAddressController.dispose();
     _fullNameFocus.dispose();
     _contactNumberFocus.dispose();
     _passportNumberFocus.dispose();
     _addressFocus.dispose();
+    _guarantorFullNameFocus.dispose();
+    _guarantorContactNumberFocus.dispose();
+    _guarantorPassportNumberFocus.dispose();
+    _guarantorAddressFocus.dispose();
     super.dispose();
   }
 
@@ -111,6 +131,10 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
           contactNumber: _contactNumberController.text,
           passportNumber: _passportNumberController.text,
           address: _addressController.text.trim().isEmpty ? null : _addressController.text,
+          guarantorFullName: _guarantorFullNameController.text.trim().isEmpty ? null : _guarantorFullNameController.text,
+          guarantorContactNumber: _guarantorContactNumberController.text.trim().isEmpty ? null : _guarantorContactNumberController.text,
+          guarantorPassportNumber: _guarantorPassportNumberController.text.trim().isEmpty ? null : _guarantorPassportNumberController.text,
+          guarantorAddress: _guarantorAddressController.text.trim().isEmpty ? null : _guarantorAddressController.text,
           updatedAt: DateTime.now(),
         );
         
@@ -136,6 +160,10 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
           contactNumber: _contactNumberController.text,
           passportNumber: _passportNumberController.text,
           address: _addressController.text.trim().isEmpty ? null : _addressController.text,
+          guarantorFullName: _guarantorFullNameController.text.trim().isEmpty ? null : _guarantorFullNameController.text,
+          guarantorContactNumber: _guarantorContactNumberController.text.trim().isEmpty ? null : _guarantorContactNumberController.text,
+          guarantorPassportNumber: _guarantorPassportNumberController.text.trim().isEmpty ? null : _guarantorPassportNumberController.text,
+          guarantorAddress: _guarantorAddressController.text.trim().isEmpty ? null : _guarantorAddressController.text,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -180,10 +208,18 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
         contactNumberController: _contactNumberController,
         passportNumberController: _passportNumberController,
         addressController: _addressController,
+        guarantorFullNameController: _guarantorFullNameController,
+        guarantorContactNumberController: _guarantorContactNumberController,
+        guarantorPassportNumberController: _guarantorPassportNumberController,
+        guarantorAddressController: _guarantorAddressController,
         fullNameFocus: _fullNameFocus,
         contactNumberFocus: _contactNumberFocus,
         passportNumberFocus: _passportNumberFocus,
         addressFocus: _addressFocus,
+        guarantorFullNameFocus: _guarantorFullNameFocus,
+        guarantorContactNumberFocus: _guarantorContactNumberFocus,
+        guarantorPassportNumberFocus: _guarantorPassportNumberFocus,
+        guarantorAddressFocus: _guarantorAddressFocus,
         isSaving: _isSaving,
         isEditing: _isEditing,
         onSave: _saveClient,
@@ -194,10 +230,18 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
         contactNumberController: _contactNumberController,
         passportNumberController: _passportNumberController,
         addressController: _addressController,
+        guarantorFullNameController: _guarantorFullNameController,
+        guarantorContactNumberController: _guarantorContactNumberController,
+        guarantorPassportNumberController: _guarantorPassportNumberController,
+        guarantorAddressController: _guarantorAddressController,
         fullNameFocus: _fullNameFocus,
         contactNumberFocus: _contactNumberFocus,
         passportNumberFocus: _passportNumberFocus,
         addressFocus: _addressFocus,
+        guarantorFullNameFocus: _guarantorFullNameFocus,
+        guarantorContactNumberFocus: _guarantorContactNumberFocus,
+        guarantorPassportNumberFocus: _guarantorPassportNumberFocus,
+        guarantorAddressFocus: _guarantorAddressFocus,
         isSaving: _isSaving,
         isEditing: _isEditing,
         onSave: _saveClient,

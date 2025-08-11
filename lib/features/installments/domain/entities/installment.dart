@@ -14,6 +14,7 @@ class Installment {
   final DateTime installmentEndDate;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? installmentNumber;
 
   const Installment({
     required this.id,
@@ -29,6 +30,7 @@ class Installment {
     required this.downPaymentDate,
     required this.installmentStartDate,
     required this.installmentEndDate,
+    this.installmentNumber,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -47,6 +49,7 @@ class Installment {
     DateTime? downPaymentDate,
     DateTime? installmentStartDate,
     DateTime? installmentEndDate,
+    int? installmentNumber,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -64,6 +67,7 @@ class Installment {
       downPaymentDate: downPaymentDate ?? this.downPaymentDate,
       installmentStartDate: installmentStartDate ?? this.installmentStartDate,
       installmentEndDate: installmentEndDate ?? this.installmentEndDate,
+      installmentNumber: installmentNumber ?? this.installmentNumber,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

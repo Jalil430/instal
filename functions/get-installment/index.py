@@ -118,6 +118,7 @@ def handler(event, context):
                 SELECT id, user_id, client_id, investor_id, product_name, cash_price, 
                        installment_price, down_payment, term_months, down_payment_date, 
                        installment_start_date, installment_end_date, monthly_payment, 
+                       installment_number,
                        created_at, updated_at
                 FROM installments WHERE id = $installment_id AND user_id = $user_id;
             """
@@ -186,6 +187,7 @@ def handler(event, context):
                 'installment_start_date': convert_date(row.installment_start_date),
                 'installment_end_date': convert_date(row.installment_end_date),
                 'monthly_payment': float(row.monthly_payment),
+                'installment_number': getattr(row, 'installment_number', None),
                 'created_at': convert_timestamp(row.created_at),
                 'updated_at': convert_timestamp(row.updated_at),
                 'payments': []

@@ -8,6 +8,10 @@ class ClientModel extends Client {
     required super.contactNumber,
     required super.passportNumber,
     super.address,
+    super.guarantorFullName,
+    super.guarantorContactNumber,
+    super.guarantorPassportNumber,
+    super.guarantorAddress,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -20,6 +24,10 @@ class ClientModel extends Client {
       contactNumber: map['contact_number'] as String,
       passportNumber: map['passport_number'] as String,
       address: map['address'] as String?,
+      guarantorFullName: map['guarantor_full_name'] as String?,
+      guarantorContactNumber: map['guarantor_contact_number'] as String?,
+      guarantorPassportNumber: map['guarantor_passport_number'] as String?,
+      guarantorAddress: map['guarantor_address'] as String?,
       createdAt: _parseDateTime(map['created_at']),
       updatedAt: _parseDateTime(map['updated_at']),
     );
@@ -33,6 +41,10 @@ class ClientModel extends Client {
       contactNumber: client.contactNumber,
       passportNumber: client.passportNumber,
       address: client.address,
+      guarantorFullName: client.guarantorFullName,
+      guarantorContactNumber: client.guarantorContactNumber,
+      guarantorPassportNumber: client.guarantorPassportNumber,
+      guarantorAddress: client.guarantorAddress,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt,
     );
@@ -52,6 +64,18 @@ class ClientModel extends Client {
     if (address != null) {
       map['address'] = address!;
     }
+    if (guarantorFullName != null) {
+      map['guarantor_full_name'] = guarantorFullName!;
+    }
+    if (guarantorContactNumber != null) {
+      map['guarantor_contact_number'] = guarantorContactNumber!;
+    }
+    if (guarantorPassportNumber != null) {
+      map['guarantor_passport_number'] = guarantorPassportNumber!;
+    }
+    if (guarantorAddress != null) {
+      map['guarantor_address'] = guarantorAddress!;
+    }
     
     return map;
   }
@@ -68,6 +92,18 @@ class ClientModel extends Client {
     if (address != null) {
       // Replace newlines with spaces to prevent JSON parsing issues
       map['address'] = address!.replaceAll('\n', ' ').replaceAll('\r', ' ');
+    }
+    if (guarantorFullName != null) {
+      map['guarantor_full_name'] = guarantorFullName!;
+    }
+    if (guarantorContactNumber != null) {
+      map['guarantor_contact_number'] = guarantorContactNumber!;
+    }
+    if (guarantorPassportNumber != null) {
+      map['guarantor_passport_number'] = guarantorPassportNumber!;
+    }
+    if (guarantorAddress != null) {
+      map['guarantor_address'] = guarantorAddress!;
     }
     
     return map;
@@ -98,6 +134,10 @@ class ClientModel extends Client {
     String? contactNumber,
     String? passportNumber,
     String? address,
+    String? guarantorFullName,
+    String? guarantorContactNumber,
+    String? guarantorPassportNumber,
+    String? guarantorAddress,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -108,6 +148,10 @@ class ClientModel extends Client {
       contactNumber: contactNumber ?? this.contactNumber,
       passportNumber: passportNumber ?? this.passportNumber,
       address: address ?? this.address,
+      guarantorFullName: guarantorFullName ?? this.guarantorFullName,
+      guarantorContactNumber: guarantorContactNumber ?? this.guarantorContactNumber,
+      guarantorPassportNumber: guarantorPassportNumber ?? this.guarantorPassportNumber,
+      guarantorAddress: guarantorAddress ?? this.guarantorAddress,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

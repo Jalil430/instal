@@ -28,6 +28,7 @@ class InstallmentModel extends Installment {
     required super.downPaymentDate,
     required super.installmentStartDate,
     required super.installmentEndDate,
+    super.installmentNumber,
     required super.createdAt,
     required super.updatedAt,
     // Optimized fields
@@ -59,6 +60,7 @@ class InstallmentModel extends Installment {
       downPaymentDate: _parseDate(map['down_payment_date']),
       installmentStartDate: _parseDate(map['installment_start_date']),
       installmentEndDate: _parseDate(map['installment_end_date']),
+      installmentNumber: map['installment_number'] as int?,
       createdAt: _parseDateTime(map['created_at']),
       updatedAt: _parseDateTime(map['updated_at']),
     );
@@ -77,6 +79,7 @@ class InstallmentModel extends Installment {
       termMonths: map['term_months'] as int,
       downPayment: (map['down_payment'] as num).toDouble(),
       monthlyPayment: (map['monthly_payment'] as num).toDouble(),
+      installmentNumber: map['installment_number'] as int?,
       downPaymentDate: _parseDate(map['down_payment_date']),
       installmentStartDate: _parseDate(map['installment_start_date']),
       installmentEndDate: _parseDate(map['installment_end_date']),
@@ -112,6 +115,7 @@ class InstallmentModel extends Installment {
       downPaymentDate: installment.downPaymentDate,
       installmentStartDate: installment.installmentStartDate,
       installmentEndDate: installment.installmentEndDate,
+      installmentNumber: installment.installmentNumber,
       createdAt: installment.createdAt,
       updatedAt: installment.updatedAt,
     );
@@ -132,6 +136,7 @@ class InstallmentModel extends Installment {
       'down_payment_date': downPaymentDate.millisecondsSinceEpoch,
       'installment_start_date': installmentStartDate.millisecondsSinceEpoch,
       'installment_end_date': installmentEndDate.millisecondsSinceEpoch,
+      'installment_number': installmentNumber,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
@@ -152,6 +157,7 @@ class InstallmentModel extends Installment {
       'down_payment_date': _formatDate(downPaymentDate),
       'installment_start_date': _formatDate(installmentStartDate),
       'installment_end_date': _formatDate(installmentEndDate),
+      if (installmentNumber != null) 'installment_number': installmentNumber,
     };
   }
 

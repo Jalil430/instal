@@ -114,17 +114,21 @@ class SecurityValidator:
                 # No pattern restriction - allow any Unicode characters
             },
             'contact_number': {
-                'type': str, 'min_length': 1, 'max_length': 50
+                'type': str, 'min_length': 0, 'max_length': 50
                 # No pattern restriction - allow any format
             },
             'passport_number': {
-                'type': str, 'min_length': 1, 'max_length': 50
+                'type': str, 'min_length': 0, 'max_length': 50
                 # No pattern restriction - allow any format/script
             },
             'address': {
                 'type': str, 'min_length': 0, 'max_length': 500
                 # No pattern restriction - allow any Unicode characters
-            }
+            },
+            'guarantor_full_name': {'type': str, 'min_length': 0, 'max_length': 100},
+            'guarantor_contact_number': {'type': str, 'min_length': 0, 'max_length': 50},
+            'guarantor_passport_number': {'type': str, 'min_length': 0, 'max_length': 50},
+            'guarantor_address': {'type': str, 'min_length': 0, 'max_length': 500},
         }
         
         for field, rules in validation_rules.items():
@@ -333,6 +337,86 @@ def handler(event, context):
                         {
                             '$client_id': sanitized_id,
                             '$address': sanitized_data['address'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+
+                if 'guarantor_full_name' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $guarantor_full_name AS Utf8?;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET guarantor_full_name = $guarantor_full_name, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$guarantor_full_name': sanitized_data['guarantor_full_name'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+
+                if 'guarantor_contact_number' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $guarantor_contact_number AS Utf8?;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET guarantor_contact_number = $guarantor_contact_number, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$guarantor_contact_number': sanitized_data['guarantor_contact_number'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+
+                if 'guarantor_passport_number' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $guarantor_passport_number AS Utf8?;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET guarantor_passport_number = $guarantor_passport_number, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$guarantor_passport_number': sanitized_data['guarantor_passport_number'],
+                            '$updated_at': current_time
+                        },
+                        commit_tx=True
+                    )
+
+                if 'guarantor_address' in sanitized_data:
+                    update_query = """
+                    DECLARE $client_id AS Utf8;
+                    DECLARE $guarantor_address AS Utf8?;
+                    DECLARE $updated_at AS Timestamp;
+                    UPDATE clients 
+                    SET guarantor_address = $guarantor_address, updated_at = $updated_at 
+                    WHERE id = $client_id;
+                    """
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(
+                        prepared_update,
+                        {
+                            '$client_id': sanitized_id,
+                            '$guarantor_address': sanitized_data['guarantor_address'],
                             '$updated_at': current_time
                         },
                         commit_tx=True

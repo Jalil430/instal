@@ -50,6 +50,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   final _termController = TextEditingController();
   final _downPaymentController = TextEditingController();
   final _monthlyPaymentController = TextEditingController();
+  final _installmentNumberController = TextEditingController();
 
   // Focus nodes for automatic navigation
   final _productNameFocus = FocusNode();
@@ -58,6 +59,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   final _termFocus = FocusNode();
   final _downPaymentFocus = FocusNode();
   final _monthlyPaymentFocus = FocusNode();
+  final _installmentNumberFocus = FocusNode();
 
   // Form values
   Client? _selectedClient;
@@ -253,12 +255,14 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     _termController.dispose();
     _downPaymentController.dispose();
     _monthlyPaymentController.dispose();
+    _installmentNumberController.dispose();
     _productNameFocus.dispose();
     _cashPriceFocus.dispose();
     _installmentPriceFocus.dispose();
     _termFocus.dispose();
     _downPaymentFocus.dispose();
     _monthlyPaymentFocus.dispose();
+    _installmentNumberFocus.dispose();
     super.dispose();
   }
 
@@ -307,6 +311,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         downPaymentDate: _buyingDate!,
         installmentStartDate: startDate,
         installmentEndDate: endDate,
+        installmentNumber: _installmentNumberController.text.trim().isEmpty ? null : int.parse(_installmentNumberController.text.trim()),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -365,12 +370,14 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         termController: _termController,
         downPaymentController: _downPaymentController,
         monthlyPaymentController: _monthlyPaymentController,
+        installmentNumberController: _installmentNumberController,
         productNameFocus: _productNameFocus,
         cashPriceFocus: _cashPriceFocus,
         installmentPriceFocus: _installmentPriceFocus,
         termFocus: _termFocus,
         downPaymentFocus: _downPaymentFocus,
         monthlyPaymentFocus: _monthlyPaymentFocus,
+        installmentNumberFocus: _installmentNumberFocus,
         buyingDate: _buyingDate,
         installmentStartDate: _installmentStartDate,
         isLoadingData: _isLoadingData,
@@ -409,12 +416,14 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         termController: _termController,
         downPaymentController: _downPaymentController,
         monthlyPaymentController: _monthlyPaymentController,
+        installmentNumberController: _installmentNumberController,
         productNameFocus: _productNameFocus,
         cashPriceFocus: _cashPriceFocus,
         installmentPriceFocus: _installmentPriceFocus,
         termFocus: _termFocus,
         downPaymentFocus: _downPaymentFocus,
         monthlyPaymentFocus: _monthlyPaymentFocus,
+        installmentNumberFocus: _installmentNumberFocus,
         buyingDate: _buyingDate,
         installmentStartDate: _installmentStartDate,
         isLoadingData: _isLoadingData,

@@ -136,13 +136,20 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                       onTap: () => context.go('/investors/${investor!.id}'),
                     ),
                     
+                  // Installment number
+                  if (installment.installmentNumber != null)
+                    _buildInfoRow(l10n?.number ?? 'Number', '#${installment.installmentNumber}'),
+
                   // Product details (after client and investor)
                   _buildInfoRow(l10n?.product ?? 'Название товара', installment.productName),
+                  _buildInfoRow(l10n?.cashPrice ?? 'Цена за наличные', currencyFormat.format(installment.cashPrice)),
                   _buildInfoRow(l10n?.installmentPrice ?? 'Сумма рассрочки', currencyFormat.format(installment.installmentPrice)),
                   _buildInfoRow(l10n?.term ?? 'Срок в месяцах', '${installment.termMonths} ${l10n?.monthsLabel ?? 'месяцев'}'),
                   _buildInfoRow(l10n?.downPaymentFull ?? 'Первоначальный взнос', currencyFormat.format(installment.downPayment)),
-                  _buildInfoRow(l10n?.buyingDate ?? 'Дата первого взноса', dateFormat.format(installment.downPaymentDate)),
                   _buildInfoRow(l10n?.monthlyPayment ?? 'Ежемесячный платеж', currencyFormat.format(installment.monthlyPayment)),
+                  _buildInfoRow(l10n?.buyingDate ?? 'Дата первого взноса', dateFormat.format(installment.downPaymentDate)),
+                  _buildInfoRow(l10n?.installmentStartDate ?? 'Дата начала рассрочки', dateFormat.format(installment.installmentStartDate)),
+                  _buildInfoRow(l10n?.installmentEndDate ?? 'Дата окончания рассрочки', dateFormat.format(installment.installmentEndDate)),
                   
                   const SizedBox(height: 24),
 

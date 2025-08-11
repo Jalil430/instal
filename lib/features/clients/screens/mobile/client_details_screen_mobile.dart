@@ -113,12 +113,25 @@ class ClientDetailsScreenMobile extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(l10n?.fullName ?? 'Полное имя', client.fullName),
-                  _buildInfoRow(l10n?.contactNumber ?? 'Контактный номер', client.contactNumber),
+                  _buildInfoRow(l10n?.contactNumber ?? 'Телефон', client.contactNumber),
                   _buildInfoRow(l10n?.passportNumber ?? 'Номер паспорта', client.passportNumber),
-                  _buildInfoRow(l10n?.address ?? 'Адрес', client.address ?? 'Не указан'),
-                  _buildInfoRow(l10n?.creationDate ?? 'Дата создания', dateFormat.format(client.createdAt)),
+                  _buildInfoRow(l10n?.address ?? 'Адрес', client.address ?? (l10n?.unknown ?? 'Не указан')),
 
                   const SizedBox(height: 24),
+                  // Guarantor Info Section
+                  Text(
+                    l10n?.gurantor ?? 'Поручитель',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInfoRow(l10n?.guarantorFullName ?? 'ФИО поручителя', client.guarantorFullName ?? (l10n?.unknown ?? 'Не указано')),
+                  _buildInfoRow(l10n?.guarantorContactNumber ?? 'Контактный номер поручителя', client.guarantorContactNumber ?? (l10n?.unknown ?? 'Не указан')),
+                  _buildInfoRow(l10n?.guarantorPassportNumber ?? 'Паспорт поручителя', client.guarantorPassportNumber ?? (l10n?.unknown ?? 'Не указан')),
+                  _buildInfoRow(l10n?.guarantorAddress ?? 'Адрес поручителя', client.guarantorAddress ?? (l10n?.unknown ?? 'Не указан')),
 
                   // Installments List
                   Row(

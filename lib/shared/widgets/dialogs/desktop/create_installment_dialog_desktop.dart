@@ -25,6 +25,8 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
   final FocusNode termFocus;
   final FocusNode downPaymentFocus;
   final FocusNode monthlyPaymentFocus;
+  final TextEditingController? installmentNumberController;
+  final FocusNode? installmentNumberFocus;
   final DateTime? buyingDate;
   final DateTime? installmentStartDate;
   final bool isLoadingData;
@@ -62,6 +64,8 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
     required this.termFocus,
     required this.downPaymentFocus,
     required this.monthlyPaymentFocus,
+    this.installmentNumberController,
+    this.installmentNumberFocus,
     required this.buyingDate,
     required this.installmentStartDate,
     required this.isLoadingData,
@@ -139,6 +143,17 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       
+                      // Installment number (optional, auto when empty)
+                      _buildTextField(
+                        context: context,
+                        controller: installmentNumberController ?? TextEditingController(),
+                        focusNode: installmentNumberFocus ?? FocusNode(),
+                        nextFocusNode: productNameFocus,
+                        label: '${l10n?.installmentNumber ?? 'Installment Number'} (${l10n?.leaveEmptyToAuto ?? 'Пусто'})',
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+
                       // Product Name
                       _buildTextField(
                         context: context,
@@ -250,6 +265,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                           ),
                         ],
                       ),
+                      // removed old placement of installment number
                     ],
                   ),
                 ),
@@ -409,7 +425,10 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
       getDisplayText: (investor) => investor?.fullName ?? (l10n.withoutInvestor ?? 'Without Investor'),
       getSearchText: (investor) => investor?.fullName ?? (l10n.withoutInvestor ?? 'Without Investor'),
       onChanged: onInvestorSelected,
-      onNext: onProductNameFocus,
+      onNext: () {
+        // After choosing investor, move focus to installment number
+        installmentNumberFocus?.requestFocus();
+      },
       label: l10n.investorOptional ?? 'Investor (Optional)',
       hint: '${l10n.search ?? 'Search'}...',
       noItemsMessage: 'No investors found',

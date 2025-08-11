@@ -97,6 +97,7 @@ def handler(event, context):
         client_id = query_params.get('client_id')
         investor_id = query_params.get('investor_id')
         product_name = query_params.get('product_name')
+        installment_number = query_params.get('installment_number')
         
         # Database connection
         endpoint = os.environ['YDB_ENDPOINT']
@@ -129,6 +130,9 @@ def handler(event, context):
             if product_name:
                 where_conditions.append("product_name LIKE $product_name")
                 params['$product_name'] = f"%{product_name}%"
+            if installment_number:
+                where_conditions.append("installment_number = $installment_number")
+                params['$installment_number'] = int(installment_number)
             
             where_clause = ""
             if where_conditions:
@@ -142,6 +146,8 @@ def handler(event, context):
                 declare_statements.append("DECLARE $investor_id AS Utf8;")
             if product_name:
                 declare_statements.append("DECLARE $product_name AS Utf8;")
+            if installment_number:
+                declare_statements.append("DECLARE $installment_number AS Int32;")
             
             query = f"""
             {' '.join(declare_statements)}
@@ -160,6 +166,7 @@ def handler(event, context):
                 installment_start_date,
                 installment_end_date,
                 monthly_payment,
+                installment_number,
                 created_at,
                 updated_at
             FROM installments

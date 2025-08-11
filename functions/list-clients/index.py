@@ -121,7 +121,9 @@ def handler(event, context):
                 DECLARE $user_id AS Utf8;
                 DECLARE $limit AS Uint64;
                 DECLARE $offset AS Uint64;
-                SELECT id, user_id, full_name, contact_number, passport_number, address, created_at, updated_at
+                SELECT id, user_id, full_name, contact_number, passport_number, address,
+                       guarantor_full_name, guarantor_contact_number, guarantor_passport_number, guarantor_address,
+                       created_at, updated_at
                 FROM clients
                 WHERE user_id = $user_id
                 ORDER BY created_at DESC
@@ -147,6 +149,10 @@ def handler(event, context):
                         'contact_number': row.contact_number,
                         'passport_number': row.passport_number,
                         'address': row.address,
+                        'guarantor_full_name': getattr(row, 'guarantor_full_name', None),
+                        'guarantor_contact_number': getattr(row, 'guarantor_contact_number', None),
+                        'guarantor_passport_number': getattr(row, 'guarantor_passport_number', None),
+                        'guarantor_address': getattr(row, 'guarantor_address', None),
                         'created_at': convert_timestamp(row.created_at),
                         'updated_at': convert_timestamp(row.updated_at)
                     })

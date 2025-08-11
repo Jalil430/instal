@@ -197,6 +197,30 @@ def handler(event, context):
                 paid_payments = 0
                 overdue_count = 0
                 
+                # Determine installment_number
+                manual_number = None
+                try:
+                    if 'installment_number' in body and body['installment_number'] not in (None, ''):
+                        manual_number = int(body['installment_number'])
+                        if manual_number <= 0:
+                            manual_number = None
+                except Exception:
+                    manual_number = None
+
+                if manual_number is None:
+                    # Get current max for this user and increment
+                    max_query = """
+                    DECLARE $user_id AS Utf8;
+                    SELECT MAX(installment_number) AS max_num FROM installments WHERE user_id = $user_id;
+                    """
+                    max_result = tx.execute(session.prepare(max_query), {'$user_id': body['user_id']})
+                    if max_result[0].rows and hasattr(max_result[0].rows[0], 'max_num') and max_result[0].rows[0].max_num is not None:
+                        new_number = int(max_result[0].rows[0].max_num) + 1
+                    else:
+                        new_number = 1
+                else:
+                    new_number = manual_number
+
                 query = """
                 DECLARE $id AS Utf8;
                 DECLARE $user_id AS Utf8;
@@ -211,6 +235,7 @@ def handler(event, context):
                 DECLARE $installment_start_date AS Date;
                 DECLARE $installment_end_date AS Date;
                 DECLARE $monthly_payment AS Decimal(22,9);
+                DECLARE $installment_number AS Int32;
                 DECLARE $created_at AS Timestamp;
                 DECLARE $updated_at AS Timestamp;
                 DECLARE $client_name AS Utf8;
@@ -238,6 +263,7 @@ def handler(event, context):
                     installment_start_date,
                     installment_end_date,
                     monthly_payment,
+                    installment_number,
                     created_at,
                     updated_at,
                     client_name,
@@ -265,6 +291,7 @@ def handler(event, context):
                     $installment_start_date,
                     $installment_end_date,
                     $monthly_payment,
+                    $installment_number,
                     $created_at,
                     $updated_at,
                     $client_name,
@@ -297,6 +324,7 @@ def handler(event, context):
                         '$installment_start_date': installment_start_date,
                         '$installment_end_date': installment_end_date,
                         '$monthly_payment': Decimal(str(body['monthly_payment'])),
+                        '$installment_number': new_number,
                         '$created_at': now,
                         '$updated_at': now,
                         '$client_name': client_name,
