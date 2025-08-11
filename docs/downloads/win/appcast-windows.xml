@@ -9,11 +9,11 @@
     <item>
       <title>Version 1.0.2</title>
       <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
-      <pubDate>Tue, 12 Aug 2025 01:25:00 +0000</pubDate>
+      <pubDate>Tue, 12 Aug 2025 02:00:00 +0000</pubDate>
       <enclosure
         url="https://github.com/Jalil430/instal/releases/download/v1.0.2/Instal-Windows-Installer-v1.0.2.exe"
-        sparkle:edSignature="zwX+oJ29c6ftkAPUF8MDmTqPd0SYPRI42FbQqfSJVIonTd5eFaxDEJ9zec+pbuVfN/HLx/ZHYFqXBlLlkyH/BQ=="
-        length="35756710"
+        sparkle:edSignature="+NoglyMnLDoqTUmyD8+auY8kJx7ad4Vi39PjVRoQqyHOO0KdWXiViavg7oPOfS/Tt6QPnXEXp+/4Ko2xeFo+BQ=="
+        length="35752769"
         sparkle:version="5"
         type="application/octet-stream" />
       <description>
