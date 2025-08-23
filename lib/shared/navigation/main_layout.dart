@@ -101,6 +101,12 @@ class _MainLayoutState extends State<MainLayout> {
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: l10n?.wallets ?? 'Кошельки',
+                  route: '/wallets',
+                  currentRoute: currentRoute,
+                ),
+                _buildNavItem(
                   icon: Icons.analytics_outlined,
                   label: l10n?.analytics ?? 'Аналитика',
                   route: '/analytics',

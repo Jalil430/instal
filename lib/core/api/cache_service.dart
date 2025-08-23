@@ -37,6 +37,11 @@ class CacheService {
         keysToRemove.addAll(getKeysWithPrefix('installment_'));
         keysToRemove.addAll(getKeysWithPrefix('analytics_$userId'));
         break;
+      case 'wallet':
+        keysToRemove.addAll(getKeysWithPrefix('wallets_$userId'));
+        keysToRemove.addAll(getKeysWithPrefix('wallet_'));
+        keysToRemove.addAll(getKeysWithPrefix('analytics_$userId'));
+        break;
     }
     
     for (final key in keysToRemove) {
@@ -74,11 +79,13 @@ class CacheService {
   // Cache key generators
   static String clientsKey(String userId) => 'clients_$userId';
   static String investorsKey(String userId) => 'investors_$userId';
+  static String walletsKey(String userId) => 'wallets_$userId';
   static String installmentsKey(String userId) => 'installments_$userId';
   static String paymentsKey(String installmentId) => 'payments_$installmentId';
   static String analyticsKey(String userId) => 'analytics_$userId';
   static String clientKey(String clientId) => 'client_$clientId';
   static String investorKey(String investorId) => 'investor_$investorId';
+  static String walletKey(String walletId) => 'wallet_$walletId';
   static String installmentKey(String installmentId) => 'installment_$installmentId';
 }
 

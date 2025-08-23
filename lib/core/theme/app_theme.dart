@@ -86,6 +86,7 @@ class AppTheme {
   static const double borderRadiusSmall = 6.0;
   static const double borderRadiusMedium = 8.0;
   static const double borderRadiusLarge = 12.0;
+  static const double borderRadiusLg = 16.0;
   
   // Animation durations
   static const Duration animationQuick = Duration(milliseconds: 150);

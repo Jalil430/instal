@@ -7,6 +7,8 @@ import '../../features/clients/screens/clients_list_screen.dart';
 import '../../features/clients/screens/client_details_screen.dart';
 import '../../features/investors/screens/investors_list_screen.dart';
 import '../../features/investors/screens/investor_details_screen.dart';
+import '../../features/wallets/screens/wallets_list_screen.dart';
+import '../../features/wallets/screens/wallet_details_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -128,6 +130,33 @@ class AppRouter {
           );
         },
       ),
+      // Wallets routes
+      GoRoute(
+        path: '/wallets',
+        name: 'wallets',
+        pageBuilder: (context, state) => MaterialPage(
+          child: AuthGuard(
+            child: SubscriptionGuard(
+              child: ResponsiveMainLayout(child: const WalletsListScreen()),
+            ),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/wallets/:id',
+        name: 'wallet-details',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return MaterialPage(
+            child: AuthGuard(
+              child: SubscriptionGuard(
+                child: ResponsiveMainLayout(child: WalletDetailsScreen(walletId: id)),
+              ),
+            ),
+          );
+        },
+      ),
+
       // Settings route
       GoRoute(
         path: '/settings',

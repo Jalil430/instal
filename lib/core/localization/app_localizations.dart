@@ -380,6 +380,30 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Выберите клиента' : 'Select a client';
   String get investorOptional =>
       locale.languageCode == 'ru' ? 'Инвестор (необязательно)' : 'Investor (optional)';
+
+  // ===== Wallets =====
+  String get wallets => locale.languageCode == 'ru' ? 'Кошельки' : 'Wallets';
+  String get wallet => locale.languageCode == 'ru' ? 'Кошелек' : 'Wallet';
+  String get walletDetails => locale.languageCode == 'ru' ? 'Детали кошелька' : 'Wallet Details';
+  String get walletTransactions => locale.languageCode == 'ru' ? 'Операции кошелька' : 'Wallet Transactions';
+  String get withoutWallet => locale.languageCode == 'ru' ? 'Без кошелька' : 'Without wallet';
+  String get selectWallet => locale.languageCode == 'ru' ? 'Выберите кошелек' : 'Select wallet';
+  String get createWallet => locale.languageCode == 'ru' ? 'Создать кошелек' : 'Create wallet';
+  String get walletName => locale.languageCode == 'ru' ? 'Название кошелька' : 'Wallet name';
+  String get enterWalletName => locale.languageCode == 'ru' ? 'Введите название кошелька' : 'Enter wallet name';
+  String get walletType => locale.languageCode == 'ru' ? 'Тип кошелька' : 'Wallet type';
+  String get personalWallet => locale.languageCode == 'ru' ? 'Личный кошелек' : 'Personal wallet';
+  String get investorWallet => locale.languageCode == 'ru' ? 'Инвестиционный кошелек' : 'Investor wallet';
+  String get walletBalance => locale.languageCode == 'ru' ? 'Баланс кошелька' : 'Wallet balance';
+  String get walletInfo => locale.languageCode == 'ru' ? 'Информация о кошельке' : 'Wallet Info';
+  String get investmentReturnDate => locale.languageCode == 'ru' ? 'Дата возврата инвестиции' : 'Investment Return Date';
+  String get investorPercentage => locale.languageCode == 'ru' ? 'Процент инвестора' : 'Investor Percentage';
+  String get userPercentage => locale.languageCode == 'ru' ? 'Процент пользователя' : 'User Percentage';
+  String get totalBalance => locale.languageCode == 'ru' ? 'Общий баланс' : 'Total balance';
+
+  String get expectedReturns => locale.languageCode == 'ru' ? 'Ожидаемые доходы' : 'Expected returns';
+  String get profit => locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';
+  String get returnDueDate => locale.languageCode == 'ru' ? 'Дата возврата' : 'Return due date';
   String get nextPaymentHeader =>
       locale.languageCode == 'ru' ? 'СЛЕДУЮЩИЙ ПЛАТЕЖ' : 'NEXT PAYMENT';
   String get paymentHeader =>

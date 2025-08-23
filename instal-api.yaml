@@ -99,6 +99,92 @@ paths:
       operationId: get-investor
       x-yc-apigateway-integration:
         type: cloud_functions
+        function_id: d4e8b3od95f0h2fiernq
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets:
+    post:
+      summary: Create a new wallet
+      operationId: create-wallet
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: WALLET_CREATE_FUNCTION_ID
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    get:
+      summary: List user's wallets with balances
+      operationId: list-wallets
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [personal, investor]
+          description: Filter wallets by type
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: WALLET_LIST_FUNCTION_ID
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/{id}/top-up:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Add funds to wallet
+      operationId: wallet-top-up
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: WALLET_TOPUP_FUNCTION_ID
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/{id}/ledger:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get wallet transaction ledger
+      operationId: wallet-ledger
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Number of transactions to return
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [installment, adjustment, transfer, reversal, initial_investment, profit_distribution]
+          description: Filter by transaction type
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Start date for filtering (ISO format)
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: End date for filtering (ISO format)
+      x-yc-apigateway-integration:
+        type: cloud_functions
         function_id: d4ehnha81dhv1t61vb5h
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'

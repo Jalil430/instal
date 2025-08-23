@@ -11,10 +11,10 @@ import '../../features/clients/domain/entities/client.dart';
 import '../../features/clients/domain/repositories/client_repository.dart';
 import '../../features/clients/data/repositories/client_repository_impl.dart';
 import '../../features/clients/data/datasources/client_remote_datasource.dart';
-import '../../features/investors/domain/entities/investor.dart';
-import '../../features/investors/domain/repositories/investor_repository.dart';
-import '../../features/investors/data/repositories/investor_repository_impl.dart';
-import '../../features/investors/data/datasources/investor_remote_datasource.dart';
+import '../../features/wallets/domain/entities/wallet.dart';
+import '../../features/wallets/domain/entities/wallet_balance.dart';
+import '../../features/wallets/widgets/wallet_selector.dart';
+import '../../features/wallets/widgets/quick_create_wallet_dialog.dart';
 import '../../features/auth/presentation/widgets/auth_service_provider.dart';
 import '../widgets/responsive_layout.dart';
 import 'dialogs/desktop/create_installment_dialog_desktop.dart';
@@ -23,7 +23,6 @@ import 'custom_button.dart';
 import 'custom_dropdown.dart';
 import 'keyboard_navigable_dropdown.dart';
 import 'create_edit_client_dialog.dart';
-import 'create_edit_investor_dialog.dart';
 
 class CreateInstallmentDialog extends StatefulWidget {
   final VoidCallback? onSuccess;
@@ -41,7 +40,6 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   final _formKey = GlobalKey<FormState>();
   late InstallmentRepository _installmentRepository;
   late ClientRepository _clientRepository;
-  late InvestorRepository _investorRepository;
 
   // Form controllers
   final _productNameController = TextEditingController();
@@ -63,22 +61,23 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
 
   // Form values
   Client? _selectedClient;
-  Investor? _selectedInvestor;
+  Wallet? _selectedWallet;
   DateTime? _buyingDate;
   DateTime? _installmentStartDate;
 
   // Data lists
   List<Client> _clients = [];
-  List<Investor> _investors = [];
+  List<Wallet> _wallets = [];
+  Map<String, WalletBalance> _walletBalances = {};
   bool _isLoadingData = true;
   bool _isSaving = false;
   
   // Navigation state
-  int _currentStep = 0; // 0: client, 1: investor, 2: product name, etc.
-  
+  int _currentStep = 0; // 0: client, 1: wallet, 2: product name, etc.
+
   // Keys for keyboard navigation
   final GlobalKey<KeyboardNavigableDropdownState<Client>> _clientDropdownKey = GlobalKey();
-  final GlobalKey<KeyboardNavigableDropdownState<Investor?>> _investorDropdownKey = GlobalKey();
+  final GlobalKey<KeyboardNavigableDropdownState<Wallet?>> _walletDropdownKey = GlobalKey();
 
   @override
   void initState() {
@@ -109,9 +108,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     _clientRepository = ClientRepositoryImpl(
       ClientRemoteDataSourceImpl(),
     );
-    _investorRepository = InvestorRepositoryImpl(
-      InvestorRemoteDataSourceImpl(),
-    );
+    // TODO: Initialize wallet repository
+    // _walletRepository = WalletRepositoryImpl(WalletRemoteDataSourceImpl());
   }
 
   void _initializeDates() {
@@ -142,30 +140,75 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       final clients = await _clientRepository.getAllClients(currentUser.id);
       print('✅ getAllClients returned: ${clients.length} clients');
       
-      print('📞 Calling getAllInvestors...');
-      final investors = await _investorRepository.getAllInvestors(currentUser.id);
-      print('✅ getAllInvestors returned: ${investors.length} investors');
-      
+      print('📞 Calling getAllWallets...');
+      // TODO: Load wallets from repository
+      // final wallets = await _walletRepository.getAllWallets(currentUser.id);
+      // final balances = await _walletRepository.getAllWalletBalances(currentUser.id);
+
+      // Mock data for now
+      final mockWallets = [
+        Wallet(
+          id: '1',
+          userId: currentUser.id,
+          name: 'My Wallet',
+          type: WalletType.personal,
+          createdAt: DateTime.now().subtract(const Duration(days: 30)),
+          updatedAt: DateTime.now(),
+        ),
+        Wallet(
+          id: '2',
+          userId: currentUser.id,
+          name: 'Investor A',
+          type: WalletType.investor,
+          investmentAmount: 1000000,
+          investorPercentage: 70,
+          userPercentage: 30,
+          investmentReturnDate: DateTime.now().add(const Duration(days: 365)),
+          createdAt: DateTime.now().subtract(const Duration(days: 15)),
+          updatedAt: DateTime.now(),
+        ),
+      ];
+
+      final mockBalances = {
+        '1': WalletBalance(
+          walletId: '1',
+          userId: currentUser.id,
+          balanceMinorUnits: 50000000, // 500K RUB
+          version: 1,
+          updatedAt: DateTime.now(),
+        ),
+        '2': WalletBalance(
+          walletId: '2',
+          userId: currentUser.id,
+          balanceMinorUnits: 345000000, // 3.45M RUB
+          version: 1,
+          updatedAt: DateTime.now(),
+        ),
+      };
+
+      print('✅ getAllWallets returned: ${mockWallets.length} wallets');
+
       // Debug logging before setState
       print('🚀 About to update state...');
       print('📋 Clients to set: ${clients.length}');
       for (int i = 0; i < clients.length && i < 3; i++) {
         print('   - ${clients[i].fullName}');
       }
-      print('💰 Investors to set: ${investors.length}');
-      for (int i = 0; i < investors.length && i < 3; i++) {
-        print('   - ${investors[i].fullName}');
+      print('💰 Wallets to set: ${mockWallets.length}');
+      for (int i = 0; i < mockWallets.length && i < 3; i++) {
+        print('   - ${mockWallets[i].name}');
       }
-      
+
       setState(() {
         _clients = clients;
-        _investors = investors;
+        _wallets = mockWallets;
+        _walletBalances = mockBalances;
         _isLoadingData = false;
       });
       
       print('✅ State updated successfully');
       print('📊 Current _clients.length: ${_clients.length}');
-      print('📊 Current _investors.length: ${_investors.length}');
+      print('📊 Current _wallets.length: ${_wallets.length}');
       print('📊 Current _isLoadingData: $_isLoadingData');
       
 
@@ -188,7 +231,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     // The KeyboardNavigableDropdown will auto-focus when autoFocus is true
   }
 
-  void _focusInvestorDropdown() {
+  void _focusWalletDropdown() {
     setState(() => _currentStep = 1);
   }
 
@@ -211,16 +254,14 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     );
   }
 
-  void _showCreateInvestorDialog() {
-    final searchQuery = _investorDropdownKey.currentState?.searchQuery ?? '';
+  void _showCreateWalletDialog() {
     showDialog(
       context: context,
-      builder: (context) => CreateEditInvestorDialog(
-        onSuccess: () {
-          _loadData(); // Reload investors after creating new one
-          _focusInvestorDropdown(); // Return focus to investor dropdown
+      builder: (context) => QuickCreateWalletDialog(
+        onWalletCreated: (name, type) {
+          _loadData(); // Reload wallets after creating new one
+          _focusWalletDropdown(); // Return focus to wallet dropdown
         },
-        initialName: searchQuery.isNotEmpty ? searchQuery : null, // Pre-fill the name field
       ),
     );
   }
@@ -301,7 +342,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         id: const Uuid().v4(),
         userId: currentUser.id,
         clientId: _selectedClient!.id,
-        investorId: _selectedInvestor?.id ?? '',
+        investorId: _selectedWallet?.id ?? '', // Keep for backward compatibility
+        walletId: _selectedWallet?.id,
         productName: _productNameController.text,
         cashPrice: double.parse(_cashPriceController.text),
         installmentPrice: double.parse(_installmentPriceController.text),
@@ -349,21 +391,22 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    print('🎨 Dialog build called - _isLoadingData: $_isLoadingData, clients: ${_clients.length}, investors: ${_investors.length}');
+    print('🎨 Dialog build called - _isLoadingData: $_isLoadingData, clients: ${_clients.length}, wallets: ${_wallets.length}');
 
-    // Create a list with "Without Investor" option
-    final investorOptions = <Investor?>[
-      null, // Represents "Without Investor"
-      ..._investors,
+    // Create a list with "Without Wallet" option
+    final walletOptions = <Wallet?>[
+      null, // Represents "Without Wallet"
+      ..._wallets,
     ];
 
     return ResponsiveLayout(
       mobile: CreateInstallmentDialogMobile(
         formKey: _formKey,
         clients: _clients,
-        investorOptions: investorOptions,
+        walletOptions: walletOptions,
+        walletBalances: _walletBalances,
         selectedClient: _selectedClient,
-        selectedInvestor: _selectedInvestor,
+        selectedWallet: _selectedWallet,
         productNameController: _productNameController,
         cashPriceController: _cashPriceController,
         installmentPriceController: _installmentPriceController,
@@ -386,30 +429,31 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onClientSelected: (client) {
           if (client != null) {
             setState(() => _selectedClient = client);
-            _focusInvestorDropdown();
+            _focusWalletDropdown();
           }
         },
-        onInvestorSelected: (investor) {
-          setState(() => _selectedInvestor = investor);
+        onWalletSelected: (wallet) {
+          setState(() => _selectedWallet = wallet);
           _focusProductName();
         },
         onClientDropdownFocus: _focusClientDropdown,
-        onInvestorDropdownFocus: _focusInvestorDropdown,
+        onWalletDropdownFocus: _focusWalletDropdown,
         onProductNameFocus: _focusProductName,
         onCreateClient: _showCreateClientDialog,
-        onCreateInvestor: _showCreateInvestorDialog,
+        onCreateWallet: _showCreateWalletDialog,
         onSave: _saveInstallment,
         onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
         onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
         clientDropdownKey: _clientDropdownKey,
-        investorDropdownKey: _investorDropdownKey,
+        walletDropdownKey: _walletDropdownKey,
       ),
       desktop: CreateInstallmentDialogDesktop(
         formKey: _formKey,
         clients: _clients,
-        investorOptions: investorOptions,
+        walletOptions: walletOptions,
+        walletBalances: _walletBalances,
         selectedClient: _selectedClient,
-        selectedInvestor: _selectedInvestor,
+        selectedWallet: _selectedWallet,
         productNameController: _productNameController,
         cashPriceController: _cashPriceController,
         installmentPriceController: _installmentPriceController,
@@ -432,23 +476,23 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onClientSelected: (client) {
           if (client != null) {
             setState(() => _selectedClient = client);
-            _focusInvestorDropdown();
+            _focusWalletDropdown();
           }
         },
-        onInvestorSelected: (investor) {
-          setState(() => _selectedInvestor = investor);
+        onWalletSelected: (wallet) {
+          setState(() => _selectedWallet = wallet);
           _focusProductName();
         },
         onClientDropdownFocus: _focusClientDropdown,
-        onInvestorDropdownFocus: _focusInvestorDropdown,
+        onWalletDropdownFocus: _focusWalletDropdown,
         onProductNameFocus: _focusProductName,
         onCreateClient: _showCreateClientDialog,
-        onCreateInvestor: _showCreateInvestorDialog,
+        onCreateWallet: _showCreateWalletDialog,
         onSave: _saveInstallment,
         onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
         onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
         clientDropdownKey: _clientDropdownKey,
-        investorDropdownKey: _investorDropdownKey,
+        walletDropdownKey: _walletDropdownKey,
       ),
     );
   }

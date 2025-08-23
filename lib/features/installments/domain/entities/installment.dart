@@ -3,6 +3,7 @@ class Installment {
   final String userId;
   final String clientId;
   final String investorId;
+  final String? walletId;
   final String productName;
   final double cashPrice;
   final double installmentPrice;
@@ -21,6 +22,7 @@ class Installment {
     required this.userId,
     required this.clientId,
     required this.investorId,
+    this.walletId,
     required this.productName,
     required this.cashPrice,
     required this.installmentPrice,
@@ -40,6 +42,7 @@ class Installment {
     String? userId,
     String? clientId,
     String? investorId,
+    String? walletId,
     String? productName,
     double? cashPrice,
     double? installmentPrice,
@@ -58,6 +61,7 @@ class Installment {
       userId: userId ?? this.userId,
       clientId: clientId ?? this.clientId,
       investorId: investorId ?? this.investorId,
+      walletId: walletId ?? this.walletId,
       productName: productName ?? this.productName,
       cashPrice: cashPrice ?? this.cashPrice,
       installmentPrice: installmentPrice ?? this.installmentPrice,

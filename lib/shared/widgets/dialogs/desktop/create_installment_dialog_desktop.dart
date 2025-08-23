@@ -3,16 +3,19 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../features/clients/domain/entities/client.dart';
-import '../../../../features/investors/domain/entities/investor.dart';
+import '../../../../features/wallets/domain/entities/wallet.dart';
+import '../../../../features/wallets/domain/entities/wallet_balance.dart';
+import '../../../widgets/wallet_selector.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/keyboard_navigable_dropdown.dart';
 
 class CreateInstallmentDialogDesktop extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final List<Client> clients;
-  final List<Investor?> investorOptions;
+  final List<Wallet?> walletOptions;
+  final Map<String, WalletBalance> walletBalances;
   final Client? selectedClient;
-  final Investor? selectedInvestor;
+  final Wallet? selectedWallet;
   final TextEditingController productNameController;
   final TextEditingController cashPriceController;
   final TextEditingController installmentPriceController;
@@ -33,25 +36,26 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
   final bool isSaving;
   final int currentStep;
   final void Function(Client?) onClientSelected;
-  final void Function(Investor?) onInvestorSelected;
+  final void Function(Wallet?) onWalletSelected;
   final VoidCallback onClientDropdownFocus;
-  final VoidCallback onInvestorDropdownFocus;
+  final VoidCallback onWalletDropdownFocus;
   final VoidCallback onProductNameFocus;
   final VoidCallback onCreateClient;
-  final VoidCallback onCreateInvestor;
+  final VoidCallback onCreateWallet;
   final VoidCallback onSave;
   final Function(DateTime) onBuyingDateChanged;
   final Function(DateTime) onInstallmentStartDateChanged;
   final GlobalKey<KeyboardNavigableDropdownState<Client>> clientDropdownKey;
-  final GlobalKey<KeyboardNavigableDropdownState<Investor?>> investorDropdownKey;
+  final GlobalKey<KeyboardNavigableDropdownState<Wallet?>> walletDropdownKey;
   
   const CreateInstallmentDialogDesktop({
     Key? key,
     required this.formKey,
     required this.clients,
-    required this.investorOptions,
+    required this.walletOptions,
+    required this.walletBalances,
     required this.selectedClient,
-    required this.selectedInvestor,
+    required this.selectedWallet,
     required this.productNameController,
     required this.cashPriceController,
     required this.installmentPriceController,
@@ -72,17 +76,17 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
     required this.isSaving,
     required this.currentStep,
     required this.onClientSelected,
-    required this.onInvestorSelected,
+    required this.onWalletSelected,
     required this.onClientDropdownFocus,
-    required this.onInvestorDropdownFocus,
+    required this.onWalletDropdownFocus,
     required this.onProductNameFocus,
     required this.onCreateClient,
-    required this.onCreateInvestor,
+    required this.onCreateWallet,
     required this.onSave,
     required this.onBuyingDateChanged,
     required this.onInstallmentStartDateChanged,
     required this.clientDropdownKey,
-    required this.investorDropdownKey,
+    required this.walletDropdownKey,
   }) : super(key: key);
 
   @override
@@ -138,7 +142,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                         children: [
                           Expanded(child: _buildClientDropdown(context)),
                           const SizedBox(width: 16),
-                          Expanded(child: _buildInvestorDropdown(context)),
+                          Expanded(child: _buildWalletSelector(context)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -358,7 +362,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
       getDisplayText: (client) => client.fullName,
       getSearchText: (client) => client.fullName,
       onChanged: onClientSelected,
-      onNext: onInvestorDropdownFocus,
+      onNext: onWalletDropdownFocus,
       label: l10n.client ?? 'Client',
       hint: '${l10n.search ?? 'Search'}...',
       noItemsMessage: 'No clients found',
@@ -367,73 +371,20 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
     );
   }
 
-  Widget _buildInvestorDropdown(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    
-    if (isLoadingData) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.investorOptional ?? 'Investor (Optional)',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.subtleBackgroundColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Loading investors...',
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return KeyboardNavigableDropdown<Investor?>(
-      key: investorDropdownKey,
-      value: selectedInvestor,
-      items: investorOptions,
-      getDisplayText: (investor) => investor?.fullName ?? (l10n.withoutInvestor ?? 'Without Investor'),
-      getSearchText: (investor) => investor?.fullName ?? (l10n.withoutInvestor ?? 'Without Investor'),
-      onChanged: onInvestorSelected,
-      onNext: () {
-        // After choosing investor, move focus to installment number
+  Widget _buildWalletSelector(BuildContext context) {
+    return WalletSelector(
+      wallets: walletOptions.where((w) => w != null).cast<Wallet>().toList(),
+      walletBalances: walletBalances,
+      selectedWallet: selectedWallet,
+      isLoading: isLoadingData,
+      onWalletSelected: (wallet) {
+        onWalletSelected(wallet);
+        // After choosing wallet, move focus to installment number
         installmentNumberFocus?.requestFocus();
       },
-      label: l10n.investorOptional ?? 'Investor (Optional)',
-      hint: '${l10n.search ?? 'Search'}...',
-      noItemsMessage: 'No investors found',
-      onCreateNew: onCreateInvestor,
-      autoFocus: currentStep == 1 && !isLoadingData,
+      onCreateWallet: onCreateWallet,
+      dropdownKey: walletDropdownKey,
+      nextFocusNode: installmentNumberFocus,
     );
   }
 
