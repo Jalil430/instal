@@ -392,6 +392,7 @@ class AppLocalizations {
   String get walletName => locale.languageCode == 'ru' ? 'Название кошелька' : 'Wallet name';
   String get enterWalletName => locale.languageCode == 'ru' ? 'Введите название кошелька' : 'Enter wallet name';
   String get walletType => locale.languageCode == 'ru' ? 'Тип кошелька' : 'Wallet type';
+  String get personal => locale.languageCode == 'ru' ? 'Личный' : 'Personal';
   String get personalWallet => locale.languageCode == 'ru' ? 'Личный кошелек' : 'Personal wallet';
   String get investorWallet => locale.languageCode == 'ru' ? 'Инвестиционный кошелек' : 'Investor wallet';
   String get walletBalance => locale.languageCode == 'ru' ? 'Баланс кошелька' : 'Wallet balance';
@@ -399,7 +400,25 @@ class AppLocalizations {
   String get investmentReturnDate => locale.languageCode == 'ru' ? 'Дата возврата инвестиции' : 'Investment Return Date';
   String get investorPercentage => locale.languageCode == 'ru' ? 'Процент инвестора' : 'Investor Percentage';
   String get userPercentage => locale.languageCode == 'ru' ? 'Процент пользователя' : 'User Percentage';
+  String get yourPercentage => locale.languageCode == 'ru' ? 'Ваш процент' : 'Your Percentage';
   String get totalBalance => locale.languageCode == 'ru' ? 'Общий баланс' : 'Total balance';
+
+
+  // Wallet descriptions
+  String get personalWalletDescription => locale.languageCode == 'ru' ? 'Для ваших личных средств' : 'For your personal funds';
+  String get investorWalletDescription => locale.languageCode == 'ru' ? 'Для инвестиций с доходом' : 'For investments with income';
+
+  // Wallet form labels
+  String get creating => locale.languageCode == 'ru' ? 'Создание...' : 'Creating...';
+  String get create => locale.languageCode == 'ru' ? 'Создать' : 'Create';
+  String get enterName => locale.languageCode == 'ru' ? 'Введите название' : 'Enter name';
+
+  // Wallet validation messages
+  String get investmentAmountRequired => locale.languageCode == 'ru' ? 'Сумма инвестиции обязательна' : 'Investment amount is required';
+  String get enterValidAmount => locale.languageCode == 'ru' ? 'Введите корректную сумму' : 'Enter a valid amount';
+  String get percentageRequired => locale.languageCode == 'ru' ? 'Процент обязателен' : 'Percentage is required';
+  String get percentageRange => locale.languageCode == 'ru' ? '0-100' : '0-100';
+  String get percentageSum100 => locale.languageCode == 'ru' ? 'Сумма должна быть 100%' : 'Sum must be 100%';
 
   String get expectedReturns => locale.languageCode == 'ru' ? 'Ожидаемые доходы' : 'Expected returns';
   String get profit => locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';

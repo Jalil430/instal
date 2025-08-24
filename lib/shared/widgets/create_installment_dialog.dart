@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/localization/app_localizations.dart';
@@ -14,7 +14,7 @@ import '../../features/clients/data/datasources/client_remote_datasource.dart';
 import '../../features/wallets/domain/entities/wallet.dart';
 import '../../features/wallets/domain/entities/wallet_balance.dart';
 import '../../features/wallets/widgets/wallet_selector.dart';
-import '../../features/wallets/widgets/quick_create_wallet_dialog.dart';
+import '../../features/wallets/widgets/create_edit_wallet_dialog.dart';
 import '../../features/auth/presentation/widgets/auth_service_provider.dart';
 import '../widgets/responsive_layout.dart';
 import 'dialogs/desktop/create_installment_dialog_desktop.dart';
@@ -257,8 +257,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   void _showCreateWalletDialog() {
     showDialog(
       context: context,
-      builder: (context) => QuickCreateWalletDialog(
-        onWalletCreated: (name, type) {
+      builder: (context) => CreateEditWalletDialog(
+        onSuccess: () {
           _loadData(); // Reload wallets after creating new one
           _focusWalletDropdown(); // Return focus to wallet dropdown
         },

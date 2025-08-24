@@ -12,7 +12,6 @@ class WalletListItem extends StatelessWidget {
   final bool isSelectionMode;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const WalletListItem({
@@ -23,7 +22,6 @@ class WalletListItem extends StatelessWidget {
     this.isSelectionMode = false,
     required this.onTap,
     required this.onLongPress,
-    required this.onEdit,
     required this.onDelete,
   });
 
@@ -77,7 +75,7 @@ class WalletListItem extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    _getWalletTypeText(),
+                    _getWalletTypeText(l10n),
                     style: const TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 16,
@@ -155,11 +153,11 @@ class WalletListItem extends StatelessWidget {
     }
   }
 
-  String _getWalletTypeText() {
+  String _getWalletTypeText(AppLocalizations? l10n) {
     if (wallet.isPersonalWallet) {
-      return 'Личный кошелек';
+      return l10n?.personal ?? 'Личный';
     } else {
-      return 'Инвестор';
+      return l10n?.investor ?? 'Инвестор';
     }
   }
 }

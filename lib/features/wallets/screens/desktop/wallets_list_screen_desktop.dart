@@ -267,7 +267,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                             context.go('/wallets/${wallet.id}');
                                           }
                                         },
-                                        onEdit: () => state.showEditWalletDialog(wallet),
+
                                         onDelete: () => state.deleteWallet(wallet),
                                         onSelect: () => state.toggleSelection(wallet.id),
                                       );
@@ -293,7 +293,6 @@ class _WalletListItem extends StatefulWidget {
   final bool isSelected;
   final bool isSelectionMode;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onSelect;
 
@@ -305,7 +304,6 @@ class _WalletListItem extends StatefulWidget {
     required this.isSelected,
     required this.isSelectionMode,
     required this.onTap,
-    required this.onEdit,
     required this.onDelete,
     required this.onSelect,
   });
@@ -340,6 +338,8 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       children: [
         MouseRegion(
@@ -359,7 +359,6 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                 position: details.globalPosition,
                 child: _WalletContextMenu(
                   onSelect: widget.onSelect,
-                  onEdit: widget.onEdit,
                   onDelete: widget.onDelete,
                 ),
                 width: 200,
@@ -422,7 +421,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  widget.wallet.isPersonalWallet ? 'Личный' : 'Инвестор',
+                                  widget.wallet.isPersonalWallet ? l10n?.personal ?? 'Личный' : l10n?.investor ?? 'Инвестор',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 14,
                                         color: widget.wallet.isPersonalWallet ? AppTheme.primaryColor : AppTheme.successColor,
@@ -481,14 +480,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              IconButton(
-                                onPressed: widget.onEdit,
-                                icon: const Icon(Icons.edit, size: 18),
-                                tooltip: 'Редактировать',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                              const SizedBox(width: 16),
+
                               IconButton(
                                 onPressed: widget.onDelete,
                                 icon: const Icon(Icons.delete, size: 18),
@@ -515,12 +507,10 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
 
 class _WalletContextMenu extends StatelessWidget {
   final VoidCallback? onSelect;
-  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const _WalletContextMenu({
     this.onSelect,
-    this.onEdit,
     this.onDelete,
   });
 
@@ -543,13 +533,6 @@ class _WalletContextMenu extends StatelessWidget {
             icon: Icons.check,
             label: l10n?.select ?? 'Выбрать',
             onTap: onSelect,
-            textStyle: textStyle,
-          ),
-          const Divider(height: 1),
-          _ContextMenuTile(
-            icon: Icons.edit,
-            label: l10n?.edit ?? 'Редактировать',
-            onTap: onEdit,
             textStyle: textStyle,
           ),
           const Divider(height: 1),

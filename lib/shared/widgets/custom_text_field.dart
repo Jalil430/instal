@@ -3,9 +3,11 @@ import '../../core/theme/app_theme.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String label;
   final String? hintText;
   final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
   final IconData? prefixIcon;
   final IconData? suffixIcon;
@@ -14,13 +16,16 @@ class CustomTextField extends StatelessWidget {
   final int maxLines;
   final bool enabled;
   final Function(String)? onChanged;
+  final Function(String)? onFieldSubmitted;
 
   const CustomTextField({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.label,
     this.hintText,
     this.keyboardType,
+    this.textInputAction,
     this.validator,
     this.prefixIcon,
     this.suffixIcon,
@@ -29,17 +34,21 @@ class CustomTextField extends StatelessWidget {
     this.maxLines = 1,
     this.enabled = true,
     this.onChanged,
+    this.onFieldSubmitted,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
+      textInputAction: textInputAction,
       maxLines: maxLines,
       obscureText: obscureText,
       enabled: enabled,
       onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
       style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,

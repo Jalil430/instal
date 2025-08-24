@@ -16,7 +16,6 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
   final InvestmentSummary? investmentSummary;
   final DateFormat dateFormat;
   final NumberFormat currencyFormat;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const WalletDetailsScreenDesktop({
@@ -27,7 +26,6 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     this.investmentSummary,
     required this.dateFormat,
     required this.currencyFormat,
-    required this.onEdit,
     required this.onDelete,
   });
 
@@ -68,7 +66,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _getWalletTypeText(),
+                        _getWalletTypeText(l10n),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
@@ -82,11 +80,6 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
 
 
                 // Action buttons
-                CustomIconButton(
-                  icon: Icons.edit_outlined,
-                  onPressed: onEdit,
-                ),
-                const SizedBox(width: 12),
                 CustomIconButton(
                   icon: Icons.delete_outline,
                   onPressed: onDelete,
@@ -644,11 +637,11 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     }
   }
 
-  String _getWalletTypeText() {
+  String _getWalletTypeText(AppLocalizations? l10n) {
     if (wallet.isPersonalWallet) {
-      return 'Личный кошелек';
+      return l10n?.personalWallet ?? 'Личный кошелек';
     } else {
-      return 'Инвестиционный кошелек';
+      return l10n?.investorWallet ?? 'Инвестиционный кошелек';
     }
   }
 }

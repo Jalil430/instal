@@ -149,7 +149,7 @@ class WalletsListScreenMobile extends StatelessWidget {
                               onLongPress: () {
                                 state.toggleSelection(wallet.id);
                               },
-                              onEdit: () => state.showEditWalletDialog(wallet),
+
                               onDelete: () => state.deleteWallet(wallet),
                             );
                           },

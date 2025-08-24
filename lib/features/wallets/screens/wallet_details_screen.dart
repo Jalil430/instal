@@ -143,17 +143,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
     }
   }
 
-  Future<void> _showEditDialog() async {
-    if (_wallet == null) return;
 
-    await showDialog(
-      context: context,
-      builder: (context) => CreateEditWalletDialog(
-        wallet: _wallet,
-        onSuccess: _loadData,
-      ),
-    );
-  }
 
   Future<void> _handleDelete() async {
     final l10n = AppLocalizations.of(context);
@@ -235,7 +225,6 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         dateFormat: dateFormat,
         currencyFormat: currencyFormat,
         onDelete: _handleDelete,
-        onEdit: _showEditDialog,
       ),
       desktop: WalletDetailsScreenDesktop(
         wallet: _wallet!,
@@ -245,7 +234,6 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         dateFormat: dateFormat,
         currencyFormat: currencyFormat,
         onDelete: _handleDelete,
-        onEdit: _showEditDialog,
       ),
     );
   }

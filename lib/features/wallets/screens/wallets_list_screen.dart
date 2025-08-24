@@ -344,15 +344,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     );
   }
 
-  void showEditWalletDialog(Wallet wallet) {
-    showDialog(
-      context: context,
-      builder: (context) => CreateEditWalletDialog(
-        wallet: wallet,
-        onSuccess: loadData,
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
