@@ -60,8 +60,8 @@ class WalletsListScreenDesktop extends StatelessWidget {
                             const SizedBox(width: 12),
                             IconButton(
                               icon: const Icon(Icons.refresh, size: 20),
-                              onPressed: state.forceRefresh,
-                              tooltip: 'Обновить',
+                              onPressed: () => state.forceRefresh(),
+                              tooltip: l10n?.refresh ?? 'Обновить',
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -166,8 +166,8 @@ class WalletsListScreenDesktop extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                Expanded(
-                                  flex: 3,
+                                                                Expanded(
+                                  flex: 1,
                                   child: Text(
                                     l10n?.walletName?.toUpperCase() ?? 'НАЗВАНИЕ КОШЕЛЬКА',
                                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -179,7 +179,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                   ),
                                 ),
                                 Expanded(
-                                  flex: 2,
+                                  flex: 1,
                                   child: Text(
                                     l10n?.walletType?.toUpperCase() ?? 'ТИП',
                                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -191,7 +191,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                   ),
                                 ),
                                 Expanded(
-                                  flex: 2,
+                                  flex: 1,
                                   child: Text(
                                     l10n?.walletBalance?.toUpperCase() ?? 'БАЛАНС',
                                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -202,25 +202,22 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                         ),
                                   ),
                                 ),
-                                if (state.filteredAndSortedWallets.any((w) => w.isInvestorWallet)) ...[
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      'ИНВЕСТИЦИОННЫЕ ДЕТАЛИ',
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                                Container(
-                                  width: 120,
-                                  alignment: Alignment.center,
+                                Expanded(
+                                  flex: 1,
                                   child: Text(
-                                    (l10n?.edit ?? 'Редактировать').toUpperCase(),
+                                    l10n?.givenForInstallment?.toUpperCase() ?? 'ВЫДАНО В РАССРОЧКУ',
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Text(
+                                    l10n?.dueToGet?.toUpperCase() ?? 'СКОРО К ПОЛУЧЕНИЮ',
                                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                                           color: AppTheme.textSecondary,
                                           fontWeight: FontWeight.w400,
@@ -257,7 +254,6 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                         wallet: wallet,
                                         balance: balance,
                                         currencyFormat: currencyFormat,
-                                        showInvestorDetails: state.filteredAndSortedWallets.any((w) => w.isInvestorWallet),
                                         isSelected: state.selectedWalletIds.contains(wallet.id),
                                         isSelectionMode: state.isSelectionMode,
                                         onTap: () {
@@ -267,7 +263,6 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                             context.go('/wallets/${wallet.id}');
                                           }
                                         },
-
                                         onDelete: () => state.deleteWallet(wallet),
                                         onSelect: () => state.toggleSelection(wallet.id),
                                       );
@@ -289,7 +284,6 @@ class _WalletListItem extends StatefulWidget {
   final Wallet wallet;
   final WalletBalance? balance;
   final NumberFormat currencyFormat;
-  final bool showInvestorDetails;
   final bool isSelected;
   final bool isSelectionMode;
   final VoidCallback onTap;
@@ -300,7 +294,6 @@ class _WalletListItem extends StatefulWidget {
     required this.wallet,
     required this.balance,
     required this.currencyFormat,
-    required this.showInvestorDetails,
     required this.isSelected,
     required this.isSelectionMode,
     required this.onTap,
@@ -397,7 +390,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                       children: [
                         // Wallet Name
                         Expanded(
-                          flex: 3,
+                          flex: 1,
                           child: Text(
                             widget.wallet.name,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -409,7 +402,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                         ),
                         // Wallet Type
                         Expanded(
-                          flex: 2,
+                          flex: 1,
                           child: Padding(
                             padding: const EdgeInsets.only(right: 16),
                             child: Row(
@@ -434,7 +427,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                         ),
                         // Balance
                         Expanded(
-                          flex: 2,
+                          flex: 1,
                           child: Text(
                             widget.balance != null ? widget.currencyFormat.format(widget.balance!.balance) : '0.00 ₽',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -444,52 +437,30 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                                 ),
                           ),
                         ),
-                        // Investor Details (if any investor wallets exist)
-                        if (widget.showInvestorDetails) ...[
-                          Expanded(
-                            flex: 3,
-                            child: widget.wallet.isInvestorWallet
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Доход: ${widget.wallet.investorPercentage}% / ${widget.wallet.userPercentage}%',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              fontSize: 12,
-                                              color: AppTheme.textSecondary,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Инвестиция: ${widget.currencyFormat.format(widget.wallet.investmentAmount!)}',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              fontSize: 12,
-                                              color: AppTheme.textSecondary,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                      ),
-                                    ],
-                                  )
-                                : const SizedBox(),
+                        // Given for Installment
+                        Expanded(
+                          flex: 1,
+                          child: Text(
+                            // TODO: Calculate actual given for installment amount from wallet data
+                            widget.currencyFormat.format(0), // Placeholder - will be calculated from actual data
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontSize: 14,
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
-                        ],
-                        // Actions
-                        Container(
-                          width: 120,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-
-                              IconButton(
-                                onPressed: widget.onDelete,
-                                icon: const Icon(Icons.delete, size: 18),
-                                tooltip: 'Удалить',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                color: AppTheme.errorColor,
-                              ),
-                            ],
+                        ),
+                        // Due to Get
+                        Expanded(
+                          flex: 1,
+                          child: Text(
+                            // TODO: Calculate actual due to get amount from wallet data
+                            widget.currencyFormat.format(0), // Placeholder - will be calculated from actual data
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontSize: 14,
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ),
                       ],

@@ -224,14 +224,16 @@ LIMIT 1;
             # Prepare queries outside transaction
             update_payment_query = """
             DECLARE $payment_id AS Utf8;
-            DECLARE $is_paid AS Bool;
+            DECLARE $paid_amount AS Decimal(22,9);
+            DECLARE $set_paid AS Bool;
             DECLARE $paid_date AS Optional<Date>;
             DECLARE $updated_at AS Timestamp;
-            
+
             UPDATE installment_payments
             SET 
-                is_paid = $is_paid,
-                paid_date = $paid_date,
+                paid_amount = COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) + $paid_amount,
+                is_paid = CASE WHEN $set_paid THEN true ELSE is_paid END,
+                paid_date = CASE WHEN $set_paid THEN $paid_date ELSE paid_date END,
                 updated_at = $updated_at
             WHERE id = $payment_id;
             """
@@ -241,18 +243,79 @@ LIMIT 1;
             # Start transaction for atomic updates
             tx = session.transaction(ydb.SerializableReadWrite())
             
-            # Update the payment first
-            logger.info(f"Updating payment {payment_id} to is_paid={is_paid}, paid_date={paid_date}")
+            # Load all payments and apply paid_amount / mark paid logic
+            get_payments_q = session.prepare(
+                """
+                DECLARE $installment_id AS Utf8;
+                SELECT id, payment_number, expected_amount, COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) AS paid_amount,
+                       is_paid, due_date
+                FROM installment_payments
+                WHERE installment_id = $installment_id
+                ORDER BY payment_number ASC;
+                """
+            )
+            payments_rs = tx.execute(get_payments_q, {'$installment_id': installment_id})
+            payments = list(payments_rs[0].rows)
+
+            current_idx = next((i for i, r in enumerate(payments) if r.id == payment_id), None)
+            if current_idx is None:
+                raise Exception("Payment not found after verification")
+
+            curr = payments[current_idx]
+            curr_paid = Decimal(str(curr.paid_amount))
+            curr_expected = Decimal(str(curr.expected_amount))
+            new_paid = curr_paid + paid_amount
+            set_paid_flag = is_paid or (new_paid >= curr_expected and curr_expected > 0)
+
             tx.execute(
                 prepared_update_payment,
                 {
                     '$payment_id': payment_id,
-                    '$is_paid': is_paid,
+                    '$paid_amount': paid_amount,
+                    '$set_paid': set_paid_flag,
                     '$paid_date': paid_date,
                     '$updated_at': datetime.utcnow()
                 }
             )
-            logger.info(f"Payment {payment_id} updated successfully")
+            logger.info(f"Payment {payment_id} paid_amount+={paid_amount} set_paid={set_paid_flag}")
+
+            # Refresh payments snapshot for recalculation
+            payments_rs = tx.execute(get_payments_q, {'$installment_id': installment_id})
+            payments = list(payments_rs[0].rows)
+
+            TWO = Decimal('0.01')
+            outstanding_total = Decimal(str(installment_price))
+            for r in payments:
+                outstanding_total -= Decimal(str(r.paid_amount or 0))
+            if outstanding_total < Decimal('0'):
+                outstanding_total = Decimal('0')
+
+            unpaid = [r for r in payments if not r.is_paid]
+
+            if outstanding_total == Decimal('0'):
+                mark_paid_q = session.prepare(
+                    """
+                    DECLARE $installment_id AS Utf8;
+                    UPDATE installment_payments SET is_paid = true, expected_amount = CAST(0 AS Decimal(22,9))
+                    WHERE installment_id = $installment_id AND is_paid = false;
+                    """
+                )
+                tx.execute(mark_paid_q, {'$installment_id': installment_id})
+            else:
+                if len(unpaid) > 0:
+                    base = (outstanding_total / Decimal(len(unpaid))).quantize(TWO, rounding=ROUND_HALF_UP)
+                    amounts = [base for _ in unpaid]
+                    diff = outstanding_total - sum(amounts)
+                    if diff != Decimal('0'):
+                        amounts[-1] = (amounts[-1] + diff).quantize(TWO, rounding=ROUND_HALF_UP)
+                    upd_exp_q = session.prepare(
+                        """
+                        DECLARE $id AS Utf8; DECLARE $exp AS Decimal(22,9);
+                        UPDATE installment_payments SET expected_amount = $exp WHERE id = $id;
+                        """
+                    )
+                    for r, amt in zip(unpaid, amounts):
+                        tx.execute(upd_exp_q, {'$id': r.id, '$exp': amt})
             
             # Now get installment data (within the same transaction to see updated payment)
             installment_query = """
@@ -274,7 +337,7 @@ SELECT installment_price FROM installments WHERE id = $installment_id;
             payment_stats_query = """
 DECLARE $installment_id AS Utf8;
 SELECT 
-    COALESCE(SUM(CASE WHEN is_paid = true THEN expected_amount ELSE CAST(0 AS Decimal(22,9)) END), CAST(0 AS Decimal(22,9))) as paid_amount,
+    COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) as paid_amount,
     CAST(COUNT(*) AS Int32) as total_payments,
     CAST(SUM(CASE WHEN is_paid = true THEN CAST(1 AS Int32) ELSE CAST(0 AS Int32) END) AS Int32) as paid_payments,
     CAST(SUM(CASE WHEN is_paid = false AND due_date < CurrentUtcDate() THEN CAST(1 AS Int32) ELSE CAST(0 AS Int32) END) AS Int32) as overdue_count,

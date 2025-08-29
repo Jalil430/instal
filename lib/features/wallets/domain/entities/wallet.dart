@@ -14,6 +14,9 @@ class Wallet {
   final double? userPercentage;
   final DateTime? investmentReturnDate;
 
+  // Personal wallet fields
+  final double? startingAmount;
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -30,6 +33,7 @@ class Wallet {
     this.investorPercentage,
     this.userPercentage,
     this.investmentReturnDate,
+    this.startingAmount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -47,6 +51,7 @@ class Wallet {
     double? investorPercentage,
     double? userPercentage,
     DateTime? investmentReturnDate,
+    double? startingAmount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -63,6 +68,7 @@ class Wallet {
       investorPercentage: investorPercentage ?? this.investorPercentage,
       userPercentage: userPercentage ?? this.userPercentage,
       investmentReturnDate: investmentReturnDate ?? this.investmentReturnDate,
+      startingAmount: startingAmount ?? this.startingAmount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -83,7 +89,7 @@ class Wallet {
 
   @override
   String toString() {
-    return 'Wallet(id: $id, name: $name, type: $type, status: $status)';
+    return 'Wallet(id: $id, name: $name, type: $type, status: $status, startingAmount: $startingAmount)';
   }
 }
 

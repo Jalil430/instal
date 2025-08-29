@@ -11,6 +11,7 @@ abstract class WalletRepository {
   Future<Wallet> updateWallet(Wallet wallet);
   Future<void> deleteWallet(String walletId);
   Future<void> archiveWallet(String walletId);
+  void clearCache();
 
   // Wallet balance operations
   Future<WalletBalance?> getWalletBalance(String walletId);

@@ -10,10 +10,12 @@ class CreateEditWalletDialogMobile extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameController;
   final TextEditingController investmentAmountController;
+  final TextEditingController startingAmountController;
   final TextEditingController investorPercentageController;
   final TextEditingController userPercentageController;
   final FocusNode nameFocus;
   final FocusNode investmentAmountFocus;
+  final FocusNode startingAmountFocus;
   final FocusNode investorPercentageFocus;
   final FocusNode userPercentageFocus;
   final WalletType selectedType;
@@ -29,10 +31,12 @@ class CreateEditWalletDialogMobile extends StatelessWidget {
     required this.formKey,
     required this.nameController,
     required this.investmentAmountController,
+    required this.startingAmountController,
     required this.investorPercentageController,
     required this.userPercentageController,
     required this.nameFocus,
     required this.investmentAmountFocus,
+    required this.startingAmountFocus,
     required this.investorPercentageFocus,
     required this.userPercentageFocus,
     required this.selectedType,
@@ -124,12 +128,12 @@ class CreateEditWalletDialogMobile extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Basic fields
+                              // Basic fields
                 _buildTextField(
                   context: context,
                   controller: nameController,
                   focusNode: nameFocus,
-                  nextFocusNode: selectedType == WalletType.investor ? investmentAmountFocus : null,
+                  nextFocusNode: selectedType == WalletType.investor ? investmentAmountFocus : startingAmountFocus,
                   label: l10n?.walletName ?? 'Название кошелька',
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
@@ -140,6 +144,29 @@ class CreateEditWalletDialogMobile extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
+              // Personal wallet fields
+              if (selectedType == WalletType.personal) ...[
+                _buildTextField(
+                  context: context,
+                  controller: startingAmountController,
+                  focusNode: startingAmountFocus,
+                  nextFocusNode: null,
+                  label: l10n?.startingAmount ?? 'Начальная сумма',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return l10n?.startingAmountRequired ?? 'Начальная сумма обязательна';
+                    }
+                    final amount = double.tryParse(value!);
+                    if (amount == null || amount < 0) {
+                      return l10n?.enterValidAmount ?? 'Введите корректную сумму';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Investor-specific fields
               if (selectedType == WalletType.investor) ...[
                 const SizedBox(height: 16),
@@ -148,7 +175,7 @@ class CreateEditWalletDialogMobile extends StatelessWidget {
                   controller: investmentAmountController,
                   focusNode: investmentAmountFocus,
                   nextFocusNode: investorPercentageFocus,
-                  label: l10n?.investmentAmount ?? 'Сумма инвестиции (₽)',
+                  label: l10n?.investmentAmount ?? 'Сумма инвестиции',
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value?.isEmpty ?? true) {

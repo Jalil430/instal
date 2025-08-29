@@ -40,6 +40,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   final _formKey = GlobalKey<FormState>();
   late InstallmentRepository _installmentRepository;
   late ClientRepository _clientRepository;
+  late WalletRepository _walletRepository;
 
   // Form controllers
   final _productNameController = TextEditingController();
@@ -108,8 +109,9 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     _clientRepository = ClientRepositoryImpl(
       ClientRemoteDataSourceImpl(),
     );
-    // TODO: Initialize wallet repository
-    // _walletRepository = WalletRepositoryImpl(WalletRemoteDataSourceImpl());
+    _walletRepository = WalletRepositoryImpl(
+      WalletRemoteDataSourceImpl(),
+    );
   }
 
   void _initializeDates() {
@@ -141,52 +143,11 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       print('✅ getAllClients returned: ${clients.length} clients');
       
       print('📞 Calling getAllWallets...');
-      // TODO: Load wallets from repository
-      // final wallets = await _walletRepository.getAllWallets(currentUser.id);
-      // final balances = await _walletRepository.getAllWalletBalances(currentUser.id);
+      final wallets = await _walletRepository.getAllWallets(currentUser.id);
+      final balances = await _walletRepository.getAllWalletBalances(currentUser.id);
+      final balancesMap = {for (final b in balances) b.walletId: b};
 
-      // Mock data for now
-      final mockWallets = [
-        Wallet(
-          id: '1',
-          userId: currentUser.id,
-          name: 'My Wallet',
-          type: WalletType.personal,
-          createdAt: DateTime.now().subtract(const Duration(days: 30)),
-          updatedAt: DateTime.now(),
-        ),
-        Wallet(
-          id: '2',
-          userId: currentUser.id,
-          name: 'Investor A',
-          type: WalletType.investor,
-          investmentAmount: 1000000,
-          investorPercentage: 70,
-          userPercentage: 30,
-          investmentReturnDate: DateTime.now().add(const Duration(days: 365)),
-          createdAt: DateTime.now().subtract(const Duration(days: 15)),
-          updatedAt: DateTime.now(),
-        ),
-      ];
-
-      final mockBalances = {
-        '1': WalletBalance(
-          walletId: '1',
-          userId: currentUser.id,
-          balanceMinorUnits: 50000000, // 500K RUB
-          version: 1,
-          updatedAt: DateTime.now(),
-        ),
-        '2': WalletBalance(
-          walletId: '2',
-          userId: currentUser.id,
-          balanceMinorUnits: 345000000, // 3.45M RUB
-          version: 1,
-          updatedAt: DateTime.now(),
-        ),
-      };
-
-      print('✅ getAllWallets returned: ${mockWallets.length} wallets');
+      print('✅ getAllWallets returned: ${wallets.length} wallets');
 
       // Debug logging before setState
       print('🚀 About to update state...');
@@ -194,15 +155,15 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       for (int i = 0; i < clients.length && i < 3; i++) {
         print('   - ${clients[i].fullName}');
       }
-      print('💰 Wallets to set: ${mockWallets.length}');
-      for (int i = 0; i < mockWallets.length && i < 3; i++) {
-        print('   - ${mockWallets[i].name}');
+      print('💰 Wallets to set: ${wallets.length}');
+      for (int i = 0; i < wallets.length && i < 3; i++) {
+        print('   - ${wallets[i].name}');
       }
 
       setState(() {
         _clients = clients;
-        _wallets = mockWallets;
-        _walletBalances = mockBalances;
+        _wallets = wallets;
+        _walletBalances = balancesMap;
         _isLoadingData = false;
       });
       

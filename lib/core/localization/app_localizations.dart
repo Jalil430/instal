@@ -27,6 +27,8 @@ class AppLocalizations {
   String get close => locale.languageCode == 'ru' ? 'Закрыть' : 'Close';
   String get details => locale.languageCode == 'ru' ? 'Детали' : 'Details';
   String get status => locale.languageCode == 'ru' ? 'Статус' : 'Status';
+  String get statusActive => locale.languageCode == 'ru' ? 'Активный' : 'Active';
+  String get statusArchived => locale.languageCode == 'ru' ? 'Архивный' : 'Archived';
   String get amount => locale.languageCode == 'ru' ? 'Сумма' : 'Amount';
   String get date => locale.languageCode == 'ru' ? 'Дата' : 'Date';
   String get information =>
@@ -320,7 +322,7 @@ class AppLocalizations {
   String investorDeleteError(Object e) =>
       locale.languageCode == 'ru' ? 'Ошибка удаления инвестора: $e' : 'Error deleting investor: $e';
   String get investorNotFound =>
-      locale.languageCode == 'ru' ? 'Инвестор не найден' : 'Investor not found';
+      locale.languageCode == 'ru' ? 'Кошелек не найден' : 'Wallet not found';
   String get investorUpdatedSuccess => locale.languageCode == 'ru'
       ? 'Инвестор успешно обновлен'
       : 'Investor updated successfully';
@@ -395,6 +397,7 @@ class AppLocalizations {
   String get personal => locale.languageCode == 'ru' ? 'Личный' : 'Personal';
   String get personalWallet => locale.languageCode == 'ru' ? 'Личный кошелек' : 'Personal wallet';
   String get investorWallet => locale.languageCode == 'ru' ? 'Инвестиционный кошелек' : 'Investor wallet';
+  String get investorWalletType => locale.languageCode == 'ru' ? 'Инвестор' : 'Investor';
   String get walletBalance => locale.languageCode == 'ru' ? 'Баланс кошелька' : 'Wallet balance';
   String get walletInfo => locale.languageCode == 'ru' ? 'Информация о кошельке' : 'Wallet Info';
   String get investmentReturnDate => locale.languageCode == 'ru' ? 'Дата возврата инвестиции' : 'Investment Return Date';
@@ -793,8 +796,8 @@ class AppLocalizations {
   String get selectedItems => locale.languageCode == 'ru' ? 'Выбрано' : 'Selected';
   String get cancelSelection => locale.languageCode == 'ru' ? 'Отменить выбор' : 'Cancel Selection';
   // ===== Subscription System =====
-  String get subscriptionWelcomeTitle => locale.languageCode == 'ru' 
-      ? 'Добро пожаловать в Instal!' 
+  String get subscriptionWelcomeTitle => locale.languageCode == 'ru'
+      ? 'Добро пожаловать в Instal!'
       : 'Welcome to Instal!';
   String get subscriptionWelcomeMessage => locale.languageCode == 'ru'
       ? 'Для использования приложения необходима активная подписка. Свяжитесь с нами для получения кода активации.'
@@ -878,6 +881,68 @@ class AppLocalizations {
   String get subscriptionErrorCheckFailed => locale.languageCode == 'ru'
       ? 'Не удалось проверить статус подписки. Повторите попытку.'
       : 'Failed to check subscription status. Please try again.';
+
+  // ===== Wallet System =====
+  // Wallet dialog actions
+  String get addMoney => locale.languageCode == 'ru' ? 'Добавить деньги' : 'Add Money';
+  String get withdrawMoney => locale.languageCode == 'ru' ? 'Снять деньги' : 'Withdraw Money';
+  String get withdraw => locale.languageCode == 'ru' ? 'Снять' : 'Withdraw';
+  String get enterAmount => locale.languageCode == 'ru' ? 'Введите сумму' : 'Enter amount';
+  String get available => locale.languageCode == 'ru' ? 'Доступно' : 'Available';
+
+  // Wallet list columns and headers
+  String get investmentDetailsHeader => locale.languageCode == 'ru' ? 'ИНВЕСТИЦИОННЫЕ ДЕТАЛИ' : 'INVESTMENT DETAILS';
+  String get givenForInstallment => locale.languageCode == 'ru' ? 'ВЫДАНО В РАССРОЧКУ' : 'GIVEN FOR INSTALLMENT';
+  String get dueToGet => locale.languageCode == 'ru' ? 'СКОРО К ПОЛУЧЕНИЮ' : 'DUE TO GET';
+  String get income => locale.languageCode == 'ru' ? 'Доход:' : 'Income:';
+  String get investment => locale.languageCode == 'ru' ? 'Инвестиция:' : 'Investment:';
+
+  // Wallet financial metrics
+  String get initialInvestment => locale.languageCode == 'ru' ? 'Первоначальная инвестиция' : 'Initial Investment';
+  String get currentBalance => locale.languageCode == 'ru' ? 'Текущий баланс' : 'Current Balance';
+  String get givenForInstallmentDetail => locale.languageCode == 'ru' ? 'Выдано в рассрочку' : 'Given for Installment';
+  String get dueToGetDetail => locale.languageCode == 'ru' ? 'Скоро к получению' : 'Due to Get';
+  String get totalValue => locale.languageCode == 'ru' ? 'Общая стоимость' : 'Total Value';
+
+  // Wallet transaction history
+  String get transactionHistory => locale.languageCode == 'ru' ? 'История операций' : 'Transaction History';
+  String get noOperations => locale.languageCode == 'ru' ? 'Нет операций' : 'No operations';
+
+  // Wallet empty states
+  String get noWallets => locale.languageCode == 'ru' ? 'Нет кошельков' : 'No wallets';
+  String get createFirstWalletDescription => locale.languageCode == 'ru' ? 'Создайте свой первый кошелек для начала работы' : 'Create your first wallet to get started';
+
+  // Wallet selection
+  String get loadingWallets => locale.languageCode == 'ru' ? 'Загрузка кошельков...' : 'Loading wallets...';
+  String get noWalletsFound => locale.languageCode == 'ru' ? 'Кошельки не найдены' : 'No wallets found';
+
+  // Wallet form messages
+  String get walletUpdatedSuccess => locale.languageCode == 'ru' ? 'Кошелек успешно обновлен' : 'Wallet updated successfully';
+  String get walletCreatedSuccess => locale.languageCode == 'ru' ? 'Кошелек успешно создан' : 'Wallet created successfully';
+
+  // Starting amount for personal wallets
+  String get startingAmount => locale.languageCode == 'ru' ? 'Начальная сумма' : 'Starting Amount';
+  String get startingAmountRequired => locale.languageCode == 'ru' ? 'Начальная сумма обязательна' : 'Starting amount is required';
+
+  // Transaction types
+  String get transactionTypeInstallment => locale.languageCode == 'ru' ? 'Рассрочка' : 'Installment';
+  String get transactionTypeAdjustment => locale.languageCode == 'ru' ? 'Корректировка' : 'Adjustment';
+  String get transactionTypeTransfer => locale.languageCode == 'ru' ? 'Перевод' : 'Transfer';
+  String get transactionTypeReversal => locale.languageCode == 'ru' ? 'Отмена' : 'Reversal';
+  String get transactionTypeInitialInvestment => locale.languageCode == 'ru' ? 'Первоначальная инвестиция' : 'Initial Investment';
+  String get transactionTypeInitialBalance => locale.languageCode == 'ru' ? 'Начальный баланс' : 'Initial Balance';
+  String get transactionTypeProfitDistribution => locale.languageCode == 'ru' ? 'Распределение прибыли' : 'Profit Distribution';
+
+  // Mobile wallet specific
+  String get selectedItemsMobile => locale.languageCode == 'ru' ? 'выбрано' : 'selected';
+
+  // Archive wallet
+  String get archiveWalletTitle =>
+      locale.languageCode == 'ru' ? 'Архивировать кошелек' : 'Archive Wallet';
+  String archiveWalletConfirmation(String name) => locale.languageCode == 'ru'
+      ? 'Вы уверены, что хотите архивировать кошелек "$name"?'
+      : 'Are you sure you want to archive wallet "$name"?';
+  String get archive => locale.languageCode == 'ru' ? 'Архивировать' : 'Archive';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

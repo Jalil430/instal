@@ -1,165 +1,62 @@
-# Wallet System Implementation Plan
+# Wallet System Overhaul — Tasks
 
-- [x] 1. Create core wallet domain entities and models
-  - Implement Wallet entity with personal and investor types
-  - Create LedgerTransaction entity with immutable transaction records
-  - Implement WalletBalance entity for materialized balance caching
-  - Create InstallmentAllocation entity for tracking funding sources
-  - Add money handling utilities for minor units (kopecks) conversion
-  - Write unit tests for all domain entities and validation rules
-  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2_
+## Phase 0 — Prep & Migrations
+- [ ] Add columns to `wallet_balances`:
+  - [ ] `total_allocated_minor_units Int64`
+  - [ ] `due_to_get_minor_units Int64`
+  - [ ] `expected_revenue_minor_units Int64`
+- [ ] Add `paid_amount Decimal(22,9)` to `installment_payments`
+- [ ] Ship read APIs that default missing aggregates to 0 to avoid breakage
 
-- [x] 2. Implement wallet repository layer with YDB integration
-  - Create wallet repository interface and implementation
-  - Implement ledger transaction repository with time-ordered queries
-  - Create wallet balance repository with optimistic concurrency control
-  - Implement installment allocation repository
-  - Add database connection utilities and error handling
-  - Write integration tests for all repository operations
-  - _Requirements: 2.1, 2.2, 2.3, 5.4, 5.5_
+## Phase 1 — Client Wiring (Create Installment)
+- [x] Replace mock wallets with real repository in `CreateInstallmentDialog`
+- [ ] Enforce `require_nonnegative` when selecting/confirming wallet
 
-- [x] 3. Build transaction service for ledger operations
-  - Implement credit/debit transaction creation with validation
-  - Create balance calculation service using ledger aggregation
-  - Implement transaction grouping for multi-wallet operations
-  - Add concurrency control with optimistic locking
-  - Create transaction reversal functionality
-  - Write unit tests for transaction service operations
-  - _Requirements: 2.1, 2.2, 2.3, 5.1, 5.2, 5.5_
+## Phase 2 — API/Backend Write Paths
+- Allocation (`functions/allocate-installment/index.py`)
+  - [ ] After successful allocation, update wallet_balances fields atomically:
+    - [ ] `balance_minor_units` (existing)
+    - [ ] `total_allocated_minor_units += amount`
+    - [ ] `due_to_get_minor_units += SUM(expected_amount of unpaid payments for that installment)`
+    - [ ] `expected_revenue_minor_units = recalc()`
+  - [ ] If installment.wallet_id is null, set it to wallet_id
 
-- [x] 4. Develop wallet management service
-  - Implement wallet creation for personal and investor types
-  - Create wallet balance management with non-negative constraints
-  - Implement wallet archival functionality
-  - Add wallet validation rules and business logic
-  - Create wallet search and filtering capabilities
-  - Write unit tests for wallet management operations
-  - _Requirements: 1.1, 1.2, 1.3, 1.4, 5.4_
+- Void allocation (`functions/void-installment-allocation/index.py`)
+  - [ ] Reverse allocation effects on aggregates and `balance_minor_units`
 
-- [x] 5. Implement investment calculation service
-  - Create investment summary calculation logic
-  - Implement profit distribution calculations based on percentages
-  - Add return date tracking and due amount calculations
-  - Create Islamic finance compliance validation
-  - Implement investment performance analytics
-  - Write unit tests for investment calculations
-  - _Requirements: 4.1, 4.2, 4.3, 4.4, 8.1, 8.3_
+- Payment update (`functions/update-installment-payment/index.py`)
+  - [ ] Accept `paid_amount` in body
+  - [ ] Update `installment_payments.paid_amount += paid_amount`
+  - [ ] If reaches/exceeds expected_amount ⇒ mark paid, cascade overpay to next unpaid payments
+  - [ ] Else partial ⇒ recalc remaining unpaid payments so their sum equals outstanding amount
+  - [ ] Update `installments.paid_amount`, `remaining_amount`, `next_payment_*`, etc (adjust logic to use `paid_amount` and mutated `expected_amount`)
+  - [ ] If installment.wallet_id present:
+    - [ ] Credit wallet ledger & `balance_minor_units += paid_amount_minor_units`
+    - [ ] Decrease `due_to_get_minor_units -= paid_amount_minor_units`
+    - [ ] Recalc `expected_revenue_minor_units`
 
-- [x] 6. Build installment allocation service
-  - Implement installment funding from specific wallets
-  - Create allocation validation with balance checking
-  - Implement allocation voiding with transaction reversals
-  - Add multi-wallet allocation support (future enhancement)
-  - Create allocation history tracking
-  - Write unit tests for allocation operations
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+- Recompute job (`functions/recompute-wallet-aggregates/index.py`)
+  - [ ] CLI/HTTP function to rebuild all wallets’ aggregates from source tables
 
-- [x] 7. Create wallet API endpoints
-  - Implement POST /wallets for wallet creation
-  - Create GET /wallets for wallet listing with balances
-  - Implement POST /wallets/{id}/top-up for adding funds
-  - Create POST /wallets/{id}/adjust for manual adjustments
-  - Implement POST /wallets/transfer for inter-wallet transfers
-  - Add GET /wallets/{id}/ledger for transaction history
-  - Write API integration tests for all endpoints
-  - _Requirements: 1.1, 1.4, 5.1, 5.2, 5.3, 6.1_
+## Phase 3 — Read APIs
+- get-wallet/list-wallets
+  - [ ] Include the three aggregate fields in `balance` block directly from `wallet_balances`
+  - [ ] Remove on‑the‑fly sums where feasible (keep a fallback only until backfill)
 
-- [x] 8. Implement installment allocation API endpoints
-  - Create POST /installments/{id}/allocate for funding installments
-  - Implement POST /installments/{id}/allocations/{allocId}/void for reversals
-  - Add GET /installments/{id}/allocations for allocation history
-  - Create validation for sufficient wallet balance
-  - Implement allocation status tracking
-  - Write API integration tests for allocation endpoints
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+## Phase 4 — Client Adoption
+- Wallet Details/List screens
+  - [ ] Consume `total_allocated_minor_units`, `due_to_get_minor_units`, `expected_revenue_minor_units` from API
+  - [ ] Remove ad‑hoc derivations
 
-- [ ] 9. Build wallet management UI screens
-  - Create wallets list screen with balance display and quick actions
-  - Implement wallet creation form with type selection
-  - Create wallet detail screen with transaction history
-  - Implement top-up and adjustment forms
-  - Add wallet transfer functionality
-  - Create wallet archival interface
-  - Write widget tests for wallet UI components
-  - _Requirements: 1.1, 1.4, 5.1, 5.2, 5.3, 6.1_
+## Phase 5 — Data Backfill
+- [ ] Run recompute for all wallets
+- [ ] Verify aggregates match expectations on sample datasets
 
-- [ ] 10. Implement investor wallet UI features
-  - Create investor wallet creation form with investment terms
-  - Implement investment summary display with profit calculations
-  - Add return date tracking and due amount visualization
-  - Create profit distribution interface
-  - Implement investment performance analytics view
-  - Write widget tests for investor-specific UI components
-  - _Requirements: 1.3, 1.5, 4.1, 4.2, 4.3, 4.4, 8.2_
+## Phase 6 — QA & Polishing
+- [ ] Partial payment edge cases (zero expected next, roundings)
+- [ ] Concurrency under load (simulating two updates)
+- [ ] Error handling and retry of wallet aggregate updates
 
-- [ ] 11. Update installment creation UI for wallet selection
-  - Modify installment creation form to include wallet selection
-  - Add wallet balance display and validation
-  - Implement funding source tracking in installment details
-  - Create allocation history view in installment screens
-  - Add wallet-based filtering for installment lists
-  - Write widget tests for updated installment UI
-  - _Requirements: 3.1, 3.2, 3.4_
-
-- [ ] 12. Implement wallet transaction history and reporting
-  - Create wallet transaction history with filtering and pagination
-  - Implement wallet growth tracking (initial investment → final amount)
-  - Add CSV export functionality for transaction data
-  - Create wallet performance dashboard showing growth metrics
-  - Implement investment return calculations based on profit distribution percentages
-  - Track money flow: installment payments → wallet → profit distribution
-  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
-
-- [ ] 13. Build data migration service
-  - Create migration script to convert existing investors to wallets
-  - Implement "My Wallet" creation for all users
-  - Create investor wallet migration with investment terms
-  - Implement installment allocation migration
-  - Add data validation and rollback capabilities
-  - Write integration tests for migration process
-  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
-
-- [ ] 14. Implement wallet state management and providers
-  - Create wallet provider for state management
-  - Implement transaction provider for ledger operations
-  - Add investment calculation provider
-  - Create allocation provider for installment funding
-  - Implement real-time balance updates
-  - Write unit tests for all providers
-  - _Requirements: 1.4, 2.4, 5.5_
-
-- [ ] 15. Add comprehensive error handling and validation
-  - Implement wallet operation error handling
-  - Create user-friendly error messages for insufficient funds
-  - Add validation for investment percentage constraints
-  - Implement concurrency error handling with retry logic
-  - Create error logging and monitoring
-  - Write unit tests for error scenarios
-  - _Requirements: 5.5, 8.4_
-
-- [ ] 16. Integrate wallet system with existing features
-  - Update navigation to include wallets screen
-  - Modify analytics dashboard to include wallet metrics
-  - Update user settings to include wallet preferences
-  - Integrate wallet notifications for low balances
-  - Update localization files with wallet-related strings
-  - Write end-to-end tests for integrated functionality
-  - _Requirements: 1.4, 6.5_
-
-- [ ] 17. Implement performance optimizations
-  - Add database indexing for transaction queries
-  - Implement balance caching strategies
-  - Create batch processing for large transaction volumes
-  - Add pagination for transaction history
-  - Implement lazy loading for wallet lists
-  - Write performance tests and benchmarks
-  - _Requirements: 2.4, 6.1_
-
-- [ ] 18. Add Islamic finance compliance features
-  - Implement profit-sharing calculation validation
-  - Create partnership agreement display
-  - Add Sharia-compliant reporting features
-  - Implement flexible profit distribution based on performance
-  - Create compliance audit trail
-  - Write unit tests for compliance features
-  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+## Optional Enhancements
+- [ ] Support multi‑wallet funding per installment with proportionate payment apportioning
+- [ ] Add audit table for payment adjustments (before/after expected_amount) for history

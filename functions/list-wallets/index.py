@@ -83,11 +83,26 @@ class JWTAuth:
 
 def convert_timestamp(ts):
     """Convert timestamp to ISO format"""
+    if ts is None:
+        return None
     if isinstance(ts, datetime):
         return ts.isoformat()
     elif isinstance(ts, int):
-        return datetime.fromtimestamp(ts / 1000000).isoformat()  # YDB timestamp is in microseconds
-    return ts
+        # Handle different timestamp formats
+        if ts > 1e12:  # Microseconds (YDB format)
+            return datetime.fromtimestamp(ts / 1000000).isoformat()
+        elif ts > 1e9:  # Seconds (Unix timestamp)
+            return datetime.fromtimestamp(ts).isoformat()
+        else:
+            # Very small timestamp, might be invalid - return a default date
+            return datetime.now().isoformat()
+    elif isinstance(ts, str):
+        # Try to parse as ISO string
+        try:
+            return datetime.fromisoformat(ts.replace('Z', '+00:00')).isoformat()
+        except:
+            return None
+    return str(ts)
 
 def convert_date(d):
     """Convert date to ISO format"""
@@ -95,7 +110,25 @@ def convert_date(d):
         return None
     if hasattr(d, 'isoformat'):
         return d.isoformat()
-    return str(d)
+    elif isinstance(d, str):
+        # Try to parse as ISO string
+        try:
+            return datetime.fromisoformat(d.replace('Z', '+00:00')).date().isoformat()
+        except:
+            return None
+    elif isinstance(d, int):
+        # Handle numeric timestamps that might be invalid
+        try:
+            if d > 1e10:  # Likely microseconds timestamp
+                return datetime.fromtimestamp(d / 1000000).date().isoformat()
+            elif d > 1e9:  # Likely seconds timestamp
+                return datetime.fromtimestamp(d).date().isoformat()
+            else:
+                # Invalid small number, return None
+                return None
+        except:
+            return None
+    return None
 
 def handler(event, context):
     """
@@ -135,100 +168,162 @@ def handler(event, context):
             pool = ydb.SessionPool(driver)
             
             def list_wallets_with_balances(session):
-                # Build query based on filters
-                base_query = """
-                SELECT 
-                    w.id,
-                    w.user_id,
-                    w.name,
-                    w.type,
-                    w.currency,
-                    w.status,
-                    w.require_nonnegative,
-                    w.allow_partial_allocation,
-                    w.investment_amount_minor_units,
-                    w.investor_percentage,
-                    w.user_percentage,
-                    w.investment_return_date,
-                    w.created_at,
-                    w.updated_at,
-                    b.balance_minor_units,
-                    b.version,
-                    b.updated_at as balance_updated_at
-                FROM wallets AS w
-                LEFT JOIN wallet_balances AS b ON w.id = b.wallet_id AND w.user_id = b.user_id
-                WHERE w.user_id = $user_id
+                # Build query based on filters and join balances
+                base_query = f"""
+                SELECT
+                    w.id AS id,
+                    w.user_id AS user_id,
+                    w.name AS name,
+                    w.type AS type,
+                    w.currency AS currency,
+                    w.status AS status,
+                    w.require_nonnegative AS require_nonnegative,
+                    w.allow_partial_allocation AS allow_partial_allocation,
+                    w.investment_amount_minor_units AS investment_amount_minor_units,
+                    w.starting_amount_minor_units AS starting_amount_minor_units,
+                    w.investor_percentage AS investor_percentage,
+                    w.user_percentage AS user_percentage,
+                    w.investment_return_date AS investment_return_date,
+                    w.created_at AS created_at,
+                    w.updated_at AS updated_at,
+                    wb.balance_minor_units AS balance_minor_units,
+                    wb.version AS balance_version,
+                    wb.updated_at AS balance_updated_at,
+                    wb.total_allocated_minor_units AS total_allocated_minor_units,
+                    wb.due_to_get_minor_units AS due_to_get_minor_units,
+                    wb.expected_revenue_minor_units AS expected_revenue_minor_units
+                FROM wallets w
+                LEFT JOIN wallet_balances wb ON wb.wallet_id = w.id AND wb.user_id = w.user_id
+                WHERE w.user_id = '{user_id}'
                 """
-                
-                params = {'$user_id': user_id}
-                
+
                 if wallet_type:
-                    base_query += " AND w.type = $type"
-                    params['$type'] = wallet_type
-                
-                base_query += " ORDER BY w.created_at DESC;"
-                
-                prepared_query = session.prepare(base_query)
+                    base_query += f" AND type = '{wallet_type}'"
+
+                base_query += " ORDER BY created_at DESC;"
+
                 result_sets = session.transaction().execute(
-                    prepared_query,
-                    params,
+                    base_query,
                     commit_tx=True
                 )
-                
+
                 wallets = []
                 for row in result_sets[0].rows:
+                    def _val(key):
+                        try:
+                            return row[key]
+                        except Exception:
+                            return None
+                    def _str(v):
+                        if v is None:
+                            return None
+                        try:
+                            return v.decode('utf-8') if isinstance(v, (bytes, bytearray)) else str(v)
+                        except Exception:
+                            return str(v)
+                    # DEBUG: Check if type field exists
+                    raw_type = _str(_val('type'))
+                    name_dbg = _str(_val('name')) or ''
+                    logger.info(f"LIST-WALLETS API - Raw type field: {raw_type} for wallet {name_dbg}")
+
+                    # Check if this wallet has investment fields to determine if it should be investor
+                    has_investment_fields = (
+                        _val('investment_amount_minor_units') is not None or
+                        _val('investor_percentage') is not None or
+                        _val('user_percentage') is not None or
+                        _val('investment_return_date') is not None
+                    )
+
+                    # Check if this wallet has personal wallet starting amount
+                    has_personal_fields = (_val('starting_amount_minor_units') is not None)
+
+                    logger.info(f"LIST-WALLETS API - Has investment fields: {has_investment_fields} for wallet {name_dbg}")
+                    logger.info(f"LIST-WALLETS API - Has personal fields: {has_personal_fields} for wallet {name_dbg}")
+
+                    # Determine wallet type (prefer DB value when valid)
+                    db_type = (str(raw_type).strip().lower() if raw_type else '')
+                    if db_type in ['investor', 'personal']:
+                        final_type = db_type
+                        logger.info(f"LIST-WALLETS API - Using DB type: {final_type} for {name_dbg}")
+                    elif has_investment_fields:
+                        final_type = 'investor'
+                        logger.info(f"LIST-WALLETS API - Inferred investor by fields for {name_dbg}")
+                    elif has_personal_fields:
+                        final_type = 'personal'
+                        logger.info(f"LIST-WALLETS API - Inferred personal by fields for {name_dbg}")
+                    else:
+                        final_type = 'personal'
+                        logger.info(f"LIST-WALLETS API - Defaulted to personal for {name_dbg}")
+
+                    balance_minor_units = int(_val('balance_minor_units') or 0)
+                    balance_version = _val('balance_version') or 1
+                    balance_updated_at = convert_timestamp(_val('balance_updated_at')) if _val('balance_updated_at') is not None else None
+
                     wallet_data = {
-                        'id': row['id'],
-                        'user_id': row['user_id'],
-                        'name': row['name'],
-                        'type': row['type'],
-                        'currency': row['currency'],
-                        'status': row['status'],
-                        'require_nonnegative': row['require_nonnegative'],
-                        'allow_partial_allocation': row['allow_partial_allocation'],
-                        'investment_amount_minor_units': row['investment_amount_minor_units'],
-                        'investor_percentage': float(row['investor_percentage']) if row['investor_percentage'] is not None else None,
-                        'user_percentage': float(row['user_percentage']) if row['user_percentage'] is not None else None,
-                        'investment_return_date': convert_date(row['investment_return_date']),
-                        'created_at': convert_timestamp(row['created_at']),
-                        'updated_at': convert_timestamp(row['updated_at']),
+                        'id': _str(_val('id')) or '',
+                        'user_id': _str(_val('user_id')) or '',
+                        'name': _str(_val('name')) or '',
+                        'type': final_type,
+                        'currency': _str(_val('currency')) or 'RUB',
+                        'status': _str(_val('status')) or 'active',
+                        'require_nonnegative': _val('require_nonnegative'),
+                        'allow_partial_allocation': _val('allow_partial_allocation'),
+                        'investment_amount_minor_units': _val('investment_amount_minor_units'),
+                        'starting_amount_minor_units': _val('starting_amount_minor_units'),
+                        'investor_percentage': float(_val('investor_percentage')) if _val('investor_percentage') is not None else None,
+                        'user_percentage': float(_val('user_percentage')) if _val('user_percentage') is not None else None,
+                        'investment_return_date': convert_date(_val('investment_return_date')),
+                        'created_at': convert_timestamp(_val('created_at')),
+                        'updated_at': convert_timestamp(_val('updated_at')),
                         'balance': {
-                            'balance_minor_units': row['balance_minor_units'] or 0,
-                            'balance_rubles': (row['balance_minor_units'] or 0) / 100.0,
-                            'version': row['version'] or 1,
-                            'updated_at': convert_timestamp(row['balance_updated_at']) if row['balance_updated_at'] else None,
+                            'balance_minor_units': int(balance_minor_units or 0),
+                            'balance_rubles': float((balance_minor_units or 0) / 100.0),
+                            'version': int(balance_version or 1),
+                            'updated_at': balance_updated_at,
+                            'total_allocated_minor_units': int(_val('total_allocated_minor_units') or 0),
+                            'due_to_get_minor_units': int(_val('due_to_get_minor_units') or 0),
+                            'expected_revenue_minor_units': int(_val('expected_revenue_minor_units') or 0),
                         }
                     }
+
+                    # Normalize unexpected types
+                    if wallet_data['type'] not in ['personal', 'investor']:
+                        wallet_data['type'] = 'investor' if has_investment_fields else 'personal'
+                    logger.info(f"LIST-WALLETS API - Final type for {name_dbg}: {wallet_data['type']}")
                     
-                    # Add computed fields for investor wallets
+                    # Add computed fields for investor wallets (normalized to app model)
                     if wallet_data['type'] == 'investor' and wallet_data['investment_amount_minor_units']:
-                        investment_amount = wallet_data['investment_amount_minor_units']
-                        current_balance = wallet_data['balance']['balance_minor_units']
-                        
-                        # For now, we'll calculate based on current balance only
-                        # In a full implementation, this would include allocated funds
-                        total_wallet_value = current_balance
-                        total_profit = total_wallet_value - investment_amount
-                        
-                        if total_profit > 0 and wallet_data['investor_percentage']:
-                            investor_profit_share = int(total_profit * wallet_data['investor_percentage'] / 100)
-                            expected_returns = investment_amount + investor_profit_share
-                        else:
-                            investor_profit_share = 0
-                            expected_returns = investment_amount
-                        
+                        investment_amount = int(wallet_data['investment_amount_minor_units'] or 0)
+                        current_balance = int(wallet_data['balance']['balance_minor_units'] or 0)
+
+                        # Sum of active allocations from this wallet
+                        try:
+                            allocations_sum_query = f"""
+                            SELECT COALESCE(SUM(amount_minor_units), 0) AS total_allocated
+                            FROM installment_allocations
+                            WHERE wallet_id = '{_val('id')}' AND user_id = '{user_id}' AND status = 'active';
+                            """
+                            alloc_rs = session.transaction().execute(allocations_sum_query, commit_tx=True)
+                            total_allocated = int(alloc_rs[0].rows[0]['total_allocated']) if alloc_rs and alloc_rs[0].rows else 0
+                        except Exception as e:
+                            logger.error(f"LIST-WALLETS API - Allocation sum failed for wallet {_val('id')}: {e}")
+                            total_allocated = 0
+
+                        profit_pct = float(wallet_data['investor_percentage'] or 0.0)
+                        total_wallet_value = current_balance + total_allocated
+                        total_profit = max(0, total_wallet_value - investment_amount)
+                        investor_profit_share = int(total_profit * (profit_pct / 100.0)) if profit_pct > 0 else 0
+                        expected_returns = investment_amount + investor_profit_share
+
                         wallet_data['investment_summary'] = {
+                            'wallet_id': str(_val('id')),
                             'total_invested_minor_units': investment_amount,
-                            'total_invested_rubles': investment_amount / 100.0,
-                            'current_wallet_value_minor_units': total_wallet_value,
-                            'current_wallet_value_rubles': total_wallet_value / 100.0,
-                            'total_profit_minor_units': max(0, total_profit),
-                            'total_profit_rubles': max(0, total_profit) / 100.0,
-                            'investor_profit_share_minor_units': investor_profit_share,
-                            'investor_profit_share_rubles': investor_profit_share / 100.0,
+                            'current_balance_minor_units': current_balance,
+                            'total_allocated_minor_units': total_allocated,
                             'expected_returns_minor_units': expected_returns,
-                            'expected_returns_rubles': expected_returns / 100.0,
-                            'roi_percentage': (investor_profit_share / investment_amount * 100) if investment_amount > 0 else 0.0,
+                            'due_amount_minor_units': total_allocated,
+                            'return_due_date': convert_date(_val('investment_return_date')),
+                            'profit_percentage': profit_pct,
                         }
                     
                     wallets.append(wallet_data)

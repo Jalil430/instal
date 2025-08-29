@@ -10,6 +10,7 @@ abstract class WalletRemoteDataSource {
   Future<WalletModel> updateWallet(WalletModel wallet);
   Future<void> deleteWallet(String walletId);
   Future<void> archiveWallet(String walletId);
+  void clearCache();
 
   Future<WalletBalanceModel?> getWalletBalance(String walletId);
   Future<List<WalletBalanceModel>> getAllWalletBalances(String userId);

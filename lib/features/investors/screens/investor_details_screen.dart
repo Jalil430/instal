@@ -76,7 +76,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
       if (investor == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)?.investorNotFound ?? 'Инвестор не найден')),
+            SnackBar(content: Text(AppLocalizations.of(context)?.investorNotFound ?? 'Кошелек не найден')),
           );
           context.go('/investors');
         }
@@ -174,7 +174,7 @@ class _InvestorDetailsScreenState extends State<InvestorDetailsScreen> {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
-              Text(AppLocalizations.of(context)?.investorNotFound ?? 'Инвестор не найден'),
+              Text(AppLocalizations.of(context)?.investorNotFound ?? 'Кошелек не найден'),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.go('/investors'),

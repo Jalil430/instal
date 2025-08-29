@@ -1,3 +1,5 @@
+import '../../../../core/localization/app_localizations.dart';
+
 class LedgerTransaction {
   final String id;
   final String walletId;
@@ -78,6 +80,25 @@ class LedgerTransaction {
   String toString() {
     return 'LedgerTransaction(id: $id, walletId: $walletId, direction: $direction, amount: ${amount.toStringAsFixed(2)} $currency, type: $referenceType)';
   }
+
+  String getDisplayName(AppLocalizations l10n) {
+    switch (referenceType) {
+      case TransactionType.installment:
+        return l10n.transactionTypeInstallment;
+      case TransactionType.adjustment:
+        return l10n.transactionTypeAdjustment;
+      case TransactionType.transfer:
+        return l10n.transactionTypeTransfer;
+      case TransactionType.reversal:
+        return l10n.transactionTypeReversal;
+      case TransactionType.initial_investment:
+        return l10n.transactionTypeInitialInvestment;
+      case TransactionType.initial_balance:
+        return l10n.transactionTypeInitialBalance;
+      case TransactionType.profit_distribution:
+        return l10n.transactionTypeProfitDistribution;
+    }
+  }
 }
 
 enum TransactionDirection {
@@ -91,5 +112,6 @@ enum TransactionType {
   transfer,
   reversal,
   initial_investment,
+  initial_balance,
   profit_distribution,
 }

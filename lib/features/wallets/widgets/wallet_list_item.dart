@@ -86,50 +86,76 @@ class WalletListItem extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Balance - with wallet icon
+              // Balance - without icon
               if (balance != null) ...[
-                Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_wallet,
-                      size: 20,
-                      color: AppTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      currencyFormat.format(balance!.balance),
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                Text(
+                  currencyFormat.format(balance!.balance),
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
 
-              // Investment details for investor wallets
-              if (wallet.isInvestorWallet) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 20,
-                      color: AppTheme.successColor,
+              const SizedBox(height: 12),
+
+              // Given for installment
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n?.givenForInstallment ?? 'Given for Installment',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          // TODO: Calculate actual given for installment amount
+                          currencyFormat.format(0), // Placeholder - will be calculated from actual data
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Доход: ${wallet.investorPercentage}% / ${wallet.userPercentage}%',
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n?.dueToGet ?? 'Due to Get',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          // TODO: Calculate actual due to get amount
+                          currencyFormat.format(0), // Placeholder - will be calculated from actual data
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ],
           ),
         ),

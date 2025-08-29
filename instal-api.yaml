@@ -108,7 +108,7 @@ paths:
       operationId: create-wallet
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: WALLET_CREATE_FUNCTION_ID
+        function_id: d4es4rs5t9appi6q5p0d
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
     get:
@@ -124,7 +124,62 @@ paths:
           description: Filter wallets by type
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: WALLET_LIST_FUNCTION_ID
+        function_id: d4euk9q4c0debf439iej
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get wallet details with balance and investment summary
+      operationId: get-wallet
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e91fateph6r1msg096
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    put:
+      summary: Update wallet details
+      operationId: update-wallet
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4epa3d73vqo5flpjfk4
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+    delete:
+      summary: Archive wallet (soft delete)
+      operationId: archive-wallet
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eh92ksggk6b1hj8rlt
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/{id}/balance:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get wallet balance details
+      operationId: get-wallet-balance
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e14cmjjbkaah5f00mm
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/balances:
+    get:
+      summary: List wallet balances for current user
+      operationId: list-wallet-balances
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ekhnheg9jntl1go6gg
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /wallets/{id}/top-up:
@@ -139,7 +194,22 @@ paths:
       operationId: wallet-top-up
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: WALLET_TOPUP_FUNCTION_ID
+        function_id: d4eacss6qhh0o9etq3kc
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/{id}/archive:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Archive wallet
+      operationId: archive-wallet-post
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eh92ksggk6b1hj8rlt
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /wallets/{id}/ledger:
@@ -185,23 +255,7 @@ paths:
           description: End date for filtering (ISO format)
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: d4ehnha81dhv1t61vb5h
-        service_account_id: ajevsnimu8g62t29vlad
-        payload_format_version: '1.0'
-    put:
-      summary: Update an investor
-      operationId: update-investor
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        function_id: d4ekneiud8r8kmlv5gfp
-        service_account_id: ajevsnimu8g62t29vlad
-        payload_format_version: '1.0'
-    delete:
-      summary: Delete an investor
-      operationId: delete-investor
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        function_id: d4e3j9imqjagflipespv
+        function_id: d4e9uc7dn0rk9lcbu6a0
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /installments:

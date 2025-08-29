@@ -5,6 +5,9 @@ import '../../../core/localization/app_localizations.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_balance.dart';
 import '../domain/repositories/wallet_repository.dart';
+import '../data/repositories/wallet_repository_impl.dart';
+import '../data/datasources/wallet_remote_datasource_impl.dart';
+import '../../../core/api/api_client.dart';
 import '../../../shared/widgets/custom_search_bar.dart';
 import '../../../shared/widgets/custom_dropdown.dart';
 import '../../../shared/widgets/custom_button.dart';
@@ -86,91 +89,94 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
   }
 
   void initializeRepository() {
-    // TODO: Initialize with actual repository implementation
-    // walletRepository = WalletRepositoryImpl(WalletRemoteDataSourceImpl());
+    walletRepository = WalletRepositoryImpl(
+      WalletRemoteDataSourceImpl(),
+    );
   }
 
   Future<void> loadData() async {
-    if (!mounted) return;
-    setState(() => isLoading = true);
+    if (!mounted) {
+      print('❌ loadData: Widget not mounted');
+      return;
+    }
+
+    print('📥 loadData: Starting data load');
+
+    // Ensure loading state is set
+    setStateWrapper(() => isLoading = true);
 
     try {
       // Get current user from authentication
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
 
-      if (!mounted) return;
+      if (!mounted) {
+        print('❌ loadData: Widget unmounted after getting user');
+        return;
+      }
 
       if (currentUser == null) {
+        print('⚠️ loadData: No current user found');
+        setStateWrapper(() => isLoading = false);
         if (mounted) {
           context.go('/auth/login');
         }
         return;
       }
 
-      // TODO: Load wallets and balances from repository
-      // final loadedWallets = await walletRepository.getAllWallets(currentUser.id);
-      // final balances = await walletRepository.getAllWalletBalances(currentUser.id);
+      print('👤 loadData: Loading wallets for user: ${currentUser.id}');
 
-      // Mock data for now
-      final mockWallets = [
-        Wallet(
-          id: '1',
-          userId: currentUser.id,
-          name: 'My Wallet',
-          type: WalletType.personal,
-          createdAt: DateTime.now().subtract(const Duration(days: 30)),
-          updatedAt: DateTime.now(),
-        ),
-        Wallet(
-          id: '2',
-          userId: currentUser.id,
-          name: 'Investor A',
-          type: WalletType.investor,
-          investmentAmount: 1000000,
-          investorPercentage: 70,
-          userPercentage: 30,
-          investmentReturnDate: DateTime.now().add(const Duration(days: 365)),
-          createdAt: DateTime.now().subtract(const Duration(days: 15)),
-          updatedAt: DateTime.now(),
-        ),
-      ];
+      // Load wallets from repository (includes balances in the response)
+      final loadedWallets = await walletRepository.getAllWallets(currentUser.id);
 
-      final mockBalances = {
-        '1': WalletBalance(
-          walletId: '1',
-          userId: currentUser.id,
-          balanceMinorUnits: 50000000, // 500,000 RUB
-          version: 1,
-          updatedAt: DateTime.now(),
-        ),
-        '2': WalletBalance(
-          walletId: '2',
-          userId: currentUser.id,
-          balanceMinorUnits: 345000000, // 3,450,000 RUB
-          version: 1,
-          updatedAt: DateTime.now(),
-        ),
-      };
+      if (!mounted) {
+        print('❌ loadData: Widget unmounted after loading wallets');
+        return;
+      }
 
-      if (!mounted) return;
+      print('📦 loadData: Loaded ${loadedWallets.length} wallets');
 
-      setState(() {
-        wallets = mockWallets;
-        walletBalances = mockBalances;
+      // Load wallet balances
+      print('💰 loadData: Loading wallet balances for user: ${currentUser.id}');
+      Map<String, WalletBalance> balanceMap = {};
+      try {
+        final loadedBalances = await walletRepository.getAllWalletBalances(currentUser.id);
+
+        if (!mounted) {
+          print('❌ loadData: Widget unmounted after loading balances');
+          return;
+        }
+
+        print('💰 loadData: Loaded ${loadedBalances.length} wallet balances');
+        // Create a map of wallet ID to balance for easy lookup
+        balanceMap = {for (var balance in loadedBalances) balance.walletId: balance};
+      } catch (balanceError) {
+        print('⚠️ loadData: Error loading wallet balances: $balanceError');
+        // Continue with empty balance map - wallets will still be displayed without balances
+        balanceMap = {};
+      }
+
+      setStateWrapper(() {
+        wallets = loadedWallets;
+        walletBalances = balanceMap;
         isLoading = false;
       });
 
       if (mounted) {
         fadeController.forward();
+        print('✅ loadData: Data loaded successfully, loading=false');
       }
     } catch (e) {
+      print('❌ loadData: Error loading data: $e');
       if (!mounted) return;
 
-      setState(() => isLoading = false);
+      setStateWrapper(() => isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e')),
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }
@@ -291,7 +297,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       // Delete all selected wallets
       for (final id in selectedWalletIds) {
         cache.remove(CacheService.walletKey(id));
-        // TODO: await walletRepository.deleteWallet(id);
+        await walletRepository.deleteWallet(id);
       }
 
       // Clear the current snackbar
@@ -339,7 +345,26 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     showDialog(
       context: context,
       builder: (context) => CreateEditWalletDialog(
-        onSuccess: loadData,
+        onSuccess: () async {
+          print('🎉 Wallet created, refreshing data...');
+
+          // Clear cache to ensure fresh data after wallet creation
+          final cache = CacheService();
+          final authService = AuthServiceProvider.of(context);
+          final currentUser = await authService.getCurrentUser();
+
+          if (currentUser != null) {
+            cache.remove(CacheService.walletsKey(currentUser.id));
+            print('🗑️ Global cache cleared after wallet creation');
+          }
+
+          // Clear repository cache as well
+          walletRepository.clearCache();
+          print('🗑️ Repository cache cleared after wallet creation');
+
+          // Reload data immediately after wallet creation
+          await loadData();
+        },
       ),
     );
   }
@@ -372,11 +397,40 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     }
   }
 
-  void forceRefresh() {
-    setStateWrapper(() {
-      isLoading = true;
-    });
-    loadData();
+  Future<void> forceRefresh() async {
+    print('🔄 Force refresh started');
+
+    // Clear cache to force fresh data
+    final cache = CacheService();
+    final authService = AuthServiceProvider.of(context);
+    final currentUser = await authService.getCurrentUser();
+
+    if (currentUser != null) {
+      cache.remove(CacheService.walletsKey(currentUser.id));
+      cache.remove(CacheService.walletBalancesKey(currentUser.id));
+      print('🗑️ Global and balance cache cleared for user: ${currentUser.id}');
+    } else {
+      print('⚠️ No current user found');
+    }
+
+    // Clear repository cache as well
+    walletRepository.clearCache();
+    print('🗑️ Repository cache cleared');
+
+    // Reset loading state and reload data
+    if (mounted) {
+      setStateWrapper(() {
+        isLoading = true;
+        // Clear current data to show loading state
+        wallets.clear();
+        walletBalances.clear();
+      });
+      print('📊 Loading state set, data cleared');
+    }
+
+    print('🔄 Calling loadData...');
+    await loadData();
+    print('✅ Force refresh completed');
   }
 
   String formatCurrency(double amount) {
@@ -403,7 +457,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
         }
         cache.remove(CacheService.walletKey(wallet.id));
 
-        // TODO: await walletRepository.deleteWallet(wallet.id);
+        await walletRepository.deleteWallet(wallet.id);
         await loadData();
 
         if (mounted) {

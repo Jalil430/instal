@@ -87,6 +87,21 @@ class CacheService {
   static String investorKey(String investorId) => 'investor_$investorId';
   static String walletKey(String walletId) => 'wallet_$walletId';
   static String installmentKey(String installmentId) => 'installment_$installmentId';
+
+  // Wallet-specific cache keys
+  static String walletBalancesKey(String userId) => 'wallet_balances_$userId';
+  static String walletBalanceKey(String walletId) => 'wallet_balance_$walletId';
+  static String walletTransactionsKey(String walletId) => 'wallet_transactions_$walletId';
+  static String walletLedgerKey(String walletId) => 'wallet_ledger_$walletId';
+  static String investmentSummaryKey(String walletId) => 'investment_summary_$walletId';
+
+  // Clear all wallet-related caches
+  void clearWalletCaches() {
+    final walletKeys = getKeysWithPrefix('wallet');
+    for (final key in walletKeys) {
+      _cache.remove(key);
+    }
+  }
 }
 
 class CacheEntry {

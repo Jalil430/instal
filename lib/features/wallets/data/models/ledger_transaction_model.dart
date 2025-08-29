@@ -33,19 +33,21 @@ class LedgerTransactionModel {
 
   factory LedgerTransactionModel.fromJson(Map<String, dynamic> json) {
     return LedgerTransactionModel(
-      id: json['id'] as String,
-      walletId: json['wallet_id'] as String,
-      userId: json['user_id'] as String,
-      direction: json['direction'] as String,
-      amountMinorUnits: (json['amount_minor_units'] as num).toInt(),
-      currency: json['currency'] as String,
-      referenceType: json['reference_type'] as String,
+      id: json['id'] as String? ?? '',
+      walletId: json['wallet_id'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
+      direction: json['direction'] as String? ?? 'credit',
+      amountMinorUnits: json['amount_minor_units'] != null ? (json['amount_minor_units'] as num).toInt() : 0,
+      currency: json['currency'] as String? ?? 'RUB',
+      referenceType: json['reference_type'] as String? ?? 'adjustment',
       referenceId: json['reference_id'] as String?,
       groupId: json['group_id'] as String?,
       correlationId: json['correlation_id'] as String?,
-      description: json['description'] as String,
-      createdBy: json['created_by'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      description: json['description'] as String? ?? '',
+      createdBy: json['created_by'] as String? ?? '',
+      createdAt: json['created_at'] != null && json['created_at'] is String
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 
@@ -126,6 +128,8 @@ class LedgerTransactionModel {
         return TransactionType.reversal;
       case 'initial_investment':
         return TransactionType.initial_investment;
+      case 'initial_balance':
+        return TransactionType.initial_balance;
       case 'profit_distribution':
         return TransactionType.profit_distribution;
       default:

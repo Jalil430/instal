@@ -8,6 +8,11 @@ import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_balance.dart';
 import '../domain/entities/ledger_transaction.dart';
 import '../domain/entities/investment_summary.dart';
+import '../domain/repositories/wallet_repository.dart';
+import '../data/repositories/wallet_repository_impl.dart';
+import '../data/datasources/wallet_remote_datasource_impl.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/cache_service.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../widgets/create_edit_wallet_dialog.dart';
@@ -34,11 +39,18 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   InvestmentSummary? _investmentSummary;
   bool _isLoading = true;
   bool _isInitialized = false;
+  late WalletRepository _walletRepository;
 
   @override
   void initState() {
     super.initState();
-    // TODO: Initialize repositories
+    _initializeRepository();
+  }
+
+  void _initializeRepository() {
+    _walletRepository = WalletRepositoryImpl(
+      WalletRemoteDataSourceImpl(),
+    );
   }
 
   @override
@@ -51,93 +63,82 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   }
 
   Future<void> _loadData() async {
-    if (!mounted) return;
+    if (!mounted) {
+      print('❌ _loadData: Widget not mounted');
+      return;
+    }
+
+    print('📥 _loadData: Starting data load for wallet ${widget.walletId}');
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Load wallet data from repository
-      // For now, create mock data
-      await Future.delayed(const Duration(seconds: 1));
+      // Load wallet data from repository
+      print('👛 _loadData: Loading wallet data...');
+      final wallet = await _walletRepository.getWalletById(widget.walletId);
+      print('📊 _loadData: Wallet loaded: ${wallet?.name ?? 'null'}');
 
-      final mockWallet = Wallet(
-        id: widget.walletId,
-        userId: 'user123', // Mock user ID
-        name: widget.walletId == '1' ? 'My Wallet' : 'Investor A',
-        type: widget.walletId == '1' ? WalletType.personal : WalletType.investor,
-        investmentAmount: widget.walletId == '1' ? null : 1000000,
-        investorPercentage: widget.walletId == '1' ? null : 70,
-        userPercentage: widget.walletId == '1' ? null : 30,
-        investmentReturnDate: widget.walletId == '1' ? null : DateTime.now().add(const Duration(days: 365)),
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-        updatedAt: DateTime.now(),
-      );
-
-      final mockBalance = WalletBalance(
-        walletId: widget.walletId,
-        userId: 'user123',
-        balanceMinorUnits: widget.walletId == '1' ? 50000000 : 345000000, // 500K or 3.45M RUB
-        version: 1,
-        updatedAt: DateTime.now(),
-      );
-
-      final mockTransactions = [
-        LedgerTransaction(
-          id: 'tx1',
-          walletId: widget.walletId,
-          userId: 'user123',
-          direction: TransactionDirection.credit,
-          amountMinorUnits: 10000000, // 100K RUB
-          currency: 'RUB',
-          referenceType: TransactionType.adjustment,
-          description: 'Initial funding',
-          createdBy: 'user123',
-          createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        ),
-        LedgerTransaction(
-          id: 'tx2',
-          walletId: widget.walletId,
-          userId: 'user123',
-          direction: TransactionDirection.debit,
-          amountMinorUnits: 5000000, // 50K RUB
-          currency: 'RUB',
-          referenceType: TransactionType.installment,
-          referenceId: 'installment1',
-          description: 'Installment funding',
-          createdBy: 'user123',
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        ),
-      ];
-
-      InvestmentSummary? mockInvestmentSummary;
-      if (mockWallet.isInvestorWallet) {
-        mockInvestmentSummary = InvestmentSummary(
-          walletId: widget.walletId,
-          totalInvestedMinorUnits: 100000000, // 1M RUB
-          currentBalanceMinorUnits: 345000000, // 3.45M RUB
-          totalAllocatedMinorUnits: 50000000, // 500K RUB
-          expectedReturnsMinorUnits: 245000000, // 2.45M RUB expected profit
-          dueAmountMinorUnits: 134500000, // 1.345M RUB due
-          returnDueDate: DateTime.now().add(const Duration(days: 365)),
-          profitPercentage: 70,
-        );
+      // Debug: Print detailed wallet information
+      if (wallet != null) {
+        print('🔍 Wallet details:');
+        print('   - Name: ${wallet.name}');
+        print('   - ID: ${wallet.id}');
+        print('   - Type: ${wallet.type}');
+        print('   - Type enum: ${wallet.type}');
+        print('   - isPersonalWallet: ${wallet.isPersonalWallet}');
+        print('   - isInvestorWallet: ${wallet.isInvestorWallet}');
+        print('   - Investment Amount: ${wallet.investmentAmount}');
+        print('   - Investor Percentage: ${wallet.investorPercentage}');
+        print('   - User Percentage: ${wallet.userPercentage}');
+        print('   - Return Date: ${wallet.investmentReturnDate}');
       }
 
-      if (!mounted) return;
+      final balance = await _walletRepository.getWalletBalance(widget.walletId);
+      print('💰 _loadData: Balance loaded: ${balance?.balance ?? 'null'}');
+
+      final transactions = await _walletRepository.getWalletTransactions(widget.walletId, limit: 50);
+      print('📋 _loadData: Transactions loaded: ${transactions.length}');
+
+      InvestmentSummary? investmentSummary;
+
+      // Infer investor wallet robustly: prefer presence of investor fields
+      final isInvestor = wallet != null && (
+        wallet.type == WalletType.investor ||
+        wallet.investmentAmount != null ||
+        wallet.investorPercentage != null ||
+        wallet.userPercentage != null ||
+        wallet.investmentReturnDate != null
+      );
+      if (isInvestor) {
+        print('📈 _loadData: Loading investment summary...');
+        investmentSummary = await _walletRepository.getInvestmentSummary(widget.walletId);
+        print('📈 _loadData: Investment summary loaded');
+      }
+
+      if (!mounted) {
+        print('❌ _loadData: Widget unmounted after data loading');
+        return;
+      }
 
       setState(() {
-        _wallet = mockWallet;
-        _balance = mockBalance;
-        _transactions = mockTransactions;
-        _investmentSummary = mockInvestmentSummary;
+        _wallet = wallet;
+        _balance = balance;
+        _transactions = transactions;
+        _investmentSummary = investmentSummary;
         _isLoading = false;
       });
+
+      print('✅ _loadData: Data loaded successfully');
     } catch (e) {
+      print('💥 _loadData: Error loading wallet ${widget.walletId}: $e');
       if (!mounted) return;
 
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)?.errorLoading ?? 'Error loading'}: $e')),
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)?.errorLoading ?? 'Error loading'}: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }
@@ -160,7 +161,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
 
     if (confirmed == true) {
       try {
-        // TODO: Delete wallet via repository
+        await _walletRepository.deleteWallet(_wallet!.id);
         if (mounted) {
           context.go('/wallets', extra: {'refresh': true});
           ScaffoldMessenger.of(context).showSnackBar(
@@ -176,6 +177,28 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _handleAddMoney() async {
+    final l10n = AppLocalizations.of(context);
+    // TODO: Implement add money functionality
+    // For now, show a placeholder message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n?.addMoney ?? 'Add Money functionality - Coming Soon!')),
+      );
+    }
+  }
+
+  Future<void> _handleWithdrawMoney() async {
+    final l10n = AppLocalizations.of(context);
+    // TODO: Implement withdraw money functionality
+    // For now, show a placeholder message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n?.withdrawMoney ?? 'Withdraw Money functionality - Coming Soon!')),
+      );
     }
   }
 
@@ -209,12 +232,30 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       );
     }
 
+    // Debug: Print wallet information
+    print('🔍 WalletDetailsScreen - Wallet: ${_wallet!.name}');
+    print('🔍 WalletDetailsScreen - Type: ${_wallet!.type}');
+    print('🔍 WalletDetailsScreen - isPersonalWallet: ${_wallet!.isPersonalWallet}');
+    print('🔍 WalletDetailsScreen - isInvestorWallet: ${_wallet!.isInvestorWallet}');
+
+    // Infer investor robustly for UI: consider presence of investor fields
+    final bool isInvestor = _wallet!.type == WalletType.investor ||
+        _wallet!.investmentAmount != null ||
+        _wallet!.investorPercentage != null ||
+        _wallet!.userPercentage != null ||
+        _wallet!.investmentReturnDate != null;
+
     final dateFormat = DateFormat('dd.MM.yyyy');
     final currencyFormat = NumberFormat.currency(
       locale: l10n?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
       symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 2,
     );
+
+    // For investor wallets, don't provide add/withdraw handlers
+    final isPersonal = !isInvestor;
+    final onAddMoney = isPersonal ? _handleAddMoney : null;
+    final onWithdrawMoney = isPersonal ? _handleWithdrawMoney : null;
 
     return ResponsiveLayout(
       mobile: WalletDetailsScreenMobile(
@@ -225,6 +266,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         dateFormat: dateFormat,
         currencyFormat: currencyFormat,
         onDelete: _handleDelete,
+        onAddMoney: onAddMoney,
+        onWithdrawMoney: onWithdrawMoney,
+        isInvestor: isInvestor,
       ),
       desktop: WalletDetailsScreenDesktop(
         wallet: _wallet!,
@@ -234,6 +278,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         dateFormat: dateFormat,
         currencyFormat: currencyFormat,
         onDelete: _handleDelete,
+        onAddMoney: onAddMoney,
+        onWithdrawMoney: onWithdrawMoney,
+        isInvestor: isInvestor,
       ),
     );
   }

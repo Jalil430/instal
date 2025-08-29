@@ -23,14 +23,16 @@ class InvestmentSummaryModel {
 
   factory InvestmentSummaryModel.fromJson(Map<String, dynamic> json) {
     return InvestmentSummaryModel(
-      walletId: json['wallet_id'] as String,
-      totalInvestedMinorUnits: (json['total_invested_minor_units'] as num).toInt(),
-      currentBalanceMinorUnits: (json['current_balance_minor_units'] as num).toInt(),
-      totalAllocatedMinorUnits: (json['total_allocated_minor_units'] as num).toInt(),
-      expectedReturnsMinorUnits: (json['expected_returns_minor_units'] as num).toInt(),
-      dueAmountMinorUnits: (json['due_amount_minor_units'] as num).toInt(),
-      returnDueDate: json['return_due_date'] != null ? DateTime.parse(json['return_due_date'] as String) : null,
-      profitPercentage: (json['profit_percentage'] as num).toDouble(),
+      walletId: json['wallet_id'] as String? ?? '',
+      totalInvestedMinorUnits: json['total_invested_minor_units'] != null ? (json['total_invested_minor_units'] as num).toInt() : 0,
+      currentBalanceMinorUnits: json['current_balance_minor_units'] != null ? (json['current_balance_minor_units'] as num).toInt() : 0,
+      totalAllocatedMinorUnits: json['total_allocated_minor_units'] != null ? (json['total_allocated_minor_units'] as num).toInt() : 0,
+      expectedReturnsMinorUnits: json['expected_returns_minor_units'] != null ? (json['expected_returns_minor_units'] as num).toInt() : 0,
+      dueAmountMinorUnits: json['due_amount_minor_units'] != null ? (json['due_amount_minor_units'] as num).toInt() : 0,
+      returnDueDate: json['return_due_date'] != null && json['return_due_date'] is String
+          ? DateTime.parse(json['return_due_date'] as String)
+          : null,
+      profitPercentage: json['profit_percentage'] != null ? (json['profit_percentage'] as num).toDouble() : 0.0,
     );
   }
 

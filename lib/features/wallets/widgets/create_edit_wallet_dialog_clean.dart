@@ -7,6 +7,8 @@ import '../domain/entities/wallet.dart';
 import '../domain/repositories/wallet_repository.dart';
 import '../data/repositories/wallet_repository_impl.dart';
 import '../data/datasources/wallet_remote_datasource_impl.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/cache_service.dart';
 import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 import '../../../shared/widgets/responsive_layout.dart';
@@ -36,14 +38,12 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
   // Form controllers
   final _nameController = TextEditingController();
   final _investmentAmountController = TextEditingController();
-  final _startingAmountController = TextEditingController();
   final _investorPercentageController = TextEditingController();
   final _userPercentageController = TextEditingController();
 
   // Focus nodes for automatic navigation
   final _nameFocus = FocusNode();
   final _investmentAmountFocus = FocusNode();
-  final _startingAmountFocus = FocusNode();
   final _investorPercentageFocus = FocusNode();
   final _userPercentageFocus = FocusNode();
 
@@ -62,7 +62,10 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
 
   void _initializeRepository() {
     _walletRepository = WalletRepositoryImpl(
-      WalletRemoteDataSourceImpl(),
+      WalletRemoteDataSourceImpl(
+        apiClient: ApiClient(),
+        cacheService: CacheService(),
+      ),
     );
   }
 
@@ -84,9 +87,6 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
         _investorPercentageController.text = wallet.investorPercentage?.toStringAsFixed(1) ?? '';
         _userPercentageController.text = wallet.userPercentage?.toStringAsFixed(1) ?? '';
         _returnDate = wallet.investmentReturnDate;
-      } else if (wallet.isPersonalWallet) {
-        // For personal wallets, show the starting amount if available
-        _startingAmountController.text = wallet.startingAmount?.toStringAsFixed(0) ?? '';
       }
     } else if (widget.initialName != null) {
       // Pre-fill name when creating from search
@@ -131,9 +131,6 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
           investmentAmount: _selectedType == WalletType.investor
               ? double.parse(_investmentAmountController.text)
               : null,
-          startingAmount: _selectedType == WalletType.personal && _startingAmountController.text.isNotEmpty
-              ? double.parse(_startingAmountController.text)
-              : null,
           investorPercentage: _selectedType == WalletType.investor
               ? double.parse(_investorPercentageController.text)
               : null,
@@ -168,9 +165,6 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
           type: _selectedType,
           investmentAmount: _selectedType == WalletType.investor
               ? double.parse(_investmentAmountController.text)
-              : null,
-          startingAmount: _selectedType == WalletType.personal && _startingAmountController.text.isNotEmpty
-              ? double.parse(_startingAmountController.text)
               : null,
           investorPercentage: _selectedType == WalletType.investor
               ? double.parse(_investorPercentageController.text)
@@ -220,12 +214,10 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
   void dispose() {
     _nameController.dispose();
     _investmentAmountController.dispose();
-    _startingAmountController.dispose();
     _investorPercentageController.dispose();
     _userPercentageController.dispose();
     _nameFocus.dispose();
     _investmentAmountFocus.dispose();
-    _startingAmountFocus.dispose();
     _investorPercentageFocus.dispose();
     _userPercentageFocus.dispose();
     super.dispose();
@@ -238,12 +230,10 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
         formKey: _formKey,
         nameController: _nameController,
         investmentAmountController: _investmentAmountController,
-        startingAmountController: _startingAmountController,
         investorPercentageController: _investorPercentageController,
         userPercentageController: _userPercentageController,
         nameFocus: _nameFocus,
         investmentAmountFocus: _investmentAmountFocus,
-        startingAmountFocus: _startingAmountFocus,
         investorPercentageFocus: _investorPercentageFocus,
         userPercentageFocus: _userPercentageFocus,
         selectedType: _selectedType,
@@ -258,12 +248,10 @@ class _CreateEditWalletDialogState extends State<CreateEditWalletDialog> {
         formKey: _formKey,
         nameController: _nameController,
         investmentAmountController: _investmentAmountController,
-        startingAmountController: _startingAmountController,
         investorPercentageController: _investorPercentageController,
         userPercentageController: _userPercentageController,
         nameFocus: _nameFocus,
         investmentAmountFocus: _investmentAmountFocus,
-        startingAmountFocus: _startingAmountFocus,
         investorPercentageFocus: _investorPercentageFocus,
         userPercentageFocus: _userPercentageFocus,
         selectedType: _selectedType,

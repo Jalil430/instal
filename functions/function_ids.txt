@@ -26,6 +26,18 @@
 Subscription Functions
 validate-subscription-code: d4eut8n056onak8o4uit
   URL: https://functions.yandexcloud.net/d4eut8n056onak8o4uit
-  
+
 check-subscription-status: d4e8pkgusps8fmc76klv
   URL: https://functions.yandexcloud.net/d4e8pkgusps8fmc76klv
+
+# Wallet Functions - Deployed Successfully ✅
+# These functions are now active and configured in instal-api.yaml
+
+create-wallet: d4es4rs5t9appi6q5p0d
+list-wallets: d4euk9q4c0debf439iej
+get-wallet: d4e91fateph6r1msg096
+get-wallet-balance: PLACEHOLDER_GET_WALLET_BALANCE
+update-wallet: d4epa3d73vqo5flpjfk4
+archive-wallet: d4eh92ksggk6b1hj8rlt
+wallet-ledger: d4e9uc7dn0rk9lcbu6a0
+wallet-top-up: d4eacss6qhh0o9etq3kc

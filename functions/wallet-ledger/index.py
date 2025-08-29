@@ -169,7 +169,14 @@ def handler(event, context):
                 
                 # Build transaction query with filters
                 base_query = """
-                SELECT 
+                DECLARE $wallet_id AS Utf8;
+                DECLARE $user_id AS Utf8;
+                DECLARE $limit AS Int32;
+                DECLARE $reference_type AS Utf8;
+                DECLARE $start_date AS Timestamp;
+                DECLARE $end_date AS Timestamp;
+
+                SELECT
                     id,
                     wallet_id,
                     user_id,

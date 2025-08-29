@@ -57,7 +57,13 @@ class WalletsListScreenMobile extends StatelessWidget {
               onPressed: state.clearSelection,
               tooltip: l10n?.cancelSelection ?? 'Отменить выбор',
             ),
-          ] else ...[],
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => state.forceRefresh(),
+              tooltip: l10n?.refresh ?? 'Обновить',
+            ),
+          ],
         ],
         bottom: state.isSelectionMode
             ? PreferredSize(
@@ -68,7 +74,7 @@ class WalletsListScreenMobile extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        '${state.selectedWalletIds.length} ${l10n?.selectedItems ?? 'выбрано'}',
+                        '${state.selectedWalletIds.length} ${l10n?.selectedItemsMobile ?? 'selected'}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           color: AppTheme.primaryColor,
@@ -116,10 +122,10 @@ class WalletsListScreenMobile extends StatelessWidget {
                 : state.filteredAndSortedWallets.isEmpty
                     ? EmptyState(
                         icon: Icons.account_balance_wallet,
-                        title: 'Нет кошельков',
-                        description: 'Создайте свой первый кошелек для начала работы',
+                        title: l10n?.noWallets ?? 'No wallets',
+                        description: l10n?.createFirstWalletDescription ?? 'Create your first wallet to get started',
                         action: CustomButton(
-                          text: 'Создать кошелек',
+                          text: l10n?.createWallet ?? 'Создать кошелек',
                           onPressed: state.showCreateWalletDialog,
                           color: AppTheme.primaryColor,
                           textColor: Colors.white,
