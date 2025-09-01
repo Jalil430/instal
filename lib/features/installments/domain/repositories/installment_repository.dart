@@ -10,6 +10,7 @@ abstract class InstallmentRepository {
   Future<List<Installment>> searchInstallments(String userId, String query);
   Future<List<Installment>> getInstallmentsByClientId(String clientId);
   Future<List<Installment>> getInstallmentsByInvestorId(String investorId);
+  Future<List<Installment>> getInstallmentsByWalletId(String walletId);
   
   // Payment operations
   Future<List<InstallmentPayment>> getPaymentsByInstallmentId(String installmentId);

@@ -361,7 +361,7 @@ def handler(event, context):
                     updated_at = $updated_at
                 WHERE wallet_id = $wallet_id 
                   AND user_id = $user_id 
-                  AND version = $expected_version;
+                  AND COALESCE(version, CAST(0 AS Uint64)) = $expected_version;
                 """
                 
                 balance_data = {

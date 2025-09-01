@@ -38,6 +38,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
   bool isInitialized = false;
   bool isSelectionMode = false;
   final Set<String> selectedWalletIds = {};
+  bool showArchived = false;
 
   late AnimationController fadeController;
   late Animation<double> fadeAnimation;
@@ -191,6 +192,10 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
       return name.contains(query);
     }).toList();
+
+    // Filter by status (active vs archived)
+    filtered = filtered.where((w) =>
+        showArchived ? w.status == WalletStatus.archived : w.status == WalletStatus.active).toList();
 
     // Sort
     if (sortBy != null) {
@@ -386,11 +391,11 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     // Use wallet count text or fallback to generic
     try {
       if (count % 10 == 1 && count % 100 != 11) {
-        return l10n.investor_one; // Using investor localization as fallback
+        return l10n.wallet_one; // Using investor localization as fallback
       } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
-        return l10n.investor_few;
+        return l10n.wallet_few;
       } else {
-        return l10n.investor_many;
+        return l10n.wallet_many;
       }
     } catch (e) {
       return ''; // Return empty string if localization fails

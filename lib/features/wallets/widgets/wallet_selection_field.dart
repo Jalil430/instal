@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/entities/wallet.dart';
 import '../domain/entities/wallet_balance.dart';
+import '../../../core/utils/num_format.dart';
 
 class WalletSelectionField extends StatelessWidget {
   final List<Wallet> wallets;
@@ -69,8 +70,8 @@ class WalletSelectionField extends StatelessWidget {
               ...wallets.map((wallet) {
                 final balance = walletBalances[wallet.id];
                 final balanceText = balance != null
-                    ? currencyFormat.format(balance.balance)
-                    : currencyFormat.format(0);
+                    ? stripTrailingZeroMoney(currencyFormat.format(balance.balance))
+                    : stripTrailingZeroMoney(currencyFormat.format(0));
 
                 return DropdownMenuItem<Wallet?>(
                   value: wallet,

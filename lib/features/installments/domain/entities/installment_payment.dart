@@ -4,6 +4,7 @@ class InstallmentPayment {
   final int paymentNumber; // 0 for down payment, 1-n for monthly payments
   final DateTime dueDate;
   final double expectedAmount;
+  final double paidAmount; // accumulated actual paid for this payment
   final bool isPaid;
   final DateTime? paidDate;
   final DateTime createdAt;
@@ -15,6 +16,7 @@ class InstallmentPayment {
     required this.paymentNumber,
     required this.dueDate,
     required this.expectedAmount,
+    this.paidAmount = 0.0,
     required this.isPaid,
     this.paidDate,
     required this.createdAt,
@@ -27,6 +29,7 @@ class InstallmentPayment {
     int? paymentNumber,
     DateTime? dueDate,
     double? expectedAmount,
+    double? paidAmount,
     bool? isPaid,
     DateTime? paidDate,
     DateTime? createdAt,
@@ -38,6 +41,7 @@ class InstallmentPayment {
       paymentNumber: paymentNumber ?? this.paymentNumber,
       dueDate: dueDate ?? this.dueDate,
       expectedAmount: expectedAmount ?? this.expectedAmount,
+      paidAmount: paidAmount ?? this.paidAmount,
       isPaid: isPaid ?? this.isPaid,
       paidDate: paidDate ?? this.paidDate,
       createdAt: createdAt ?? this.createdAt,
@@ -79,8 +83,7 @@ class InstallmentPayment {
   
   bool get isUpcoming => status == 'предстоящий';
 
-  /// Get the actual payment amount (0 if not paid, expectedAmount if paid)
-  double get paidAmount => isPaid ? expectedAmount : 0.0;
+  // paidAmount now comes from backend and accumulates actuals
 
   String get paymentLabel {
     if (isDownPayment) {
@@ -104,6 +107,7 @@ class InstallmentPayment {
       other.paymentNumber == paymentNumber &&
       other.dueDate == dueDate &&
       other.expectedAmount == expectedAmount &&
+      other.paidAmount == paidAmount &&
       other.isPaid == isPaid &&
       other.paidDate == paidDate &&
       other.createdAt == createdAt &&
@@ -117,9 +121,10 @@ class InstallmentPayment {
       paymentNumber.hashCode ^
       dueDate.hashCode ^
       expectedAmount.hashCode ^
+      paidAmount.hashCode ^
       isPaid.hashCode ^
       paidDate.hashCode ^
       createdAt.hashCode ^
       updatedAt.hashCode;
   }
-} 
+}

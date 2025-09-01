@@ -445,6 +445,7 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                           expectedAmount:
                                               installment.nextPaymentAmount ??
                                                   0.0,
+                                          paidAmount: 0.0,
                                           isPaid: false,
                                           paidDate: null,
                                           createdAt: DateTime.now(),

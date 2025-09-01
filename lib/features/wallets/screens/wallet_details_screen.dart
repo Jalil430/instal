@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/num_format.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_icon_button.dart';
 import '../domain/entities/wallet.dart';
@@ -16,9 +17,15 @@ import '../../../core/api/cache_service.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../widgets/create_edit_wallet_dialog.dart';
+import '../widgets/wallet_dialogs.dart';
 import '../../../shared/widgets/responsive_layout.dart';
 import 'desktop/wallet_details_screen_desktop.dart';
 import 'mobile/wallet_details_screen_mobile.dart';
+import '../../installments/domain/entities/installment.dart';
+import '../../installments/domain/repositories/installment_repository.dart';
+import '../../installments/data/repositories/installment_repository_impl.dart';
+import '../../installments/data/datasources/installment_remote_datasource.dart';
+import '../../auth/presentation/widgets/auth_service_provider.dart';
 
 class WalletDetailsScreen extends StatefulWidget {
   final String walletId;
@@ -37,9 +44,12 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   WalletBalance? _balance;
   List<LedgerTransaction> _transactions = [];
   InvestmentSummary? _investmentSummary;
+  List<Installment> _installments = [];
+  bool _installmentsLoading = false;
   bool _isLoading = true;
   bool _isInitialized = false;
   late WalletRepository _walletRepository;
+  late InstallmentRepository _installmentRepository;
 
   @override
   void initState() {
@@ -50,6 +60,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   void _initializeRepository() {
     _walletRepository = WalletRepositoryImpl(
       WalletRemoteDataSourceImpl(),
+    );
+    _installmentRepository = InstallmentRepositoryImpl(
+      InstallmentRemoteDataSourceImpl(),
     );
   }
 
@@ -95,8 +108,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       final balance = await _walletRepository.getWalletBalance(widget.walletId);
       print('💰 _loadData: Balance loaded: ${balance?.balance ?? 'null'}');
 
-      final transactions = await _walletRepository.getWalletTransactions(widget.walletId, limit: 50);
-      print('📋 _loadData: Transactions loaded: ${transactions.length}');
+      // Hide transactions history: do not load transactions list
+      final transactions = <LedgerTransaction>[];
+      print('📋 _loadData: Transactions loading skipped (hidden)');
 
       InvestmentSummary? investmentSummary;
 
@@ -114,6 +128,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         print('📈 _loadData: Investment summary loaded');
       }
 
+      // Defer installments loading to after first frame
+      Future.microtask(_loadInstallments);
+
       if (!mounted) {
         print('❌ _loadData: Widget unmounted after data loading');
         return;
@@ -124,6 +141,8 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         _balance = balance;
         _transactions = transactions;
         _investmentSummary = investmentSummary;
+        // Ensure state update for installments as well
+        // _installments already set above
         _isLoading = false;
       });
 
@@ -141,6 +160,49 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadInstallments() async {
+    if (!mounted) return;
+    setState(() => _installmentsLoading = true);
+    try {
+      // Prefer direct query by wallet_id, then defensively filter on client-side
+      final fetched = await _installmentRepository.getInstallmentsByWalletId(widget.walletId);
+      List<Installment> linked = fetched.where((i) => (i.walletId ?? '').trim() == widget.walletId).toList();
+      print('🧾 _loadInstallments: fetched=${fetched.length}, linked after filter=${linked.length} for wallet ${widget.walletId}');
+
+      // Fallback: derive from wallet ledger transactions (reference_type == installment)
+      if (linked.isEmpty && _transactions.isNotEmpty) {
+        try {
+          final ids = _transactions
+              .where((t) => t.referenceType.name == 'installment' && (t.referenceId ?? '').isNotEmpty)
+              .map((t) => t.referenceId!)
+              .toSet()
+              .toList();
+          final List<Installment> viaLedger = [];
+          for (final id in ids) {
+            try {
+              final inst = await _installmentRepository.getInstallmentById(id);
+              if (inst != null) viaLedger.add(inst);
+            } catch (e) {
+              print('⚠️ _loadInstallments: failed to load installment $id from ledger ref: $e');
+            }
+          }
+          // Filter again by wallet id if present; otherwise keep all from ledger
+          final viaLedgerFiltered = viaLedger.where((i) => (i.walletId ?? '').isEmpty || (i.walletId ?? '').trim() == widget.walletId).toList();
+          linked = viaLedgerFiltered;
+          print('🧾 _loadInstallments: derived ${linked.length} installments via ledger references');
+        } catch (e) {
+          print('⚠️ _loadInstallments ledger fallback error: $e');
+        }
+      }
+
+      if (mounted) setState(() => _installments = linked);
+    } catch (e) {
+      print('⚠️ _loadInstallments: $e');
+    } finally {
+      if (mounted) setState(() => _installmentsLoading = false);
     }
   }
 
@@ -181,24 +243,96 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   }
 
   Future<void> _handleAddMoney() async {
+    if (_wallet == null) return;
+    final wallet = _wallet!;
     final l10n = AppLocalizations.of(context);
-    // TODO: Implement add money functionality
-    // For now, show a placeholder message
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n?.addMoney ?? 'Add Money functionality - Coming Soon!')),
-      );
-    }
+    final currencyFormat = NumberFormat.currency(
+      locale: l10n?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
+      decimalDigits: 2,
+    );
+    await AddMoneyDialog.show(
+      context: context,
+      wallet: wallet,
+      currencyFormat: currencyFormat,
+      onConfirm: (amount) async {
+        try {
+          final mu = (amount * 100).round();
+          await _walletRepository.topUpWallet(wallet.id, mu, 'Manual top-up');
+          await _loadData();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n?.walletUpdatedSuccess ?? 'Wallet updated successfully')));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n?.error ?? 'Error'}: $e'), backgroundColor: AppTheme.errorColor));
+          }
+        }
+      },
+    );
   }
 
   Future<void> _handleWithdrawMoney() async {
+    if (_wallet == null) return;
+    final wallet = _wallet!;
     final l10n = AppLocalizations.of(context);
-    // TODO: Implement withdraw money functionality
-    // For now, show a placeholder message
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n?.withdrawMoney ?? 'Withdraw Money functionality - Coming Soon!')),
-      );
+    final balance = _balance?.balance ?? 0;
+    final currencyFormat = NumberFormat.currency(
+      locale: l10n?.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
+      decimalDigits: 2,
+    );
+    await WithdrawMoneyDialog.show(
+      context: context,
+      wallet: wallet,
+      currentBalance: balance,
+      currencyFormat: currencyFormat,
+      onConfirm: (amount) async {
+        try {
+          final mu = (amount * 100).round();
+          await _walletRepository.withdrawWallet(wallet.id, mu, 'Manual withdraw');
+          await _loadData();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n?.walletUpdatedSuccess ?? 'Wallet updated successfully')));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n?.error ?? 'Error'}: $e'), backgroundColor: AppTheme.errorColor));
+          }
+        }
+      },
+    );
+  }
+
+  Future<void> _handleArchiveToggle() async {
+    if (_wallet == null) return;
+    final w = _wallet!;
+    final isArchived = w.status == WalletStatus.archived;
+    try {
+      if (isArchived) {
+        await _walletRepository.unarchiveWallet(w.id);
+      } else {
+        await _walletRepository.archiveWallet(w.id);
+      }
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isArchived
+                ? (AppLocalizations.of(context)?.unarchived ?? 'Unarchived')
+                : (AppLocalizations.of(context)?.archived ?? 'Archived')),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)?.error ?? 'Error'}: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
     }
   }
 
@@ -254,8 +388,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
 
     // For investor wallets, don't provide add/withdraw handlers
     final isPersonal = !isInvestor;
-    final onAddMoney = isPersonal ? _handleAddMoney : null;
-    final onWithdrawMoney = isPersonal ? _handleWithdrawMoney : null;
+    final isActive = _wallet!.status == WalletStatus.active;
+    final onAddMoney = (isPersonal && isActive) ? _handleAddMoney : null;
+    final onWithdrawMoney = (isPersonal && isActive) ? _handleWithdrawMoney : null;
 
     return ResponsiveLayout(
       mobile: WalletDetailsScreenMobile(
@@ -269,6 +404,8 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         onAddMoney: onAddMoney,
         onWithdrawMoney: onWithdrawMoney,
         isInvestor: isInvestor,
+        installments: _installments,
+        onArchiveToggle: _handleArchiveToggle,
       ),
       desktop: WalletDetailsScreenDesktop(
         wallet: _wallet!,
@@ -281,6 +418,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
         onAddMoney: onAddMoney,
         onWithdrawMoney: onWithdrawMoney,
         isInvestor: isInvestor,
+        installments: _installments,
+        installmentsLoading: _installmentsLoading,
+        onArchiveToggle: _handleArchiveToggle,
       ),
     );
   }

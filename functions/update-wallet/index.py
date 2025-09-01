@@ -3,7 +3,7 @@ import json
 import ydb
 import jwt
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Dict, Any, Optional, Tuple
 
 # Configure logging
@@ -288,14 +288,30 @@ def handler(event, context):
             }
 
         # 4. Input validation and sanitization
-        sanitized_data, validation_errors = SecurityValidator.validate_and_sanitize_input(body)
+        # Support status-only toggle (archive/unarchive) to bypass full validation
+        status_only = False
+        desired_status = None
+        try:
+            keys_nonempty = [k for k, v in (body or {}).items() if v not in (None, '')]
+        except Exception:
+            keys_nonempty = list((body or {}).keys())
+        if isinstance(body, dict) and 'status' in body and len(keys_nonempty) == 1:
+            s = str(body.get('status', '')).strip().lower()
+            if s in ('active', 'archived'):
+                status_only = True
+                desired_status = s
 
-        if validation_errors:
-            return {
-                'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Validation failed', 'details': validation_errors})
-            }
+        if status_only:
+            sanitized_data = {'status': desired_status}
+            validation_errors = []
+        else:
+            sanitized_data, validation_errors = SecurityValidator.validate_and_sanitize_input(body)
+            if validation_errors:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Validation failed', 'details': validation_errors})
+                }
 
         # 5. Database operations
         try:
@@ -340,8 +356,8 @@ def handler(event, context):
                 wallet_row = verify_result[0].rows[0]
                 current_status = wallet_row['status']
 
-                # Prevent updating archived wallets
-                if current_status == 'archived' and sanitized_data.get('status') != 'archived':
+                # Prevent updating archived wallets, except status-only unarchive
+                if current_status == 'archived' and not (status_only and desired_status == 'active') and sanitized_data.get('status') != 'archived':
                     return {
                         'statusCode': 400,
                         'headers': {'Content-Type': 'application/json'},
@@ -351,52 +367,64 @@ def handler(event, context):
                 # Update wallet
                 current_time = datetime.utcnow()
 
-                update_query = """
-                DECLARE $wallet_id AS Utf8;
-                DECLARE $user_id AS Utf8;
-                DECLARE $name AS Utf8;
-                DECLARE $type AS Utf8;
-                DECLARE $currency AS Utf8;
-                DECLARE $status AS Utf8;
-                DECLARE $investment_amount_minor_units AS Int64?;
-                DECLARE $starting_amount_minor_units AS Int64?;
-                DECLARE $investor_percentage AS Decimal(5,2)?;
-                DECLARE $user_percentage AS Decimal(5,2)?;
-                DECLARE $investment_return_date AS Date?;
-                DECLARE $updated_at AS Timestamp;
+                if status_only:
+                    upd_status_q = """
+                    DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $status AS Utf8; DECLARE $updated_at AS Timestamp;
+                    UPDATE wallets SET status = $status, updated_at = $updated_at WHERE id = $wallet_id AND user_id = $user_id;
+                    """
+                    session.transaction().execute(
+                        session.prepare(upd_status_q),
+                        {'$wallet_id': wallet_id, '$user_id': user_id, '$status': desired_status, '$updated_at': current_time},
+                        commit_tx=True
+                    )
+                else:
+                    update_query = """
+                    DECLARE $wallet_id AS Utf8;
+                    DECLARE $user_id AS Utf8;
+                    DECLARE $name AS Utf8;
+                    DECLARE $type AS Utf8;
+                    DECLARE $currency AS Utf8;
+                    DECLARE $status AS Utf8;
+                    DECLARE $investment_amount_minor_units AS Int64?;
+                    DECLARE $starting_amount_minor_units AS Int64?;
+                    DECLARE $investor_percentage AS Decimal(5,2)?;
+                    DECLARE $user_percentage AS Decimal(5,2)?;
+                    DECLARE $investment_return_date AS Date?;
+                    DECLARE $updated_at AS Timestamp;
 
-                UPDATE wallets
-                SET name = $name,
-                    type = $type,
-                    currency = $currency,
-                    status = $status,
-                    investment_amount_minor_units = $investment_amount_minor_units,
-                    starting_amount_minor_units = $starting_amount_minor_units,
-                    investor_percentage = $investor_percentage,
-                    user_percentage = $user_percentage,
-                    investment_return_date = $investment_return_date,
-                    updated_at = $updated_at
-                WHERE id = $wallet_id AND user_id = $user_id;
-                """
+                    UPDATE wallets
+                    SET name = $name,
+                        type = $type,
+                        currency = $currency,
+                        status = $status,
+                        investment_amount_minor_units = $investment_amount_minor_units,
+                        starting_amount_minor_units = $starting_amount_minor_units,
+                        investor_percentage = $investor_percentage,
+                        user_percentage = $user_percentage,
+                        investment_return_date = $investment_return_date,
+                        updated_at = $updated_at
+                    WHERE id = $wallet_id AND user_id = $user_id;
+                    """
 
-                prepared_update = session.prepare(update_query)
-                session.transaction().execute(prepared_update, {
-                    '$wallet_id': wallet_id,
-                    '$user_id': user_id,
-                    '$name': sanitized_data['name'],
-                    '$type': sanitized_data['type'],
-                    '$currency': sanitized_data['currency'],
-                    '$status': sanitized_data['status'],
-                    '$investment_amount_minor_units': sanitized_data.get('investment_amount_minor_units'),
-                    '$starting_amount_minor_units': sanitized_data.get('starting_amount_minor_units'),
-                    '$investor_percentage': sanitized_data.get('investor_percentage'),
-                    '$user_percentage': sanitized_data.get('user_percentage'),
-                    '$investment_return_date': datetime.fromisoformat(sanitized_data['investment_return_date'].replace('Z', '+00:00')).date() if sanitized_data.get('investment_return_date') else None,
-                    '$updated_at': current_time,
-                }, commit_tx=True)
+                    prepared_update = session.prepare(update_query)
+                    session.transaction().execute(prepared_update, {
+                        '$wallet_id': wallet_id,
+                        '$user_id': user_id,
+                        '$name': sanitized_data['name'],
+                        '$type': sanitized_data['type'],
+                        '$currency': sanitized_data['currency'],
+                        '$status': sanitized_data['status'],
+                        '$investment_amount_minor_units': sanitized_data.get('investment_amount_minor_units'),
+                        '$starting_amount_minor_units': sanitized_data.get('starting_amount_minor_units'),
+                        '$investor_percentage': sanitized_data.get('investor_percentage'),
+                        '$user_percentage': sanitized_data.get('user_percentage'),
+                        '$investment_return_date': datetime.fromisoformat(sanitized_data['investment_return_date'].replace('Z', '+00:00')).date() if sanitized_data.get('investment_return_date') else None,
+                        '$updated_at': current_time,
+                    }, commit_tx=True)
 
                 # Get updated wallet data
                 select_query = """
+                DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
                 SELECT
                     id, user_id, name, type, currency, status,
                     require_nonnegative, allow_partial_allocation,
@@ -416,6 +444,32 @@ def handler(event, context):
 
                 updated_row = result_sets[0].rows[0]
 
+                def _conv_ts(ts):
+                    if ts is None:
+                        return None
+                    if isinstance(ts, int):
+                        # YDB Timestamp in microseconds
+                        return datetime.fromtimestamp(ts / 1_000_000).isoformat()
+                    if hasattr(ts, 'isoformat'):
+                        return ts.isoformat()
+                    return str(ts)
+
+                def _conv_date(dv):
+                    if dv is None:
+                        return None
+                    if isinstance(dv, int):
+                        # YDB Date as days since epoch
+                        base = date(1970, 1, 1)
+                        return (base + timedelta(days=int(dv))).isoformat()
+                    if isinstance(dv, str):
+                        return dv
+                    if hasattr(dv, 'isoformat'):
+                        return dv.isoformat()
+                    return str(dv)
+
+                investor_pct = updated_row['investor_percentage']
+                user_pct = updated_row['user_percentage']
+
                 wallet_data = {
                     'id': updated_row['id'],
                     'user_id': updated_row['user_id'],
@@ -427,11 +481,11 @@ def handler(event, context):
                     'allow_partial_allocation': updated_row['allow_partial_allocation'],
                     'investment_amount_minor_units': updated_row['investment_amount_minor_units'],
                     'starting_amount_minor_units': updated_row['starting_amount_minor_units'],
-                    'investor_percentage': float(updated_row['investor_percentage']) if updated_row['investor_percentage'] is not None else None,
-                    'user_percentage': float(updated_row['user_percentage']) if updated_row['user_percentage'] is not None else None,
-                    'investment_return_date': updated_row['investment_return_date'].isoformat() if updated_row['investment_return_date'] else None,
-                    'created_at': updated_row['created_at'].isoformat(),
-                    'updated_at': updated_row['updated_at'].isoformat(),
+                    'investor_percentage': float(investor_pct) if investor_pct is not None else None,
+                    'user_percentage': float(user_pct) if user_pct is not None else None,
+                    'investment_return_date': _conv_date(updated_row['investment_return_date']) if 'investment_return_date' in updated_row else None,
+                    'created_at': _conv_ts(updated_row['created_at']),
+                    'updated_at': _conv_ts(updated_row['updated_at']),
                 }
 
                 logger.info(f"Wallet {wallet_id} updated successfully")

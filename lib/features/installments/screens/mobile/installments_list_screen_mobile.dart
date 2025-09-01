@@ -187,6 +187,7 @@ class InstallmentsListScreenMobile extends StatelessWidget {
                           paymentNumber: 1,
                           dueDate: installment.nextPaymentDate!,
                           expectedAmount: installment.nextPaymentAmount ?? 0.0,
+                          paidAmount: 0.0,
                           isPaid: false,
                           paidDate: null,
                           createdAt: DateTime.now(),

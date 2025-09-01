@@ -1,27 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_contextual_dialog.dart';
+import '../../../../core/utils/num_format.dart';
 import '../../widgets/wallet_dialogs.dart';
 import '../../domain/entities/wallet.dart';
 import '../../domain/entities/wallet_balance.dart';
 import '../../domain/entities/ledger_transaction.dart';
 import '../../domain/entities/investment_summary.dart';
+import '../../../installments/domain/entities/installment.dart';
 
 class WalletDetailsScreenMobile extends StatelessWidget {
   final Wallet wallet;
   final WalletBalance? balance;
   final List<LedgerTransaction> transactions;
   final InvestmentSummary? investmentSummary;
+  final List<Installment> installments;
   final DateFormat dateFormat;
   final NumberFormat currencyFormat;
   final VoidCallback onDelete;
   final VoidCallback? onAddMoney;
   final VoidCallback? onWithdrawMoney;
   final bool isInvestor;
+  final VoidCallback onArchiveToggle;
 
   const WalletDetailsScreenMobile({
     super.key,
@@ -35,6 +40,8 @@ class WalletDetailsScreenMobile extends StatelessWidget {
     this.onAddMoney,
     this.onWithdrawMoney,
     required this.isInvestor,
+    required this.onArchiveToggle,
+    required this.installments,
   });
 
   @override
@@ -52,7 +59,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
 
     // Use inferred type passed from parent to ensure correct UI
     final walletTypeName = isInvestor ? 'investor' : 'personal';
-    final shouldShowPersonalButtons = !isInvestor;
+    final shouldShowPersonalButtons = !isInvestor && wallet.status == WalletStatus.active;
 
     print('🔍 WALLET TYPE NAME: ${walletTypeName}');
     print('🔍 SHOULD SHOW PERSONAL BUTTONS: ${shouldShowPersonalButtons}');
@@ -110,33 +117,10 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   ),
                 ),
 
-                    // Show different buttons based on wallet type
-                    if (shouldShowPersonalButtons) ...[
-                      // Personal wallet: Show ADD and WITHDRAW buttons (larger to fit labels)
-                      CustomButton(
-                        text: l10n?.addMoney ?? 'Add Money',
-                        onPressed: onAddMoney ?? () {},
-                        icon: Icons.add_circle,
-                        color: AppTheme.successColor,
-                        textColor: Colors.white,
-                        fontSize: 12,
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      const SizedBox(width: 8),
-                      CustomButton(
-                        text: l10n?.withdrawMoney ?? 'Withdraw Money',
-                        onPressed: onWithdrawMoney ?? () {},
-                        icon: Icons.remove_circle,
-                        color: AppTheme.warningColor,
-                        textColor: Colors.white,
-                        fontSize: 12,
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      const SizedBox(width: 8),
+                    // Show archive/unarchive in header
+                    if (true) ...[
                       CustomIconButton(
-                        icon: Icons.archive,
+                        icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
                         hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
                         hoverIconColor: AppTheme.warningColor,
@@ -162,7 +146,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       CustomIconButton(
-                        icon: Icons.archive,
+                        icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
                         hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
                         hoverIconColor: AppTheme.warningColor,
@@ -190,6 +174,39 @@ class WalletDetailsScreenMobile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Personal wallet actions (vertical) at top of main content
+                  if (shouldShowPersonalButtons) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          CustomButton(
+                            text: l10n?.addMoney ?? 'Add Money',
+                            onPressed: onAddMoney ?? () {},
+                            icon: Icons.add_circle,
+                            color: AppTheme.successColor,
+                            textColor: Colors.white,
+                            fontSize: 14,
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          const SizedBox(height: 16),
+                          CustomButton(
+                            text: l10n?.withdrawMoney ?? 'Withdraw Money',
+                            onPressed: onWithdrawMoney ?? () {},
+                            icon: Icons.remove_circle,
+                            color: AppTheme.warningColor,
+                            textColor: Colors.white,
+                            fontSize: 14,
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
 
 
@@ -203,7 +220,8 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   _buildInvestmentDetails(context),
                   const SizedBox(height: 16),
 
-                  // Recent transactions
+                  // Recent transactions (hidden when empty)
+                  if (transactions.isNotEmpty)
                   Container(
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
@@ -242,30 +260,65 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                         ),
 
                         // Content
-                        Padding(
+                        if (transactions.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: SizedBox(
+                              height: 300,
+                              child: ListView.builder(
+                                itemCount: transactions.length,
+                                itemBuilder: (context, index) => _buildTransactionItem(context, transactions[index]),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Linked Installments (separate section under transactions)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
                           padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          decoration: BoxDecoration(
+                            color: AppTheme.subtleBackgroundColor,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(11),
+                              topRight: Radius.circular(11),
+                            ),
+                            border: Border(
+                              bottom: BorderSide(color: AppTheme.subtleBorderColor),
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              const SizedBox(height: 16),
-                              if (transactions.isEmpty)
-                                Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Text(
-                                      l10n?.noOperations ?? 'Нет операций',
-                                      style: TextStyle(
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else
-                                ...transactions
-                                    .take(5)
-                                    .map((transaction) => _buildTransactionItem(context, transaction)),
+                              Text(
+                                '${l10n?.installments ?? 'Рассрочки'} (${installments.length})',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                              ),
                             ],
                           ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: installments.isEmpty
+                              ? Text(l10n?.noInstallments ?? 'Нет рассрочек', style: const TextStyle(color: AppTheme.textSecondary))
+                              : SizedBox(
+                                  height: 300,
+                                  child: ListView.builder(
+                                    itemCount: installments.length,
+                                    itemBuilder: (context, index) => _buildMobileInstallmentItem(context, installments[index]),
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -286,12 +339,14 @@ class WalletDetailsScreenMobile extends StatelessWidget {
     final currentBalance = balance?.balance ?? 0;
     final initialInvestment = investmentSummary?.totalInvested ??
         (wallet.isPersonalWallet ? wallet.startingAmount : wallet.investmentAmount) ?? 0;
-    final totalAllocated = investmentSummary?.totalAllocated ?? 0;
-    final expectedReturns = investmentSummary?.expectedReturns ?? 0;
-    final dueAmount = investmentSummary?.dueAmount ?? 0;
+    // Use persisted aggregates from wallet_balances when available
+    final totalAllocated = balance?.totalAllocated ?? (investmentSummary?.totalAllocated ?? 0);
+    final expectedReturns = balance?.expectedRevenue ?? (investmentSummary?.expectedReturns ?? 0);
+    final paidAmount = balance?.paidAmount ?? 0;
+    final dueAmount = balance?.dueToGet ?? (investmentSummary?.dueAmount ?? 0);
 
-    final totalWalletValue = currentBalance + expectedReturns;
-    final totalProfit = totalWalletValue - initialInvestment;
+    final totalWalletValue = currentBalance + totalAllocated;
+    final totalProfit = expectedReturns; // show expected revenue as profit for clarity
     final roi = initialInvestment > 0 ? (totalProfit / initialInvestment) * 100 : 0;
 
     return Column(
@@ -313,7 +368,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                       wallet.isPersonalWallet
                           ? (l10n?.startingAmount ?? 'Начальная сумма')
                           : (l10n?.initialInvestment ?? 'Первоначальная инвестиция'),
-                      initialInvestment > 0 ? currencyFormat.format(initialInvestment) : '—',
+                      initialInvestment > 0 ? stripTrailingZeroMoney(currencyFormat.format(initialInvestment)) : '—',
                       Icons.account_balance,
                       AppTheme.primaryColor,
                     ),
@@ -326,7 +381,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   Expanded(
                     child: _buildMobileSummaryCell(
                       l10n?.currentBalance ?? 'Текущий баланс',
-                      currencyFormat.format(currentBalance),
+                      stripTrailingZeroMoney(currencyFormat.format(currentBalance)),
                       Icons.account_balance_wallet,
                       AppTheme.successColor,
                       isHighlight: true,
@@ -346,7 +401,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   Expanded(
                     child: _buildMobileSummaryCell(
                       l10n?.givenForInstallmentDetail ?? 'Выдано в рассрочку',
-                      currencyFormat.format(totalAllocated),
+                      stripTrailingZeroMoney(currencyFormat.format(totalAllocated)),
                       Icons.money_off,
                       AppTheme.warningColor,
                     ),
@@ -358,9 +413,9 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   ),
                   Expanded(
                     child: _buildMobileSummaryCell(
-                      l10n?.expectedReturns ?? 'Ожидаемые возвраты',
-                      currencyFormat.format(expectedReturns),
-                      Icons.call_received,
+                      l10n?.paidAmount ?? 'Оплачено',
+                      stripTrailingZeroMoney(currencyFormat.format(paidAmount)),
+                      Icons.payments,
                       AppTheme.successColor,
                     ),
                   ),
@@ -378,7 +433,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   Expanded(
                     child: _buildMobileSummaryCell(
                       l10n?.dueToGetDetail ?? 'Скоро к получению',
-                      currencyFormat.format(dueAmount),
+                      stripTrailingZeroMoney(currencyFormat.format(dueAmount)),
                       Icons.schedule,
                       AppTheme.warningColor,
                     ),
@@ -391,7 +446,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   Expanded(
                     child: _buildMobileSummaryCell(
                       l10n?.totalValue ?? 'Общая стоимость',
-                      currencyFormat.format(totalWalletValue),
+                      stripTrailingZeroMoney(currencyFormat.format(totalWalletValue)),
                       Icons.calculate,
                       AppTheme.primaryColor,
                       isHighlight: true,
@@ -410,8 +465,8 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildMobileSummaryCell(
-                        l10n?.profit ?? 'Прибыль',
-                        currencyFormat.format(totalProfit),
+                        l10n?.expectedProfit ?? 'Ожидаемая прибыль',
+                        stripTrailingZeroMoney(currencyFormat.format(totalProfit)),
                         totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
                         totalProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
                       ),
@@ -478,7 +533,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
             value,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w600,
+              fontWeight: isHighlight ? FontWeight.w600 : FontWeight.w600,
               color: AppTheme.textPrimary,
               letterSpacing: isHighlight ? -0.3 : 0,
             ),
@@ -549,12 +604,12 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   // For personal wallets, show starting amount instead of investment amount
                   _buildInvestmentMetric(
                     l10n?.startingAmount ?? 'Starting Amount',
-                    currencyFormat.format(wallet.startingAmount ?? 0),
+                    stripTrailingZeroMoney(currencyFormat.format(wallet.startingAmount ?? 0)),
                   ),
                 ] else if (wallet.investmentAmount != null) ...[
                   _buildInvestmentMetric(
                     l10n?.investmentAmount ?? 'Investment Amount',
-                    wallet.investmentAmount != null ? currencyFormat.format(wallet.investmentAmount!) : null,
+                    wallet.investmentAmount != null ? stripTrailingZeroMoney(currencyFormat.format(wallet.investmentAmount!)) : null,
                   ),
                 ],
                 if (wallet.investorPercentage != null)
@@ -640,15 +695,19 @@ class WalletDetailsScreenMobile extends StatelessWidget {
             child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Main title: localized type
                 Text(
-                  transaction.description,
+                  transaction.getDisplayName(l10n!),
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     color: AppTheme.textPrimary,
                   ),
                 ),
+                const SizedBox(height: 2),
+                // Subtitle: description with date right after it
                 Text(
-                  '${transaction.getDisplayName(l10n!)} • ${dateFormat.format(transaction.createdAt)}',
+                  '${transaction.getDescriptionLocalized(l10n!)} • ${dateFormat.format(transaction.createdAt)}',
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
@@ -658,13 +717,52 @@ class WalletDetailsScreenMobile extends StatelessWidget {
             ),
           ),
           Text(
-            '${transaction.isCredit ? '+' : '-'}${currencyFormat.format(transaction.amount)}',
+            '${transaction.isCredit ? '+' : '-'}${stripTrailingZeroMoney(currencyFormat.format(transaction.amount))}',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: transaction.isCredit ? AppTheme.successColor : AppTheme.errorColor,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMobileInstallmentItem(BuildContext context, Installment installment) {
+    return InkWell(
+      onTap: () => context.go('/installments/${installment.id}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+        padding: const EdgeInsets.all(AppTheme.spacingMd),
+        decoration: BoxDecoration(
+          color: AppTheme.subtleBackgroundColor,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          border: Border.all(color: AppTheme.subtleBorderColor),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    installment.productName,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${stripTrailingZeroMoney(currencyFormat.format(installment.installmentPrice))} • ${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              dateFormat.format(installment.downPaymentDate),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -710,7 +808,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
         // TODO: Implement add money functionality
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Added ${currencyFormat.format(amount)} to ${wallet.name}'),
+            content: Text('Added ${stripTrailingZeroMoney(currencyFormat.format(amount))} to ${wallet.name}'),
             backgroundColor: AppTheme.successColor,
           ),
         );
@@ -731,7 +829,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
         if (amount <= currentBalance) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Withdrew ${currencyFormat.format(amount)} from ${wallet.name}'),
+              content: Text('Withdrew ${stripTrailingZeroMoney(currencyFormat.format(amount))} from ${wallet.name}'),
               backgroundColor: AppTheme.warningColor,
             ),
           );
@@ -826,14 +924,14 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                       const SizedBox(height: 8),
                       _buildSimpleAmountRow(
                         'Investor Share',
-                        currencyFormat.format(investorAmount),
+                        stripTrailingZeroMoney(currencyFormat.format(investorAmount)),
                         '${investorPercentage.toStringAsFixed(0)}%',
                         AppTheme.primaryColor,
                       ),
                       const SizedBox(height: 6),
                       _buildSimpleAmountRow(
                         'Your Share',
-                        currencyFormat.format(userAmount),
+                        stripTrailingZeroMoney(currencyFormat.format(userAmount)),
                         '${userPercentage.toStringAsFixed(0)}%',
                         AppTheme.successColor,
                       ),
@@ -864,14 +962,14 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                       const SizedBox(height: 8),
                       _buildSimpleAmountRow(
                         'Investor Share',
-                        currencyFormat.format(expectedInvestorAmount),
+                        stripTrailingZeroMoney(currencyFormat.format(expectedInvestorAmount)),
                         '${investorPercentage.toStringAsFixed(0)}%',
                         AppTheme.primaryColor.withOpacity(0.7),
                       ),
                       const SizedBox(height: 6),
                       _buildSimpleAmountRow(
                         'Your Share',
-                        currencyFormat.format(expectedUserAmount),
+                        stripTrailingZeroMoney(currencyFormat.format(expectedUserAmount)),
                         '${userPercentage.toStringAsFixed(0)}%',
                         AppTheme.successColor.withOpacity(0.7),
                       ),
@@ -959,7 +1057,9 @@ class WalletDetailsScreenMobile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              l10n?.archiveWalletTitle ?? 'Archive Wallet',
+              wallet.status == WalletStatus.archived
+                  ? (l10n?.unarchiveWalletTitle ?? 'Unarchive Wallet')
+                  : (l10n?.archiveWalletTitle ?? 'Archive Wallet'),
               style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 18,
@@ -969,7 +1069,9 @@ class WalletDetailsScreenMobile extends StatelessWidget {
           ],
         ),
         content: Text(
-          l10n?.archiveWalletConfirmation(wallet.name) ?? 'Are you sure you want to archive this wallet? This action can be undone later.',
+          wallet.status == WalletStatus.archived
+              ? (l10n?.unarchiveWalletConfirmation(wallet.name) ?? 'Unarchive this wallet?')
+              : (l10n?.archiveWalletConfirmation(wallet.name) ?? 'Are you sure you want to archive this wallet? This action can be undone later.'),
           style: TextStyle(
             color: AppTheme.textSecondary,
             fontSize: 14,
@@ -992,20 +1094,14 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: Text(l10n?.archive ?? 'Archive'),
+            child: Text(wallet.status == WalletStatus.archived ? (l10n?.unarchive ?? 'Unarchive') : (l10n?.archive ?? 'Archive')),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      // TODO: Implement archive wallet functionality
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Wallet "${wallet.name}" has been archived'),
-          backgroundColor: AppTheme.warningColor,
-        ),
-      );
+      onArchiveToggle();
     }
   }
 }

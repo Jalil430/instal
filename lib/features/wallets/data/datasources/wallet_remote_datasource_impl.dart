@@ -167,7 +167,8 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
   @override
   Future<void> archiveWallet(String walletId) async {
     try {
-      final response = await api.ApiClient.post('/wallets/$walletId/archive', {});
+      // Use update-wallet for archiving
+      final response = await api.ApiClient.put('/wallets/$walletId', {'status': 'archived'});
 
       if (response.statusCode == 200) {
         _clearAllCache();
@@ -176,6 +177,21 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
       }
     } catch (e) {
       throw Exception('Error archiving wallet: $e');
+    }
+  }
+
+  @override
+  Future<void> unarchiveWallet(String walletId) async {
+    try {
+      final response = await api.ApiClient.put('/wallets/$walletId', {'status': 'active'});
+
+      if (response.statusCode == 200) {
+        _clearAllCache();
+      } else {
+        throw Exception('Failed to unarchive wallet: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error unarchiving wallet: $e');
     }
   }
 
@@ -338,6 +354,44 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
       }
     } catch (e) {
       throw Exception('Error loading investment summary: $e');
+    }
+  }
+
+  @override
+  Future<void> topUpWallet(String walletId, int amountMinorUnits, String description) async {
+    try {
+      final response = await api.ApiClient.post('/wallets/$walletId/top-up', {
+        'amount_minor_units': amountMinorUnits,
+        'description': description,
+      });
+      if (response.statusCode == 200) {
+        _clearCache('balance_$walletId');
+        _clearCache('wallet_$walletId');
+        _clearCache('wallets');
+      } else {
+        throw Exception('Top-up failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Top-up error: $e');
+    }
+  }
+
+  @override
+  Future<void> withdrawWallet(String walletId, int amountMinorUnits, String description) async {
+    try {
+      final response = await api.ApiClient.post('/wallets/$walletId/withdraw', {
+        'amount_minor_units': amountMinorUnits,
+        'description': description,
+      });
+      if (response.statusCode == 200) {
+        _clearCache('balance_$walletId');
+        _clearCache('wallet_$walletId');
+        _clearCache('wallets');
+      } else {
+        throw Exception('Withdraw failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Withdraw error: $e');
     }
   }
 

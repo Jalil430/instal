@@ -389,10 +389,12 @@ def handler(event, context):
                 DECLARE $updated_at AS Timestamp;
                 
                 INSERT INTO wallet_balances (
-                  wallet_id, user_id, balance_minor_units, version, updated_at
+                  wallet_id, user_id, balance_minor_units, version, updated_at,
+                  total_allocated_minor_units, due_to_get_minor_units, expected_revenue_minor_units, paid_amount_minor_units
                 ) 
                 VALUES (
-                  $wallet_id, $user_id, $balance_minor_units, $version, $updated_at
+                  $wallet_id, $user_id, $balance_minor_units, $version, $updated_at,
+                  CAST(0 AS Int64), CAST(0 AS Int64), CAST(0 AS Int64), CAST(0 AS Int64)
                 );
                 """
                 

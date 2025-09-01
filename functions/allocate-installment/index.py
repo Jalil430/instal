@@ -99,7 +99,7 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                 try:
                     # Check if installment exists and get details
                     installment_query = """
-                    SELECT id, client_id, total_amount_minor_units, status
+                    SELECT id, client_id, installment_price, status, installment_number
                     FROM installments 
                     WHERE id = $installment_id AND user_id = $user_id
                     """
@@ -151,7 +151,10 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                     )
                     
                     total_allocated = list(existing_result[0].rows)[0].total_allocated
-                    remaining_amount = installment.total_amount_minor_units - total_allocated
+                    # Installment cap in minor units (RUB cents)
+                    from decimal import Decimal, ROUND_HALF_UP
+                    installment_price_mu = int((Decimal(str(installment.installment_price)) * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                    remaining_amount = installment_price_mu - total_allocated
                     
                     if amount_minor_units > remaining_amount:
                         raise ValueError(f"Allocation amount exceeds remaining installment amount. Remaining: {remaining_amount} minor units")
@@ -160,6 +163,17 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                     allocation_id = str(uuid.uuid4())
                     transaction_id = str(uuid.uuid4())
                     now_iso = datetime.utcnow().isoformat()
+
+                    # If installment is not yet linked to a wallet, set it now
+                    link_wallet_query = """
+                    UPDATE installments SET wallet_id = $wallet_id
+                    WHERE id = $installment_id AND user_id = $user_id AND (wallet_id IS NULL OR wallet_id = '' );
+                    """
+                    tx.execute(link_wallet_query, {
+                        '$installment_id': installment_id,
+                        '$wallet_id': wallet_id,
+                        '$user_id': user_id
+                    })
 
                     # Create allocation record
                     allocation_query = """
@@ -188,8 +202,8 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                         id, wallet_id, user_id, direction, amount_minor_units, currency,
                         reference_type, reference_id, description, created_by, created_at
                     ) VALUES (
-                        $id, $wallet_id, $user_id, 'debit', $amount_minor_units, 'RUB',
-                        'installment', $reference_id, $description, $created_by, $created_at
+                        $id, $wallet_id, $user_id, 'debit', $amount_minor_units, CAST('RUB' AS Utf8),
+                        CAST('installment' AS Utf8), $reference_id, $description, $created_by, $created_at
                     )
                     """
                     
@@ -205,16 +219,89 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                         '$created_at': now_iso
                     })
                     
-                    # Update wallet balance
+                    # Recompute wallet aggregates: total_allocated (remaining), due_to_get, expected_revenue
+                    # total_allocated = sum remaining across linked installments
+                    total_alloc_rs = tx.execute(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
+                        FROM (
+                          SELECT i.id,
+                            CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
+                          FROM installments i
+                          LEFT JOIN (
+                            SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
+                            FROM installment_payments GROUP BY installment_id
+                          ) AS p ON p.installment_id = i.id
+                          WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id
+                        );
+                        """,
+                        {'$wallet_id': wallet_id, '$user_id': user_id}
+                    )
+                    from decimal import Decimal, ROUND_HALF_UP
+                    total_remaining_dec = Decimal(str(total_alloc_rs[0].rows[0].total_remaining or 0)) if total_alloc_rs[0].rows else Decimal('0')
+                    total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+                    # due_to_get = sum of next unpaid payment per installment
+                    nd_rs = tx.execute(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT COALESCE(SUM(
+                          CAST(ip.expected_amount AS Decimal(22,9)) - CAST(COALESCE(ip.paid_amount, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))
+                        ), CAST(0 AS Decimal(22,9))) AS due_next_sum
+                        FROM installment_payments ip
+                        INNER JOIN installments i ON i.id = ip.installment_id
+                        INNER JOIN (
+                          SELECT ip2.installment_id AS inst_id, MIN(ip2.due_date) AS next_due
+                          FROM installment_payments ip2
+                          INNER JOIN installments i2 ON i2.id = ip2.installment_id
+                          WHERE i2.wallet_id = $wallet_id AND i2.user_id = $user_id AND ip2.is_paid = false
+                          GROUP BY ip2.installment_id
+                        ) nu ON nu.inst_id = ip.installment_id AND ip.due_date = nu.next_due
+                        WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                        """,
+                        {'$wallet_id': wallet_id, '$user_id': user_id}
+                    )
+                    from decimal import Decimal, ROUND_HALF_UP
+                    due_next_dec = Decimal(str(nd_rs[0].rows[0].due_next_sum or 0)) if nd_rs[0].rows else Decimal('0')
+                    due_to_get_mu = int((due_next_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+                    # Fetch wallet investor fields for expected_revenue
+                    w_rs = tx.execute(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT type, investment_amount_minor_units, investor_percentage
+                        FROM wallets WHERE id = $wallet_id AND user_id = $user_id;
+                        """,
+                        {'$wallet_id': wallet_id, '$user_id': user_id}
+                    )
+                    wallet_type = str(w_rs[0].rows[0].type or '').lower() if w_rs[0].rows else ''
+                    investment_amount_mu = int(w_rs[0].rows[0].investment_amount_minor_units or 0) if w_rs[0].rows else 0
+                    investor_pct = Decimal(str(w_rs[0].rows[0].investor_percentage or 0)) if w_rs[0].rows else Decimal('0')
+
+                    # Update wallet balance and aggregates atomically with version check
                     new_balance = wallet.balance_minor_units - amount_minor_units
                     new_version = wallet.version + 1
-                    
+                    exp_rev_rs = tx.execute(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS profit_sum
+                        FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                        """,
+                        {'$wallet_id': wallet_id, '$user_id': user_id}
+                    )
+                    profit_sum = Decimal(str(exp_rev_rs[0].rows[0].profit_sum or 0)) if exp_rev_rs[0].rows else Decimal('0')
+                    expected_revenue_mu = int((profit_sum * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
                     balance_update_query = """
                     UPDATE wallet_balances 
                     SET balance_minor_units = $new_balance, 
                         version = $new_version,
-                        updated_at = $updated_at
-                    WHERE wallet_id = $wallet_id AND user_id = $user_id AND version = $current_version
+                        updated_at = $updated_at,
+                        total_allocated_minor_units = $total_alloc,
+                        due_to_get_minor_units = $due_to_get,
+                        expected_revenue_minor_units = $exp_rev
+                    WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $current_version
                     """
                     
                     result = tx.execute(balance_update_query, {
@@ -223,10 +310,17 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                         '$updated_at': now_iso,
                         '$wallet_id': wallet_id,
                         '$user_id': user_id,
-                        '$current_version': wallet.version
+                        '$current_version': wallet.version,
+                        '$total_alloc': total_alloc_mu,
+                        '$due_to_get': due_to_get_mu,
+                        '$exp_rev': expected_revenue_mu
                     })
-
-                    if result[0].stats.rows_affected == 0:
+                    ra = None
+                    try:
+                        ra = getattr(getattr(result[0], 'stats', None), 'rows_affected', None)
+                    except Exception:
+                        ra = None
+                    if ra is not None and ra == 0:
                         raise ydb.Aborted("Concurrent update to wallet balance detected.")
 
                     # Commit transaction

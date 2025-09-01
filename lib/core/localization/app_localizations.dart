@@ -65,12 +65,12 @@ class AppLocalizations {
   String get analytics => locale.languageCode == 'ru' ? 'Аналитика' : 'Analytics';
 
   // ===== Plurals =====
-  String get investor_one =>
-      locale.languageCode == 'ru' ? 'инвестор' : 'investor';
-  String get investor_few =>
-      locale.languageCode == 'ru' ? 'инвестора' : 'investors';
-  String get investor_many =>
-      locale.languageCode == 'ru' ? 'инвесторов' : 'investors';
+  String get wallet_one =>
+      locale.languageCode == 'ru' ? 'кошелек' : 'wallet';
+  String get wallet_few =>
+      locale.languageCode == 'ru' ? 'кошелька' : 'wallets';
+  String get wallet_many =>
+      locale.languageCode == 'ru' ? 'кошельков' : 'wallets';
   String get client_one => locale.languageCode == 'ru' ? 'клиент' : 'client';
   String get client_few => locale.languageCode == 'ru' ? 'клиента' : 'clients';
   String get client_many => locale.languageCode == 'ru' ? 'клиентов' : 'clients';
@@ -82,6 +82,10 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'рассрочек' : 'installments';
 
   String get refresh => locale.languageCode == 'ru' ? 'Обновить' : 'Refresh';
+  String get showActive => locale.languageCode == 'ru' ? 'Показать активные' : 'Show Active';
+  String get showArchived => locale.languageCode == 'ru' ? 'Показать архив' : 'Show Archived';
+  String get archived => locale.languageCode == 'ru' ? 'В архиве' : 'Archived';
+  String get unarchived => locale.languageCode == 'ru' ? 'Разархивировано' : 'Unarchived';
 
 
   // ===== Entities (Client, Investor, Installment) =====
@@ -165,6 +169,11 @@ class AppLocalizations {
   String get dueDate => locale.languageCode == 'ru' ? 'Срок оплаты' : 'Due Date';
   String get nextPayment =>
       locale.languageCode == 'ru' ? 'Следующий платеж' : 'Next Payment';
+  // Payment dialog helpers
+  String get fillExpected =>
+      locale.languageCode == 'ru' ? 'Заполнить ожидаемой суммой' : 'Fill expected amount';
+  String get markAsPaidZero =>
+      locale.languageCode == 'ru' ? 'Отметить как оплачено (0)' : 'Mark as paid (0)';
 
   // ===== Statuses =====
   String get paid => locale.languageCode == 'ru' ? 'Оплачено' : 'Paid';
@@ -425,6 +434,9 @@ class AppLocalizations {
 
   String get expectedReturns => locale.languageCode == 'ru' ? 'Ожидаемые доходы' : 'Expected returns';
   String get profit => locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';
+  // Clarified: projected profit assuming all payments are received
+  String get expectedProfit =>
+      locale.languageCode == 'ru' ? 'Ожидаемая прибыль' : 'Expected Profit';
   String get returnDueDate => locale.languageCode == 'ru' ? 'Дата возврата' : 'Return due date';
   String get nextPaymentHeader =>
       locale.languageCode == 'ru' ? 'СЛЕДУЮЩИЙ ПЛАТЕЖ' : 'NEXT PAYMENT';
@@ -943,6 +955,12 @@ class AppLocalizations {
       ? 'Вы уверены, что хотите архивировать кошелек "$name"?'
       : 'Are you sure you want to archive wallet "$name"?';
   String get archive => locale.languageCode == 'ru' ? 'Архивировать' : 'Archive';
+  String get unarchiveWalletTitle =>
+      locale.languageCode == 'ru' ? 'Разархивировать кошелек' : 'Unarchive Wallet';
+  String unarchiveWalletConfirmation(String name) => locale.languageCode == 'ru'
+      ? 'Разархивировать кошелек "$name"?'
+      : 'Unarchive wallet "$name"?';
+  String get unarchive => locale.languageCode == 'ru' ? 'Разархивировать' : 'Unarchive';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

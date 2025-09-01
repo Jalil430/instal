@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/utils/num_format.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
@@ -150,27 +151,52 @@ class ClientDetailsScreenMobile extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   
-                  if (installments.isEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(l10n?.noInstallments ?? 'Нет рассрочек'),
-                      ),
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          ...installments.map((installment) {
-                            return _buildMobileInstallmentItem(context, installment);
-                          }),
-                        ],
-                      ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.subtleBackgroundColor,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(11),
+                              topRight: Radius.circular(11),
+                            ),
+                            border: Border(
+                              bottom: BorderSide(color: AppTheme.subtleBorderColor),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${l10n?.clientInstallments ?? 'Рассрочки клиента'} (${installments.length})',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: installments.isEmpty
+                              ? Text(l10n?.noInstallments ?? 'Нет рассрочек', style: const TextStyle(color: AppTheme.textSecondary))
+                              : SizedBox(
+                                  height: 300,
+                                  child: ListView.builder(
+                                    itemCount: installments.length,
+                                    itemBuilder: (context, index) => _buildMobileInstallmentItem(context, installments[index]),
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -210,52 +236,37 @@ class ClientDetailsScreenMobile extends StatelessWidget {
   }
 
   Widget _buildMobileInstallmentItem(BuildContext context, Installment installment) {
-    // In mobile, we show installment details in a card with a vertical layout
     return InkWell(
       onTap: () => context.go('/installments/${installment.id}'),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+        padding: const EdgeInsets.all(AppTheme.spacingMd),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: AppTheme.borderColor.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
+          color: AppTheme.subtleBackgroundColor,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          border: Border.all(color: AppTheme.subtleBorderColor),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              installment.productName,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    installment.productName,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${stripTrailingZeroMoney(currencyFormat.format(installment.installmentPrice))} • ${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  currencyFormat.format(installment.installmentPrice),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  '${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
             Text(
               dateFormat.format(installment.downPaymentDate),
-              style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 13,
-              ),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
           ],
         ),

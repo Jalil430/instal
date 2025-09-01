@@ -197,7 +197,11 @@ def handler(event, context):
                     user_id,
                     balance_minor_units,
                     version,
-                    updated_at
+                    updated_at,
+                    total_allocated_minor_units,
+                    due_to_get_minor_units,
+                    expected_revenue_minor_units,
+                    paid_amount_minor_units
                 FROM wallet_balances
                 WHERE wallet_id = '{wallet_id}' AND user_id = '{user_id}';
                 """
@@ -242,7 +246,11 @@ def handler(event, context):
                     'balance_minor_units': balance_minor_units,
                     'balance_rubles': float(balance_minor_units / 100.0),
                     'version': version,
-                    'updated_at': updated_at
+                    'updated_at': updated_at,
+                    'total_allocated_minor_units': convert_int64(row.get('total_allocated_minor_units')),
+                    'due_to_get_minor_units': convert_int64(row.get('due_to_get_minor_units')),
+                    'expected_revenue_minor_units': convert_int64(row.get('expected_revenue_minor_units')),
+                    'paid_amount_minor_units': convert_int64(row.get('paid_amount_minor_units')),
                 }
 
                 logger.info(f"GET-WALLET-BALANCE API - Returning balance data for wallet {wallet_id}")

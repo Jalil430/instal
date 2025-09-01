@@ -58,6 +58,12 @@ class InstallmentRepositoryImpl implements InstallmentRepository {
     return installmentModels.cast<Installment>();
   }
 
+  @override
+  Future<List<Installment>> getInstallmentsByWalletId(String walletId) async {
+    final installmentModels = await _remoteDataSource.getInstallmentsByWalletId(walletId);
+    return installmentModels.cast<Installment>();
+  }
+
   // Payment operations
   @override
   Future<List<InstallmentPayment>> getPaymentsByInstallmentId(String installmentId) async {

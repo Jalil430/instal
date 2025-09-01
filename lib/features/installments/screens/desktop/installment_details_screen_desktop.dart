@@ -159,23 +159,27 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: Column(
                       children: [
                         _buildTableHeader(context),
-                        ...payments.map((payment) {
-                          return InstallmentPaymentItem(
-                            payment: payment,
-                            onPaymentUpdated: (updatedInstallment) {
-                              // This callback will be handled by the parent screen
-                              // and it will reload the data
-                            },
-                            isExpanded: false,
-                          );
-                        }),
-                        // Add remaining payments if any
-                        if (payments.length < installment.termMonths)
-                          ..._buildRemainingPayments(context),
+                        SizedBox(
+                          height: 600,
+                          child: ListView(
+                            children: [
+                              ...payments.map((payment) {
+                                return InstallmentPaymentItem(
+                                  payment: payment,
+                                  onPaymentUpdated: (updatedInstallment) {},
+                                  isExpanded: false,
+                                );
+                              }).toList(),
+                              if (payments.length < installment.termMonths)
+                                ..._buildRemainingPayments(context),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),

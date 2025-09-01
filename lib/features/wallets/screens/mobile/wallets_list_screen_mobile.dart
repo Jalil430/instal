@@ -63,6 +63,13 @@ class WalletsListScreenMobile extends StatelessWidget {
               onPressed: () => state.forceRefresh(),
               tooltip: l10n?.refresh ?? 'Обновить',
             ),
+            IconButton(
+              icon: Icon(state.showArchived ? Icons.unarchive : Icons.archive),
+              tooltip: state.showArchived
+                  ? (l10n?.showActive ?? 'Show Active')
+                  : (l10n?.showArchived ?? 'Show Archived'),
+              onPressed: () => state.setStateWrapper(() => state.showArchived = !state.showArchived),
+            ),
           ],
         ],
         bottom: state.isSelectionMode

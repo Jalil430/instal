@@ -58,5 +58,4 @@
 - [ ] Error handling and retry of wallet aggregate updates
 
 ## Optional Enhancements
-- [ ] Support multi‑wallet funding per installment with proportionate payment apportioning
 - [ ] Add audit table for payment adjustments (before/after expected_amount) for history

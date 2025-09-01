@@ -53,11 +53,17 @@ UPDATE_WALLET_ID=$(create_function "update-wallet" "update-wallet/")
 echo "Creating archive-wallet function..."
 ARCHIVE_WALLET_ID=$(create_function "archive-wallet" "archive-wallet/")
 
+echo "Creating delete-wallet function..."
+DELETE_WALLET_ID=$(create_function "delete-wallet" "delete-wallet/")
+
 echo "Creating wallet-ledger function..."
 WALLET_LEDGER_ID=$(create_function "wallet-ledger" "wallet-ledger/")
 
 echo "Creating wallet-top-up function..."
 WALLET_TOPUP_ID=$(create_function "wallet-top-up" "wallet-top-up/")
+
+echo "Creating wallet-withdraw function..."
+WALLET_WITHDRAW_ID=$(create_function "wallet-withdraw" "wallet-withdraw/")
 
 echo ""
 echo "Wallet functions deployed successfully!"
@@ -70,8 +76,10 @@ echo "get-wallet-balance: $GET_WALLET_BALANCE_ID"
 echo "list-wallet-balances: $LIST_WALLET_BALANCES_ID"
 echo "update-wallet: $UPDATE_WALLET_ID"
 echo "archive-wallet: $ARCHIVE_WALLET_ID"
+echo "delete-wallet: $DELETE_WALLET_ID"
 echo "wallet-ledger: $WALLET_LEDGER_ID"
 echo "wallet-top-up: $WALLET_TOPUP_ID"
+echo "wallet-withdraw: $WALLET_WITHDRAW_ID"
 echo ""
 echo "Please update instal-api.yaml with these function IDs:"
 echo "- Replace WALLET_CREATE_FUNCTION_ID with: $CREATE_WALLET_ID"
@@ -81,5 +89,7 @@ echo "- Replace PLACEHOLDER_GET_WALLET_BALANCE with: $GET_WALLET_BALANCE_ID"
 echo "- Replace PLACEHOLDER_LIST_WALLET_BALANCES with: $LIST_WALLET_BALANCES_ID"
 echo "- Replace WALLET_UPDATE_FUNCTION_ID with: $UPDATE_WALLET_ID"
 echo "- Replace WALLET_ARCHIVE_FUNCTION_ID with: $ARCHIVE_WALLET_ID"
+echo "- Replace WALLET_DELETE_FUNCTION_ID with: $DELETE_WALLET_ID"
 echo "- Replace WALLET_LEDGER_FUNCTION_ID with: $WALLET_LEDGER_ID"
 echo "- Replace WALLET_TOPUP_FUNCTION_ID with: $WALLET_TOPUP_ID"
+echo "- Replace WALLET_WITHDRAW_FUNCTION_ID with: $WALLET_WITHDRAW_ID"

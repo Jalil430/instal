@@ -11,6 +11,7 @@ abstract class WalletRepository {
   Future<Wallet> updateWallet(Wallet wallet);
   Future<void> deleteWallet(String walletId);
   Future<void> archiveWallet(String walletId);
+  Future<void> unarchiveWallet(String walletId);
   void clearCache();
 
   // Wallet balance operations
@@ -34,4 +35,8 @@ abstract class WalletRepository {
   Future<List<Wallet>> searchWallets(String userId, String query);
   Future<List<Wallet>> getWalletsByType(String userId, WalletType type);
   Future<List<Wallet>> getActiveWallets(String userId);
+
+  // Personal wallet cash operations
+  Future<void> topUpWallet(String walletId, int amountMinorUnits, String description);
+  Future<void> withdrawWallet(String walletId, int amountMinorUnits, String description);
 }

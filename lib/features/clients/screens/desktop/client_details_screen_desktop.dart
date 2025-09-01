@@ -145,6 +145,7 @@ class ClientDetailsScreenDesktop extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: Column(
                       children: [
@@ -157,9 +158,13 @@ class ClientDetailsScreenDesktop extends StatelessWidget {
                             ),
                           )
                         else
-                          ...installments.map((installment) {
-                            return _buildInstallmentListItem(context, installment);
-                          }),
+                          SizedBox(
+                            height: 300,
+                            child: ListView.builder(
+                              itemCount: installments.length,
+                              itemBuilder: (context, index) => _buildInstallmentListItem(context, installments[index]),
+                            ),
+                          ),
                       ],
                     ),
                   ),

@@ -5,6 +5,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../features/wallets/domain/entities/wallet.dart';
 import '../../features/wallets/domain/entities/wallet_balance.dart';
 import 'keyboard_navigable_dropdown.dart';
+import '../../core/utils/num_format.dart';
 
 class WalletSelector extends StatelessWidget {
   final List<Wallet> wallets;
@@ -102,8 +103,8 @@ class WalletSelector extends StatelessWidget {
 
         final balance = walletBalances[wallet.id];
         final balanceText = balance != null
-            ? currencyFormat.format(balance.balance)
-            : currencyFormat.format(0);
+            ? stripTrailingZeroMoney(currencyFormat.format(balance.balance))
+            : stripTrailingZeroMoney(currencyFormat.format(0));
 
         return '${wallet.name} ($balanceText)';
       },

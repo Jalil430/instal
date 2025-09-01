@@ -10,7 +10,6 @@ fi
 : "${JWT_SECRET_KEY:?JWT_SECRET_KEY env var must be set}"
 : "${YDB_ENDPOINT:?YDB_ENDPOINT env var must be set}"
 : "${YDB_DATABASE:?YDB_DATABASE env var must be set}"
-: "${API_GATEWAY_ID:?API_GATEWAY_ID env var must be set}"
 
 SERVICE_ACCOUNT_ID="aje6aqidkl72tp8qttce"
 RUNTIME="python39"
@@ -41,34 +40,50 @@ deploy() {
   yc serverless function get --name "${name}" --format json | jq -r '.id'
 }
 
-echo "Starting deployment (simple mode)."
+echo "Starting deployment (focused mode)."
 echo "Tip: source deploy_env.sh before running this script."
 
-# Ensure only the newly created functions exist (as requested)
-ensure_function get-wallet-balance
-ensure_function list-wallet-balances
+# Create functions if they don't exist yet
+# ensure_function create-installment
+# ensure_function create-wallet
+# ensure_function update-installment-payment
+# ensure_function allocate-installment
+# ensure_function void-installment-allocation
+# ensure_function get-installment
+# ensure_function delete-installment
+# ensure_function get-wallet
+# ensure_function delete-wallet
+ensure_function wallet-withdraw
+ensure_function wallet-top-up
 
-# Deploy all wallet-related functions
-CREATE_WALLET_ID=$(deploy create-wallet              functions/create-wallet/)
-LIST_WALLETS_ID=$(deploy list-wallets                functions/list-wallets/)
-GET_WALLET_ID=$(deploy get-wallet                    functions/get-wallet/)
-GET_WALLET_BALANCE_ID=$(deploy get-wallet-balance    functions/get-wallet-balance/)
-LIST_WALLET_BALANCES_ID=$(deploy list-wallet-balances functions/list-wallet-balances/)
-UPDATE_WALLET_ID=$(deploy update-wallet              functions/update-wallet/)
-ARCHIVE_WALLET_ID=$(deploy archive-wallet            functions/archive-wallet/)
-WALLET_LEDGER_ID=$(deploy wallet-ledger              functions/wallet-ledger/)
-WALLET_TOPUP_ID=$(deploy wallet-top-up               functions/wallet-top-up/)
+
+# Deploy only the functions we updated
+# CREATE_INSTALLMENT_ID=$(deploy create-installment           functions/create-installment/)
+# CREATE_WALLET_ID=$(deploy create-wallet                     functions/create-wallet/)
+# UPDATE_INSTALLMENT_PAYMENT_ID=$(deploy update-installment-payment functions/update-installment-payment/)
+# ALLOCATE_INSTALLMENT_ID=$(deploy allocate-installment        functions/allocate-installment/)
+# VOID_INSTALLMENT_ALLOCATION_ID=$(deploy void-installment-allocation functions/void-installment-allocation/)
+# GET_INSTALLMENT_ID=$(deploy get-installment                 functions/get-installment/)
+# DELETE_INSTALLMENT_ID=$(deploy delete-installment               functions/delete-installment/)
+# GET_WALLET_ID=$(deploy get-wallet                             functions/get-wallet/)
+# GET_WALLET_ID=$(deploy update-wallet                             functions/update-wallet/)
+# GET_WALLET_ID=$(deploy delete-wallet                             functions/delete-wallet/)
+GET_WALLET_ID=$(deploy wallet-withdraw                             functions/wallet-withdraw/)
+GET_WALLET_ID=$(deploy wallet-top-up                             functions/wallet-top-up/)
 
 echo ""
-echo "Function IDs (copy into instal-api.yaml manually where needed):"
-echo "  create-wallet:        $CREATE_WALLET_ID"
-echo "  list-wallets:         $LIST_WALLETS_ID"
-echo "  get-wallet:           $GET_WALLET_ID"
-echo "  get-wallet-balance:   $GET_WALLET_BALANCE_ID"
-echo "  list-wallet-balances: $LIST_WALLET_BALANCES_ID"
-echo "  update-wallet:        $UPDATE_WALLET_ID"
-echo "  archive-wallet:       $ARCHIVE_WALLET_ID"
-echo "  wallet-ledger:        $WALLET_LEDGER_ID"
-echo "  wallet-top-up:        $WALLET_TOPUP_ID"
+echo "Function IDs (copy into instal-api.yaml where needed):"
+# echo "  create-installment:            $CREATE_INSTALLMENT_ID"
+# echo "  create-wallet:                 $CREATE_WALLET_ID"
+# echo "  update-installment-payment:    $UPDATE_INSTALLMENT_PAYMENT_ID"
+# echo "  allocate-installment:          $ALLOCATE_INSTALLMENT_ID"
+# echo "  void-installment-allocation:   $VOID_INSTALLMENT_ALLOCATION_ID"
+# echo "  get-installment:               $GET_INSTALLMENT_ID"
+# echo "  delete-installment:               $DELETE_INSTALLMENT_ID"
+# echo "  get-wallet:               $GET_WALLET_ID"
+# echo "  update-wallet:               $GET_WALLET_ID"
+# echo "  delete-wallet:               $GET_WALLET_ID"
+echo "  wallet-withdraw:               $GET_WALLET_ID"
+echo "  wallet-top-up:               $GET_WALLET_ID"
 echo ""
-echo "Done. Update instal-api.yaml manually with any new IDs and deploy the API Gateway separately."
+echo "Done."

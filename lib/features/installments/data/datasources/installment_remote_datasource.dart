@@ -13,6 +13,7 @@ abstract class InstallmentRemoteDataSource {
   Future<List<InstallmentModel>> searchInstallments(String userId, String query);
   Future<List<InstallmentModel>> getInstallmentsByClientId(String clientId);
   Future<List<InstallmentModel>> getInstallmentsByInvestorId(String investorId);
+  Future<List<InstallmentModel>> getInstallmentsByWalletId(String walletId);
   
   // Payment operations
   Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(String installmentId);
@@ -80,6 +81,12 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   @override
   Future<String> createInstallment(InstallmentModel installment) async {
     final installmentData = installment.toApiMap();
+    // Debug: ensure wallet_id is present when selected in UI
+    try {
+      // Safe prints to help diagnose payload
+      // ignore: avoid_print
+      print('🛰️ POST /installments wallet_id: ' + (installmentData['wallet_id']?.toString() ?? 'NULL'));
+    } catch (_) {}
     
     final response = await ApiClient.post('/installments', installmentData);
     ApiClient.handleResponse(response);
@@ -167,6 +174,14 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     return jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
   }
 
+  @override
+  Future<List<InstallmentModel>> getInstallmentsByWalletId(String walletId) async {
+    final response = await ApiClient.get('/installments?wallet_id=$walletId&limit=50000&offset=0');
+    ApiClient.handleResponse(response);
+    final List<dynamic> jsonList = json.decode(response.body);
+    return jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
+  }
+
   // Payment operations
   @override
   Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(String installmentId) async {
@@ -212,6 +227,7 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   @override
   Future<InstallmentModel> updatePayment(InstallmentPaymentModel payment) async {
     final paymentData = {
+      'paid_amount': payment.paidAmount, // supports 0 or more
       'is_paid': payment.isPaid,
       'paid_date': payment.paidDate?.toIso8601String().split('T')[0], // YYYY-MM-DD format
     };

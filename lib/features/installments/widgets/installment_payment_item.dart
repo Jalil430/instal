@@ -297,9 +297,13 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                       padding: const EdgeInsets.only(left: 8),
                       child: Row(
                         children: [
-                          // Payment Amount
+                          // Payment Amount (show paid for paid items, expected otherwise)
                           Text(
-                            currencyFormat.format(widget.payment.expectedAmount),
+                            currencyFormat.format(
+                              widget.payment.isPaid
+                                  ? widget.payment.paidAmount
+                                  : widget.payment.expectedAmount,
+                            ),
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w400,
                                   fontSize: 14,

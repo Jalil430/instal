@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/utils/num_format.dart';
 import '../../../../shared/widgets/custom_contextual_dialog.dart';
 import '../../domain/entities/wallet.dart';
 import '../../domain/entities/wallet_balance.dart';
@@ -10,6 +11,7 @@ import '../wallets_list_screen.dart';
 import '../../widgets/wallet_list_item.dart';
 import '../../../../shared/widgets/analytics_card.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/custom_icon_button.dart';
 
 class WalletsListScreenDesktop extends StatelessWidget {
   final WalletsListScreenState state;
@@ -65,6 +67,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
+                            // Removed archive toggle here; moved near Add button on the right
                           ],
                         ),
                         Text(
@@ -104,10 +107,22 @@ class WalletsListScreenDesktop extends StatelessWidget {
                         child: Text(l10n?.delete ?? 'Delete'),
                       ),
                     ] else ...[
-                      // Custom Add button
-                      CustomButton(
-                        text: l10n?.createWallet ?? 'Создать кошелек',
-                        onPressed: () => state.showCreateWalletDialog(),
+                      // Right-side controls: Archived toggle + Add button
+                      Row(
+                        children: [
+                          CustomIconButton(
+                            icon: state.showArchived ? Icons.unarchive : Icons.archive,
+                            onPressed: () => state.setStateWrapper(() => state.showArchived = !state.showArchived),
+                            hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
+                            hoverIconColor: AppTheme.warningColor,
+                            hoverBorderColor: AppTheme.warningColor.withOpacity(0.3),
+                          ),
+                          const SizedBox(width: 8),
+                          CustomButton(
+                            text: l10n?.createWallet ?? 'Создать кошелек',
+                            onPressed: () => state.showCreateWalletDialog(),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -429,10 +444,12 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                         Expanded(
                           flex: 1,
                           child: Text(
-                            widget.balance != null ? widget.currencyFormat.format(widget.balance!.balance) : '0.00 ₽',
+                            widget.balance != null
+                                ? stripTrailingZeroMoney(widget.currencyFormat.format(widget.balance!.balance))
+                                : stripTrailingZeroMoney(widget.currencyFormat.format(0)),
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                   color: AppTheme.textPrimary,
                                 ),
                           ),
@@ -442,7 +459,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                           flex: 1,
                           child: Text(
                             // TODO: Calculate actual given for installment amount from wallet data
-                            widget.currencyFormat.format(0), // Placeholder - will be calculated from actual data
+                            stripTrailingZeroMoney(widget.currencyFormat.format(0)), // Placeholder - will be calculated from actual data
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 14,
                                   color: AppTheme.textPrimary,
@@ -455,7 +472,7 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                           flex: 1,
                           child: Text(
                             // TODO: Calculate actual due to get amount from wallet data
-                            widget.currencyFormat.format(0), // Placeholder - will be calculated from actual data
+                            stripTrailingZeroMoney(widget.currencyFormat.format(0)), // Placeholder - will be calculated from actual data
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 14,
                                   color: AppTheme.textPrimary,

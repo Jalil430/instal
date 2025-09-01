@@ -291,6 +291,8 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
       final updatedPayment = widget.payment.copyWith(
         isPaid: false,
         paidDate: null,
+        // Send 0; backend will treat is_paid=false with nonzero current paid as full cancellation
+        paidAmount: 0.0,
       );
       
       final updatedInstallment = await _repository.updatePayment(updatedPayment);

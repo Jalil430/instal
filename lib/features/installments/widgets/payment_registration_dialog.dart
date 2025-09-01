@@ -73,6 +73,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
   bool _isLoading = false;
   // Add focus node
   final FocusNode _focusNode = FocusNode();
+  final TextEditingController _amountController = TextEditingController();
 
   @override
   void initState() {
@@ -81,6 +82,8 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
       InstallmentRemoteDataSourceImpl(),
     );
     _selectedDate = DateTime.now();
+    // Pre-fill amount with expected amount
+    _amountController.text = widget.payment.expectedAmount.toStringAsFixed(0);
     // Request focus when dialog is shown
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -90,6 +93,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
   @override
   void dispose() {
     _focusNode.dispose(); // Clean up the focus node
+    _amountController.dispose();
     super.dispose();
   }
 
@@ -188,6 +192,20 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
         ),
         
         SizedBox(height: isDesktop ? 12 : 20),
+
+        // Amount input
+        TextField(
+          controller: _amountController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[0-9]+([.,][0-9]{0,2})?'))],
+          decoration: InputDecoration(
+            labelText: l10n?.enterAmount ?? 'Сумма оплаты',
+            hintText: currencyFormat.format(widget.payment.expectedAmount),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        SizedBox(height: isDesktop ? 12 : 16),
+        SizedBox(height: isDesktop ? 8 : 12),
         
         // Buttons
         Row(
@@ -318,9 +336,34 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
       // Add a small delay to ensure UI updates before the API call
       await Future.delayed(const Duration(milliseconds: 50));
       
+      // Parse amount (allow comma or dot) + validate (0 allowed)
+      final raw = _amountController.text.trim().replaceAll(',', '.');
+      final valid = RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(raw);
+      if (!valid) {
+        if (mounted) {
+          final loc = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc?.invalidAmount ?? 'Некорректная сумма (до 2 знаков после запятой)')),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+      double amount = double.tryParse(raw) ?? 0.0;
+      if (amount < 0) {
+        if (mounted) {
+          final loc = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc?.invalidAmount ?? 'Некорректная сумма')),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
       final updatedPayment = widget.payment.copyWith(
         isPaid: true,
         paidDate: _selectedDate,
+        paidAmount: amount,
       );
       
       // Use a shorter timeout for payment operations

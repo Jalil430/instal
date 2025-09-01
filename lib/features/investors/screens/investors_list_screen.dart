@@ -332,11 +332,11 @@ class InvestorsListScreenState extends State<InvestorsListScreen> with TickerPro
   String getInvestorsCountText(int count) {
     final l10n = AppLocalizations.of(context)!;
     if (count % 10 == 1 && count % 100 != 11) {
-      return l10n.investor_one;
+      return l10n.wallet_one;
     } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
-      return l10n.investor_few;
+      return l10n.wallet_few;
     } else {
-      return l10n.investor_many;
+      return l10n.wallet_many;
     }
   }
 

@@ -3,8 +3,9 @@ import os
 import ydb
 import jwt
 import logging
-from typing import Union, Optional, Tuple
-from decimal import Decimal
+import time
+from typing import Optional, Tuple
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, date
 
 # Configure logging
@@ -21,7 +22,7 @@ class JWTAuth:
         
         try:
             payload = jwt.decode(token, secret_key, algorithms=['HS256'])
-            
+
             # Check token type
             if payload.get('type') != token_type:
                 raise ValueError(f"Invalid token type. Expected {token_type}")
@@ -115,15 +116,17 @@ def handler(event, context):
             return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Invalid JSON in request body'})}
         
         # --- Validation ---
-        if 'is_paid' not in body or not isinstance(body.get('is_paid'), bool):
-            return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': "'is_paid' (boolean) is a required field"})}
+        # paid_amount optional for backward compatibility; default to 0
+        try:
+            paid_delta = Decimal(str(body.get('paid_amount', 0)))
+        except Exception:
+            return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': "'paid_amount' must be a number"})}
+        logger.info(f"UPDATE-PAYMENT: initial paid_delta={paid_delta} is_paid={body.get('is_paid', False)} paid_date={body.get('paid_date')}")
 
-        is_paid = body['is_paid']
+        # Optional flags
+        is_paid = bool(body.get('is_paid', False))
         paid_date = None
-
-        if is_paid:
-            if 'paid_date' not in body or not body['paid_date']:
-                return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': "'paid_date' is required when 'is_paid' is true"})}
+        if body.get('paid_date'):
             try:
                 paid_date = datetime.strptime(body['paid_date'], '%Y-%m-%d').date()
             except (ValueError, TypeError):
@@ -146,39 +149,76 @@ def handler(event, context):
         
         def execute_query(session):
             nonlocal payment_id  # Allow modification of payment_id from outer scope
+            nonlocal paid_delta  # We may adjust delta (e.g., full cancellation)
             logger.info(f"Starting execute_query with payment_id: {payment_id}, user_id: {user_id}")
             
-            try:
-                # First, verify the payment belongs to an installment owned by the authenticated user
-                # and get the installment_id for updating calculated fields
-                verify_query = """DECLARE $payment_id AS Utf8;
-SELECT installment_id FROM installment_payments WHERE id = $payment_id;"""
-                
-                logger.info(f"Executing verify query with payment_id: {payment_id}")
-                logger.info(f"Verify query text: {verify_query}")
+            # Lightweight two-step verification with retry to avoid join pressure and throttling
+            get_payment_inst_q = session.prepare(
+                """
+                DECLARE $payment_id AS Utf8;
+                SELECT installment_id FROM installment_payments WHERE id = $payment_id;
+                """
+            )
+            check_installment_user_q = session.prepare(
+                """
+                DECLARE $installment_id AS Utf8; DECLARE $user_id AS Utf8;
+                SELECT id FROM installments WHERE id = $installment_id AND user_id = $user_id;
+                """
+            )
+
+            verify_result = None
+            installment_id = None
+            backoff = 0.15
+            for attempt in range(5):
                 try:
-                    prepared_query = session.prepare(verify_query)
-                    logger.info("Query prepared successfully")
-                    verify_result = session.transaction().execute(
-                        prepared_query,
+                    # Step 1: find installment_id by payment_id
+                    res1 = session.transaction().execute(
+                        get_payment_inst_q,
                         {'$payment_id': payment_id},
                         commit_tx=False
                     )
-                    logger.info(f"Verify query executed successfully")
-                except Exception as query_error:
-                    logger.error(f"Query execution failed: {query_error}")
-                    logger.error(f"Query was: {verify_query}")
+                    if res1[0].rows:
+                        installment_id = res1[0].rows[0].installment_id
+                        # Step 2: ensure this installment belongs to current user
+                        res2 = session.transaction().execute(
+                            check_installment_user_q,
+                            {'$installment_id': installment_id, '$user_id': user_id},
+                            commit_tx=False
+                        )
+                        verify_result = res2
+                        break
+                    else:
+                        verify_result = res1  # empty rows
+                        break
+                except Exception as e:
+                    msg = str(e)
+                    if 'ResourceExhausted' in msg or 'RESOURCE_EXHAUSTED' in msg:
+                        time.sleep(backoff)
+                        backoff = min(backoff * 2, 1.0)
+                        continue
+                    logger.error(f"Verify step failed: {e}")
                     raise
-            except Exception as e:
-                logger.error(f"Error in verify query: {str(e)}")
-                raise
-            
+
             # Handle synthetic payment IDs (ending with _next)
-            if not verify_result[0].rows and payment_id.endswith('_next'):
+            if (not verify_result or not verify_result[0].rows) and payment_id.endswith('_next'):
                 installment_id = payment_id.replace('_next', '')
                 logger.info(f"Detected synthetic payment ID. Looking for next unpaid payment in installment: {installment_id}")
                 
                 # Find the actual next unpaid payment for this installment
+                # Ensure the installment belongs to the user
+                inst_check_q = """
+DECLARE $installment_id AS Utf8; DECLARE $user_id AS Utf8;
+SELECT id FROM installments WHERE id = $installment_id AND user_id = $user_id;
+"""
+                prepared_inst_check = session.prepare(inst_check_q)
+                inst_rows = session.transaction().execute(
+                    prepared_inst_check,
+                    {'$installment_id': installment_id, '$user_id': user_id},
+                    commit_tx=False
+                )
+                if not inst_rows[0].rows:
+                    raise Exception("Installment not found or access denied")
+
                 find_next_payment_query = """
 DECLARE $installment_id AS Utf8;
 SELECT id
@@ -212,51 +252,78 @@ LIMIT 1;
                 payment_id = row.id
                 logger.info(f"Found actual payment ID: {payment_id} for installment: {installment_id}")
                 
-            elif not verify_result[0].rows:
+            elif not verify_result or not verify_result[0].rows:
                 logger.error(f"Payment not found or access denied. payment_id: {payment_id}, user_id: {user_id}")
                 raise Exception("Payment not found or access denied")
             else:
-                row = verify_result[0].rows[0]
-                installment_id = row.installment_id
+                # Already validated: we have installment_id from step 1
+                if not installment_id:
+                    # Fallback to join result structure (shouldn't happen now)
+                    row = verify_result[0].rows[0]
+                    installment_id = row.installment_id
                 logger.info(f"Found installment_id: {installment_id} for payment_id: {payment_id}")
 
             
-            # Prepare queries outside transaction
-            update_payment_query = """
-            DECLARE $payment_id AS Utf8;
-            DECLARE $paid_amount AS Decimal(22,9);
-            DECLARE $set_paid AS Bool;
-            DECLARE $paid_date AS Optional<Date>;
-            DECLARE $updated_at AS Timestamp;
+            # Prepare reusable queries outside transaction
+            update_payment_query = session.prepare(
+                """
+                DECLARE $payment_id AS Utf8;
+                DECLARE $paid_amount AS Decimal(22,9);
+                DECLARE $has_set AS Bool;
+                DECLARE $new_is_paid AS Bool;
+                DECLARE $paid_date AS Optional<Date>;
+                DECLARE $updated_at AS Timestamp;
 
-            UPDATE installment_payments
-            SET 
-                paid_amount = COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) + $paid_amount,
-                is_paid = CASE WHEN $set_paid THEN true ELSE is_paid END,
-                paid_date = CASE WHEN $set_paid THEN $paid_date ELSE paid_date END,
-                updated_at = $updated_at
-            WHERE id = $payment_id;
-            """
-            
-            prepared_update_payment = session.prepare(update_payment_query)
-            
-            # Start transaction for atomic updates
-            tx = session.transaction(ydb.SerializableReadWrite())
-            
-            # Load all payments and apply paid_amount / mark paid logic
+                UPDATE installment_payments
+                SET 
+                    paid_amount = COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) + $paid_amount,
+                    is_paid = CASE WHEN $has_set THEN $new_is_paid ELSE is_paid END,
+                    expected_amount = CASE WHEN $has_set AND $new_is_paid THEN CAST(0 AS Decimal(22,9)) ELSE expected_amount END,
+                    paid_date = CASE 
+                        WHEN $has_set AND $new_is_paid THEN $paid_date 
+                        WHEN $has_set AND NOT $new_is_paid THEN NULL 
+                        ELSE paid_date END,
+                    updated_at = $updated_at
+                WHERE id = $payment_id;
+                """
+            )
+
+            get_installment_q = session.prepare(
+                """
+                DECLARE $installment_id AS Utf8;
+                SELECT installment_price, wallet_id, user_id, installment_number, down_payment, monthly_payment
+                FROM installments WHERE id = $installment_id;
+                """
+            )
+
             get_payments_q = session.prepare(
                 """
                 DECLARE $installment_id AS Utf8;
-                SELECT id, payment_number, expected_amount, COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) AS paid_amount,
+                SELECT id, payment_number, expected_amount,
+                       COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) AS paid_amount,
                        is_paid, due_date
                 FROM installment_payments
                 WHERE installment_id = $installment_id
                 ORDER BY payment_number ASC;
                 """
             )
+
+            # Start transaction for atomic updates
+            tx = session.transaction(ydb.SerializableReadWrite())
+
+            # Get payments snapshot and installment price
+            inst_rs = tx.execute(get_installment_q, {'$installment_id': installment_id})
+            if not inst_rs[0].rows:
+                raise Exception("Installment not found")
+            installment_row = inst_rs[0].rows[0]
+            installment_price = Decimal(str(installment_row.installment_price))
+            installment_wallet_id = getattr(installment_row, 'wallet_id', None)
+            installment_user_id = getattr(installment_row, 'user_id', None)
+            base_down_payment = Decimal(str(getattr(installment_row, 'down_payment', '0')))
+            base_monthly_payment = Decimal(str(getattr(installment_row, 'monthly_payment', '0')))
+
             payments_rs = tx.execute(get_payments_q, {'$installment_id': installment_id})
             payments = list(payments_rs[0].rows)
-
             current_idx = next((i for i, r in enumerate(payments) if r.id == payment_id), None)
             if current_idx is None:
                 raise Exception("Payment not found after verification")
@@ -264,75 +331,219 @@ LIMIT 1;
             curr = payments[current_idx]
             curr_paid = Decimal(str(curr.paid_amount))
             curr_expected = Decimal(str(curr.expected_amount))
-            new_paid = curr_paid + paid_amount
-            set_paid_flag = is_paid or (new_paid >= curr_expected and curr_expected > 0)
+            
+            # Allow simple "set to unpaid" by sending is_paid=false with 0 amount: we convert it into a full cancellation
+            if (paid_delta == Decimal('0')) and (body.get('is_paid') is False) and (curr_paid > Decimal('0')):
+                paid_delta = -curr_paid
+                logger.info(f"UPDATE-PAYMENT TX: full cancellation applied, new paid_delta={paid_delta}")
+
+            new_paid = curr_paid + paid_delta
+            if new_paid < Decimal('0'):
+                raise Exception("Cancellation exceeds paid amount")
+            overpay_excess = new_paid - curr_expected if new_paid > curr_expected and curr_expected > Decimal('0') else Decimal('0')
+
+            # Determine if we should flip is_paid
+            want_set = False
+            new_is_paid = curr.is_paid
+            if body.get('is_paid') is not None:
+                want_set = True
+                new_is_paid = bool(body.get('is_paid'))
+            else:
+                if paid_delta > Decimal('0') and curr_expected > Decimal('0') and new_paid >= curr_expected:
+                    want_set = True
+                    new_is_paid = True
+                elif paid_delta < Decimal('0') and new_paid < curr_expected:
+                    want_set = True
+                    new_is_paid = False
+
+            # If caller marks as paid, use provided paid_date; if unmark, paid_date cleared by query
+            eff_paid_date = paid_date if (want_set and new_is_paid) else None
 
             tx.execute(
-                prepared_update_payment,
+                update_payment_query,
                 {
                     '$payment_id': payment_id,
-                    '$paid_amount': paid_amount,
-                    '$set_paid': set_paid_flag,
-                    '$paid_date': paid_date,
+                    '$paid_amount': paid_delta,
+                    '$has_set': want_set,
+                    '$new_is_paid': new_is_paid,
+                    '$paid_date': eff_paid_date,
                     '$updated_at': datetime.utcnow()
                 }
             )
-            logger.info(f"Payment {payment_id} paid_amount+={paid_amount} set_paid={set_paid_flag}")
+            logger.info(f"UPDATE-PAYMENT TX: Payment {payment_id} delta={paid_delta} set_paid={want_set} -> {new_is_paid}")
 
-            # Refresh payments snapshot for recalculation
+            # Refresh payments after update
             payments_rs = tx.execute(get_payments_q, {'$installment_id': installment_id})
             payments = list(payments_rs[0].rows)
 
-            TWO = Decimal('0.01')
-            outstanding_total = Decimal(str(installment_price))
+            # Recompute outstanding = installment_price - sum(actual paid)
+            outstanding_total = installment_price
             for r in payments:
-                outstanding_total -= Decimal(str(r.paid_amount or 0))
+                outstanding_total -= Decimal(str(r.paid_amount))
             if outstanding_total < Decimal('0'):
                 outstanding_total = Decimal('0')
 
+            # Identify unpaid payments snapshot
             unpaid = [r for r in payments if not r.is_paid]
 
             if outstanding_total == Decimal('0'):
+                # Mark all remaining unpaid as paid with zero expected
                 mark_paid_q = session.prepare(
                     """
                     DECLARE $installment_id AS Utf8;
-                    UPDATE installment_payments SET is_paid = true, expected_amount = CAST(0 AS Decimal(22,9))
+                    UPDATE installment_payments
+                    SET is_paid = true,
+                        expected_amount = CAST(0 AS Decimal(22,9)),
+                        updated_at = CurrentUtcTimestamp()
                     WHERE installment_id = $installment_id AND is_paid = false;
                     """
                 )
                 tx.execute(mark_paid_q, {'$installment_id': installment_id})
             else:
                 if len(unpaid) > 0:
-                    base = (outstanding_total / Decimal(len(unpaid))).quantize(TWO, rounding=ROUND_HALF_UP)
-                    amounts = [base for _ in unpaid]
-                    diff = outstanding_total - sum(amounts)
-                    if diff != Decimal('0'):
-                        amounts[-1] = (amounts[-1] + diff).quantize(TWO, rounding=ROUND_HALF_UP)
-                    upd_exp_q = session.prepare(
-                        """
-                        DECLARE $id AS Utf8; DECLARE $exp AS Decimal(22,9);
-                        UPDATE installment_payments SET expected_amount = $exp WHERE id = $id;
-                        """
-                    )
-                    for r, amt in zip(unpaid, amounts):
-                        tx.execute(upd_exp_q, {'$id': r.id, '$exp': amt})
+                    # If we overpaid current payment, cascade the excess forward in order
+                    if overpay_excess > Decimal('0'):
+                        # Use payments snapshot ordered by payment_number already
+                        cascade_q = session.prepare(
+                            """
+                            DECLARE $id AS Utf8;
+                            DECLARE $exp AS Decimal(22,9);
+                            DECLARE $paid AS Bool;
+                            UPDATE installment_payments
+                            SET expected_amount = $exp,
+                                is_paid = CASE WHEN $paid THEN true ELSE is_paid END,
+                                updated_at = CurrentUtcTimestamp()
+                            WHERE id = $id;
+                            """
+                        )
+                        # Find current payment_number
+                        current_payment_number = next((r.payment_number for r in payments if r.id == payment_id), None)
+                        for r in payments:
+                            if overpay_excess <= Decimal('0'):
+                                break
+                            if r.is_paid:
+                                continue
+                            if r.payment_number <= current_payment_number:
+                                continue
+                            r_expected = Decimal(str(r.expected_amount))
+                            if overpay_excess >= r_expected and r_expected > Decimal('0'):
+                                # Fully cover this future payment
+                                tx.execute(cascade_q, {'$id': r.id, '$exp': Decimal('0'), '$paid': True})
+                                overpay_excess -= r_expected
+                            else:
+                                # Partially reduce this future payment
+                                new_exp = (r_expected - overpay_excess) if r_expected > overpay_excess else Decimal('0')
+                                fully_paid = new_exp == Decimal('0')
+                                tx.execute(cascade_q, {'$id': r.id, '$exp': new_exp, '$paid': fully_paid})
+                                overpay_excess = Decimal('0')
+
+                        # After cascade, recompute if everything is covered
+                        payments_rs2 = tx.execute(get_payments_q, {'$installment_id': installment_id})
+                        payments2 = list(payments_rs2[0].rows)
+                        outstanding_total2 = installment_price
+                        for r in payments2:
+                            outstanding_total2 -= Decimal(str(r.paid_amount))
+                        if outstanding_total2 <= Decimal('0'):
+                            mark_paid_q = session.prepare(
+                                """
+                                DECLARE $installment_id AS Utf8;
+                                UPDATE installment_payments
+                                SET is_paid = true,
+                                    expected_amount = CAST(0 AS Decimal(22,9)),
+                                    updated_at = CurrentUtcTimestamp()
+                                WHERE installment_id = $installment_id AND is_paid = false;
+                                """
+                            )
+                            tx.execute(mark_paid_q, {'$installment_id': installment_id})
+                    else:
+                        # No overpay: keep existing expected amounts; do not rebalance here
+                        pass
             
-            # Now get installment data (within the same transaction to see updated payment)
-            installment_query = """
-DECLARE $installment_id AS Utf8;
-SELECT installment_price FROM installments WHERE id = $installment_id;
-"""
-            
-            installment_result = tx.execute(
-                session.prepare(installment_query),
-                {'$installment_id': installment_id}
-            )
-            
-            if not installment_result[0].rows:
-                raise Exception("Installment not found")
-                
-            installment_price = installment_result[0].rows[0].installment_price
-            
+            # Final reconciliation: restore expectations towards initial plan (down + monthly)
+            # and fit to outstanding. When this operation is a payment, do NOT increase any
+            # unpaid expected amounts above their current values (preserve prior reductions).
+            payments_rs3 = tx.execute(get_payments_q, {'$installment_id': installment_id})
+            payments3 = list(payments_rs3[0].rows)
+            unpaid3 = [r for r in payments3 if not r.is_paid]
+            if len(unpaid3) > 0:
+                TWO = Decimal('0.01')
+                # Compute outstanding based on paid amounts
+                rem = installment_price
+                for r in payments3:
+                    rem -= Decimal(str(r.paid_amount))
+                if rem < Decimal('0'):
+                    rem = Decimal('0')
+
+                # Helper to derive the initial expected amount for a payment
+                def initial_expected_for(pmt):
+                    if int(pmt.payment_number or 0) == 0:
+                        return base_down_payment
+                    return base_monthly_payment
+
+                adj_q = session.prepare(
+                    """
+                    DECLARE $id AS Utf8;
+                    DECLARE $exp AS Decimal(22,9);
+                    UPDATE installment_payments
+                    SET expected_amount = $exp,
+                        updated_at = CurrentUtcTimestamp()
+                    WHERE id = $id;
+                    """
+                )
+
+                unpaid_sorted = sorted(unpaid3, key=lambda x: x.payment_number)
+                # Determine operation type
+                is_pay_operation = (paid_delta > Decimal('0')) or (want_set and new_is_paid)
+                toggled_unmark_id = payment_id if (want_set and not new_is_paid) else None
+
+                # Track assignments to use for remainder adjustment
+                assigned = {}
+
+                if (not is_pay_operation) and toggled_unmark_id is not None:
+                    # Unmarking a payment: keep other unpaid months at their initial caps first,
+                    # then assign the remainder to the toggled month. This yields patterns like 1/3/3.
+                    rest = [r for r in unpaid_sorted if r.id != toggled_unmark_id]
+                    # Assign non-toggled first up to their initial caps
+                    for r in rest:
+                        if rem <= Decimal('0'):
+                            target = Decimal('0')
+                        else:
+                            cap = initial_expected_for(r).quantize(TWO, rounding=ROUND_HALF_UP)
+                            target = min(cap, rem).quantize(TWO, rounding=ROUND_HALF_UP)
+                        assigned[r.id] = target
+                        tx.execute(adj_q, {'$id': r.id, '$exp': target})
+                        rem = (rem - target).quantize(TWO, rounding=ROUND_HALF_UP)
+                    # Now the toggled payment absorbs the remainder up to its cap
+                    toggle_row = next(r for r in unpaid_sorted if r.id == toggled_unmark_id)
+                    cap_toggle = initial_expected_for(toggle_row).quantize(TWO, rounding=ROUND_HALF_UP)
+                    target_toggle = min(cap_toggle, rem).quantize(TWO, rounding=ROUND_HALF_UP)
+                    assigned[toggle_row.id] = target_toggle
+                    tx.execute(adj_q, {'$id': toggle_row.id, '$exp': target_toggle})
+                    rem = (rem - target_toggle).quantize(TWO, rounding=ROUND_HALF_UP)
+                else:
+                    # Payment or generic case: restore left-to-right, but when paying do not increase above current expected.
+                    for r in unpaid_sorted:
+                        if rem <= Decimal('0'):
+                            target = Decimal('0')
+                        else:
+                            cap = initial_expected_for(r).quantize(TWO, rounding=ROUND_HALF_UP)
+                            if is_pay_operation:
+                                cur_exp = Decimal(str(r.expected_amount)).quantize(TWO, rounding=ROUND_HALF_UP)
+                                target = min(cap, rem, cur_exp).quantize(TWO, rounding=ROUND_HALF_UP)
+                            else:
+                                target = min(cap, rem).quantize(TWO, rounding=ROUND_HALF_UP)
+                        assigned[r.id] = target
+                        tx.execute(adj_q, {'$id': r.id, '$exp': target})
+                        rem = (rem - target).quantize(TWO, rounding=ROUND_HALF_UP)
+
+                # If remainder persists due to rounding, add it to the earliest unpaid (nearest due)
+                if rem > Decimal('0') and len(unpaid_sorted) > 0:
+                    first = unpaid_sorted[0]
+                    # Use the value we just assigned, not the stale snapshot
+                    first_exp = assigned.get(first.id, Decimal(str(first.expected_amount))).quantize(TWO, rounding=ROUND_HALF_UP)
+                    final_exp = (first_exp + rem).quantize(TWO, rounding=ROUND_HALF_UP)
+                    tx.execute(adj_q, {'$id': first.id, '$exp': final_exp})
+
             # Get payment statistics (within transaction to see the updated payment)
             payment_stats_query = """
 DECLARE $installment_id AS Utf8;
@@ -458,6 +669,206 @@ WHERE id = $installment_id;
                 {'$installment_id': installment_id}
             )
             
+            # If installment is linked to a wallet, update wallet ledger and aggregates
+            if installment_wallet_id is not None and str(installment_wallet_id).strip() != '':
+                # Only write ledger and move balance if there was a non-zero paid delta
+                if paid_delta != Decimal('0'):
+                    # Fetch current wallet balance/version and wallet params
+                    wb_q = session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8;
+                        DECLARE $user_id AS Utf8;
+                        SELECT balance_minor_units, version
+                        FROM wallet_balances
+                        WHERE wallet_id = $wallet_id AND user_id = $user_id;
+                        """
+                    )
+                    w_q = session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8;
+                        DECLARE $user_id AS Utf8;
+                        SELECT type, investment_amount_minor_units, investor_percentage
+                        FROM wallets
+                        WHERE id = $wallet_id AND user_id = $user_id;
+                        """
+                    )
+
+                    wb_rs = tx.execute(wb_q, {'$wallet_id': installment_wallet_id, '$user_id': installment_user_id})
+                    w_rs = tx.execute(w_q, {'$wallet_id': installment_wallet_id, '$user_id': installment_user_id})
+                    if wb_rs[0].rows:
+                        wb_row = wb_rs[0].rows[0]
+                        current_balance = int(wb_row.balance_minor_units or 0)
+                        current_version = int(wb_row.version or 0)
+                    else:
+                        # If no balance row exists, skip wallet updates for safety
+                        current_balance = None
+                        current_version = None
+
+                    wallet_type = None
+                    investment_amount_mu = 0
+                    investor_pct = Decimal('0')
+                    if w_rs[0].rows:
+                        wrow = w_rs[0].rows[0]
+                        wallet_type = str(getattr(wrow, 'type', '') or '').lower()
+                        try:
+                            investment_amount_mu = int(getattr(wrow, 'investment_amount_minor_units', 0) or 0)
+                        except Exception:
+                            investment_amount_mu = 0
+                        try:
+                            investor_pct = Decimal(str(getattr(wrow, 'investor_percentage', 0) or 0))
+                        except Exception:
+                            investor_pct = Decimal('0')
+
+                    # Insert ledger transaction (credit for positive, debit for negative)
+                    import uuid
+                    ledger_id = str(uuid.uuid4())
+                    ledger_insert_q = session.prepare(
+                            """
+                            DECLARE $id AS Utf8;
+                            DECLARE $wallet_id AS Utf8;
+                            DECLARE $user_id AS Utf8;
+                            DECLARE $amount AS Int64;
+                            DECLARE $direction AS Utf8;
+                            DECLARE $reference_id AS Utf8;
+                            DECLARE $description AS Utf8;
+                            DECLARE $now AS Timestamp;
+                            INSERT INTO ledger_transactions (
+                                id, wallet_id, user_id, direction, amount_minor_units, currency,
+                                reference_type, reference_id, description, created_by, created_at
+                            ) VALUES (
+                                $id, $wallet_id, $user_id, $direction, $amount, CAST('RUB' AS Utf8),
+                                CAST('installment' AS Utf8), $reference_id, $description, $user_id, $now
+                            );
+                            """
+                        )
+                    # Convert paid_delta to minor units (2 digits)
+                    paid_minor_units = int((paid_delta * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                    if paid_minor_units != 0 and current_balance is not None:
+                        logger.info(f"UPDATE-PAYMENT TX: ledger will write direction={'credit' if paid_minor_units>0 else 'debit'} amount_mu={paid_minor_units}")
+                        direction = 'credit' if paid_minor_units > 0 else 'debit'
+                        # Simple fixed descriptions
+                        desc = 'Installment payment' if direction == 'credit' else 'Installment payment cancellation'
+                        tx.execute(ledger_insert_q, {
+                            '$id': ledger_id,
+                            '$wallet_id': installment_wallet_id,
+                            '$user_id': installment_user_id,
+                            '$amount': paid_minor_units,
+                            '$direction': direction,
+                            '$reference_id': installment_id,
+                            '$description': desc,
+                            '$now': datetime.utcnow()
+                        })
+
+                        # Recompute aggregates for this wallet
+                        # total_allocated = sum of remaining per linked installments (installment_price - sum(paid_amount))
+                        total_alloc_rs = tx.execute(
+                            session.prepare(
+                                """
+                                DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                                SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
+                                FROM (
+                                    SELECT i.id,
+                                      CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
+                                    FROM installments i
+                                    LEFT JOIN (
+                                        SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
+                                        FROM installment_payments
+                                        GROUP BY installment_id
+                                    ) AS p ON p.installment_id = i.id
+                                    WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id
+                                );
+                                """
+                            ),
+                            {'$wallet_id': installment_wallet_id, '$user_id': installment_user_id}
+                        )
+                        total_remaining_dec = Decimal('0')
+                        if total_alloc_rs[0].rows:
+                            total_remaining_dec = Decimal(str(total_alloc_rs[0].rows[0].total_remaining or 0))
+                        total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+                        # due_to_get = sum of the next unpaid payment per installment linked to this wallet
+                        next_due_q = session.prepare(
+                            """
+                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                            SELECT COALESCE(SUM(
+                              CAST(ip.expected_amount AS Decimal(22,9)) - CAST(COALESCE(ip.paid_amount, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))
+                            ), CAST(0 AS Decimal(22,9))) AS due_next_sum
+                            FROM installment_payments ip
+                            INNER JOIN installments i ON i.id = ip.installment_id
+                            INNER JOIN (
+                              SELECT ip2.installment_id AS inst_id, MIN(ip2.due_date) AS next_due
+                              FROM installment_payments ip2
+                              INNER JOIN installments i2 ON i2.id = ip2.installment_id
+                              WHERE i2.wallet_id = $wallet_id AND i2.user_id = $user_id AND ip2.is_paid = false
+                              GROUP BY ip2.installment_id
+                            ) nu ON nu.inst_id = ip.installment_id AND ip.due_date = nu.next_due
+                            WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                            """
+                        )
+                        nd_rs = tx.execute(next_due_q, {'$wallet_id': installment_wallet_id, '$user_id': installment_user_id})
+                        due_next_dec = Decimal('0')
+                        if nd_rs[0].rows:
+                            due_next_dec = Decimal(str(nd_rs[0].rows[0].due_next_sum or 0))
+                        due_to_get_mu = int((due_next_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+                        # New balance and version
+                        new_balance = current_balance + paid_minor_units
+                        new_version = current_version + 1
+
+                        # expected_revenue = sum(installment_price - cash_price) for linked installments (investor only)
+                        exp_rev_rs = tx.execute(
+                            session.prepare(
+                                """
+                                DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                                SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS profit_sum
+                                FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                                """
+                            ),
+                            {'$wallet_id': installment_wallet_id, '$user_id': installment_user_id}
+                        )
+                        profit_sum = Decimal('0')
+                        if exp_rev_rs[0].rows:
+                            profit_sum = Decimal(str(exp_rev_rs[0].rows[0].profit_sum or 0))
+                        expected_revenue_mu = int((profit_sum * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+                        wb_update_q = session.prepare(
+                            """
+                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                            DECLARE $new_balance AS Int64; DECLARE $new_version AS Uint64;
+                            DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $paid_mu AS Int64;
+                            DECLARE $curr_version AS Uint64; DECLARE $now AS Timestamp;
+                            UPDATE wallet_balances
+                            SET balance_minor_units = $new_balance,
+                                version = $new_version,
+                                updated_at = $now,
+                                total_allocated_minor_units = $total_alloc,
+                                due_to_get_minor_units = $due_to_get,
+                                expected_revenue_minor_units = $exp_rev,
+                                paid_amount_minor_units = COALESCE(paid_amount_minor_units, 0) + $paid_mu
+                            WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $curr_version;
+                            """
+                        )
+                        upd_res = tx.execute(wb_update_q, {
+                            '$wallet_id': installment_wallet_id,
+                            '$user_id': installment_user_id,
+                            '$new_balance': new_balance,
+                            '$new_version': new_version,
+                            '$total_alloc': total_alloc_mu,
+                            '$due_to_get': due_to_get_mu,
+                            '$exp_rev': expected_revenue_mu,
+                            '$paid_mu': paid_minor_units,
+                            '$curr_version': current_version,
+                            '$now': datetime.utcnow()
+                        })
+                        ra = None
+                        try:
+                            ra = getattr(getattr(upd_res[0], 'stats', None), 'rows_affected', None)
+                        except Exception:
+                            ra = None
+                        logger.info(f"UPDATE-PAYMENT TX: wallet_balances updated new_balance={new_balance} rows_affected={ra if ra is not None else 'unknown'} total_alloc_mu={total_alloc_mu} due_to_get_mu={due_to_get_mu} exp_rev_mu={expected_revenue_mu} paid_mu_delta={paid_minor_units}")
+                        if ra is not None and ra == 0:
+                            raise ydb.Aborted("Concurrent update to wallet balance detected.")
+
             # Get the updated installment data to return to the client
             updated_installment_query = """
 DECLARE $installment_id AS Utf8;

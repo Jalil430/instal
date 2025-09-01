@@ -13,6 +13,9 @@ import '../../features/clients/data/repositories/client_repository_impl.dart';
 import '../../features/clients/data/datasources/client_remote_datasource.dart';
 import '../../features/wallets/domain/entities/wallet.dart';
 import '../../features/wallets/domain/entities/wallet_balance.dart';
+import '../../features/wallets/domain/repositories/wallet_repository.dart';
+import '../../features/wallets/data/repositories/wallet_repository_impl.dart';
+import '../../features/wallets/data/datasources/wallet_remote_datasource_impl.dart';
 import '../../features/wallets/widgets/wallet_selector.dart';
 import '../../features/wallets/widgets/create_edit_wallet_dialog.dart';
 import '../../features/auth/presentation/widgets/auth_service_provider.dart';
@@ -144,8 +147,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       
       print('📞 Calling getAllWallets...');
       final wallets = await _walletRepository.getAllWallets(currentUser.id);
-      final balances = await _walletRepository.getAllWalletBalances(currentUser.id);
-      final balancesMap = {for (final b in balances) b.walletId: b};
+      final List<WalletBalance> balances = await _walletRepository.getAllWalletBalances(currentUser.id);
+      final Map<String, WalletBalance> balancesMap = {for (final b in balances) b.walletId: b};
 
       print('✅ getAllWallets returned: ${wallets.length} wallets');
 
@@ -357,7 +360,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     // Create a list with "Without Wallet" option
     final walletOptions = <Wallet?>[
       null, // Represents "Without Wallet"
-      ..._wallets,
+      ..._wallets.where((w) => w.status == WalletStatus.active),
     ];
 
     return ResponsiveLayout(

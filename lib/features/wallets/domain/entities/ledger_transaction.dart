@@ -99,6 +99,28 @@ class LedgerTransaction {
         return l10n.transactionTypeProfitDistribution;
     }
   }
+
+  String getDescriptionLocalized(AppLocalizations l10n) {
+    final raw = (description).trim();
+    if (raw.isEmpty) {
+      // Fallback to type name if description is missing
+      return getDisplayName(l10n);
+    }
+    if (l10n.locale.languageCode != 'ru') return raw;
+    // Simple mapping only (no dynamic patterns)
+    switch (raw) {
+      case 'Installment cash purchase':
+        return 'Покупка в рассрочку';
+      case 'Down payment received':
+        return 'Внесён первый взнос';
+      case 'Installment payment':
+        return 'Платёж по рассрочке';
+      case 'Installment payment cancellation':
+        return 'Отмена платежа по рассрочке';
+      default:
+        return raw;
+    }
+  }
 }
 
 enum TransactionDirection {

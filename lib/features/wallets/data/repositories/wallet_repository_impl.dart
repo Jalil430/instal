@@ -51,6 +51,11 @@ class WalletRepositoryImpl implements WalletRepository {
   }
 
   @override
+  Future<void> unarchiveWallet(String walletId) async {
+    await _remoteDataSource.unarchiveWallet(walletId);
+  }
+
+  @override
   void clearCache() {
     _remoteDataSource.clearCache();
   }
@@ -114,5 +119,15 @@ class WalletRepositoryImpl implements WalletRepository {
   Future<List<Wallet>> getActiveWallets(String userId) async {
     final walletModels = await _remoteDataSource.getActiveWallets(userId);
     return walletModels.map((model) => model.toEntity()).toList();
+  }
+
+  @override
+  Future<void> topUpWallet(String walletId, int amountMinorUnits, String description) async {
+    await _remoteDataSource.topUpWallet(walletId, amountMinorUnits, description);
+  }
+
+  @override
+  Future<void> withdrawWallet(String walletId, int amountMinorUnits, String description) async {
+    await _remoteDataSource.withdrawWallet(walletId, amountMinorUnits, description);
   }
 }

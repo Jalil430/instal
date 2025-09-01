@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/num_format.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
 import '../../domain/entities/wallet.dart';
 import '../../domain/entities/wallet_balance.dart';
 import '../../domain/entities/ledger_transaction.dart';
 import '../../domain/entities/investment_summary.dart';
+import '../../../installments/domain/entities/installment.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_contextual_dialog.dart';
 import '../../widgets/wallet_dialogs.dart';
@@ -22,6 +25,9 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
   final VoidCallback? onAddMoney;
   final VoidCallback? onWithdrawMoney;
   final bool isInvestor;
+  final VoidCallback onArchiveToggle;
+  final List<Installment> installments;
+  final bool installmentsLoading;
 
   const WalletDetailsScreenDesktop({
     super.key,
@@ -35,6 +41,9 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     this.onAddMoney,
     this.onWithdrawMoney,
     required this.isInvestor,
+    required this.onArchiveToggle,
+    required this.installments,
+    required this.installmentsLoading,
   });
 
   @override
@@ -99,7 +108,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                       if (onAddMoney != null) ...[
                         CustomButton(
                           text: l10n?.add ?? 'Добавить',
-                          onPressed: () => _showAddMoneyDialog(context),
+                          onPressed: onAddMoney,
                           icon: Icons.add_circle,
                           color: AppTheme.successColor,
                           textColor: Colors.white,
@@ -112,7 +121,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                       if (onWithdrawMoney != null) ...[
                         CustomButton(
                           text: l10n?.withdraw ?? 'Снять',
-                          onPressed: () => _showWithdrawMoneyDialog(context),
+                          onPressed: onWithdrawMoney,
                           icon: Icons.remove_circle,
                           color: AppTheme.warningColor,
                           textColor: Colors.white,
@@ -123,7 +132,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                         const SizedBox(width: 8),
                       ],
                       CustomIconButton(
-                        icon: Icons.archive,
+                        icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
                         hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
                         hoverIconColor: AppTheme.warningColor,
@@ -144,7 +153,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   Row(
                     children: [
                       CustomIconButton(
-                        icon: Icons.archive,
+                        icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
                         hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
                         hoverIconColor: AppTheme.warningColor,
@@ -165,7 +174,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   Row(
                     children: [
                       CustomIconButton(
-                        icon: Icons.archive,
+                        icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
                         hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
                         hoverIconColor: AppTheme.warningColor,
@@ -205,12 +214,125 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Transactions
-                  _buildTransactionsList(context),
+                  if (transactions.isNotEmpty) _buildTransactionsList(context),
+
+                  const SizedBox(height: 20),
+
+                  // Linked Installments (moved under transactions)
+                  _buildInstallmentsSection(context),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInstallmentsSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              '${l10n?.installments ?? 'Рассрочки'} (${installments.length})',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(width: 8),
+            if (installmentsLoading)
+              const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: Column(
+            children: [
+              _buildInstallmentsTableHeader(context),
+              if (installments.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(child: Text(l10n?.noInstallments ?? 'Нет рассрочек')),
+                )
+              else
+                SizedBox(
+                  height: 300,
+                  child: ListView.builder(
+                    itemCount: installments.length,
+                    itemBuilder: (context, index) => _buildInstallmentRow(context, installments[index]),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInstallmentsTableHeader(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final headerStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: AppTheme.textSecondary,
+          fontWeight: FontWeight.w400,
+          fontSize: 12,
+          letterSpacing: 0.5,
+        );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleBackgroundColor,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(11), topRight: Radius.circular(11)),
+        border: Border(bottom: BorderSide(color: AppTheme.subtleBorderColor, width: 1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: Text(l10n?.productNameHeader ?? 'ТОВАР', style: headerStyle)),
+          Expanded(flex: 2, child: Text(l10n?.amountHeader ?? 'СУММА', style: headerStyle)),
+          Expanded(flex: 2, child: Text(l10n?.term ?? 'СРОК', style: headerStyle)),
+          Expanded(flex: 2, child: Text(l10n?.buyingDateHeader ?? 'ДАТА ПОКУПКИ', style: headerStyle)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstallmentRow(BuildContext context, Installment installment) {
+    return InkWell(
+      onTap: () => context.go('/installments/${installment.id}'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppTheme.borderColor.withOpacity(0.3), width: 1)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Text(installment.productName, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(currencyFormat.format(installment.installmentPrice), style: Theme.of(context).textTheme.bodyMedium),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text('${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}', style: Theme.of(context).textTheme.bodyMedium),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(dateFormat.format(installment.downPaymentDate), style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -222,12 +344,14 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     final currentBalance = balance?.balance ?? 0;
     final initialInvestment = investmentSummary?.totalInvested ??
         (wallet.isPersonalWallet ? wallet.startingAmount : wallet.investmentAmount) ?? 0;
-    final totalAllocated = investmentSummary?.totalAllocated ?? 0;
-    final expectedReturns = investmentSummary?.expectedReturns ?? 0;
-    final dueAmount = investmentSummary?.dueAmount ?? 0;
+    // Use persisted aggregates
+    final totalAllocated = balance?.totalAllocated ?? (investmentSummary?.totalAllocated ?? 0);
+    final expectedReturns = balance?.expectedRevenue ?? (investmentSummary?.expectedReturns ?? 0);
+    final paidAmount = balance?.paidAmount ?? 0;
+    final dueAmount = balance?.dueToGet ?? (investmentSummary?.dueAmount ?? 0);
 
-    final totalWalletValue = currentBalance + expectedReturns;
-    final totalProfit = totalWalletValue - initialInvestment;
+    final totalWalletValue = currentBalance + totalAllocated;
+    final totalProfit = expectedReturns;
     final roi = initialInvestment > 0 ? (totalProfit / initialInvestment) * 100 : 0;
 
     return Container(
@@ -252,7 +376,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                         wallet.isPersonalWallet
                             ? (l10n?.startingAmount ?? 'Starting Amount')
                             : (l10n?.initialInvestment ?? 'Initial Investment'),
-                        initialInvestment > 0 ? currencyFormat.format(initialInvestment) : '—',
+                        initialInvestment > 0 ? stripTrailingZeroMoney(currencyFormat.format(initialInvestment)) : '—',
                         Icons.account_balance,
                         AppTheme.primaryColor,
                       ),
@@ -265,7 +389,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCell(
                         l10n?.currentBalance ?? 'Current Balance',
-                        currencyFormat.format(currentBalance),
+                        stripTrailingZeroMoney(currencyFormat.format(currentBalance)),
                         Icons.account_balance_wallet,
                         AppTheme.successColor,
                         isHighlight: true,
@@ -285,7 +409,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCell(
                         l10n?.givenForInstallmentDetail ?? 'Given for Installment',
-                        currencyFormat.format(totalAllocated),
+                        stripTrailingZeroMoney(currencyFormat.format(totalAllocated)),
                         Icons.money_off,
                         AppTheme.warningColor,
                       ),
@@ -297,9 +421,9 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     ),
                     Expanded(
                       child: _buildSummaryCell(
-                        l10n?.expectedReturns ?? 'Expected Returns',
-                        currencyFormat.format(expectedReturns),
-                        Icons.call_received,
+                        l10n?.paidAmount ?? 'Оплачено',
+                        stripTrailingZeroMoney(currencyFormat.format(paidAmount)),
+                        Icons.payments,
                         AppTheme.successColor,
                       ),
                     ),
@@ -317,7 +441,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCell(
                         l10n?.dueToGetDetail ?? 'Due to Get',
-                        currencyFormat.format(dueAmount),
+                        stripTrailingZeroMoney(currencyFormat.format(dueAmount)),
                         Icons.schedule,
                         AppTheme.warningColor,
                       ),
@@ -330,7 +454,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCell(
                         l10n?.totalValue ?? 'Total Value',
-                        currencyFormat.format(totalWalletValue),
+                        stripTrailingZeroMoney(currencyFormat.format(totalWalletValue)),
                         Icons.calculate,
                         AppTheme.primaryColor,
                         isHighlight: true,
@@ -350,8 +474,8 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _buildSummaryCell(
-                          l10n?.profit ?? 'Profit',
-                          currencyFormat.format(totalProfit),
+                          l10n?.expectedProfit ?? 'Expected Profit',
+                          stripTrailingZeroMoney(currencyFormat.format(totalProfit)),
                           totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
                           totalProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
                         ),
@@ -416,9 +540,9 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   value,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w600,
+                    fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary,
-                    letterSpacing: isHighlight ? -0.5 : 0,
+                    letterSpacing: 0,
                   ),
                 ),
               ],
@@ -492,13 +616,13 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   const SizedBox(height: AppTheme.spacingMd),
                   _buildInvestmentMetric(
                     l10n?.startingAmount ?? 'Starting Amount',
-                    currencyFormat.format(wallet.startingAmount ?? 0),
+                    stripTrailingZeroMoney(currencyFormat.format(wallet.startingAmount ?? 0)),
                   ),
                 ] else if (wallet.investmentAmount != null) ...[
                   const SizedBox(height: AppTheme.spacingMd),
                   _buildInvestmentMetric(
                     l10n?.investmentAmount ?? 'Investment Amount',
-                    wallet.investmentAmount != null ? currencyFormat.format(wallet.investmentAmount!) : null,
+                    wallet.investmentAmount != null ? stripTrailingZeroMoney(currencyFormat.format(wallet.investmentAmount!)) : null,
                   ),
                 ],
                 if (wallet.investorPercentage != null) ...[
@@ -676,9 +800,10 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                // Keep the date as a secondary line
+                // Description with date right after it
                 Text(
-                  dateFormat.format(transaction.createdAt),
+                  '${transaction.getDescriptionLocalized(l10n!)} • ${dateFormat.format(transaction.createdAt)}',
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
@@ -688,7 +813,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
             ),
           ),
           Text(
-            '${transaction.isCredit ? '+' : '-'}${currencyFormat.format(transaction.amount)}',
+            '${transaction.isCredit ? '+' : '-'}${stripTrailingZeroMoney(currencyFormat.format(transaction.amount))}',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: transaction.isCredit ? AppTheme.successColor : AppTheme.errorColor,
@@ -780,15 +905,13 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
 
   Widget _buildInvestmentSummaryCard(BuildContext context) {
     final currentBalance = balance?.balance ?? 0;
-    final investorPercentage = wallet.investorPercentage ?? 70.0;
-    final userPercentage = wallet.userPercentage ?? 30.0;
-
-    // Calculate amounts from current balance
+    final investorPercentage = wallet.investorPercentage ?? 0.0;
+    final userPercentage = wallet.userPercentage ?? 0.0;
     final investorAmount = currentBalance * (investorPercentage / 100);
     final userAmount = currentBalance * (userPercentage / 100);
-
-    // Mock full expected amounts (when all installments are collected)
-    final expectedTotalBalance = currentBalance * 2.5; // Mock multiplier
+    // Expected distribution when remaining (due_to_get) is collected
+    final dueToGet = balance?.dueToGet ?? 0.0;
+    final expectedTotalBalance = currentBalance + dueToGet;
     final expectedInvestorAmount = expectedTotalBalance * (investorPercentage / 100);
     final expectedUserAmount = expectedTotalBalance * (userPercentage / 100);
 
@@ -999,7 +1122,9 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              l10n?.archiveWalletTitle ?? 'Archive Wallet',
+              wallet.status == WalletStatus.archived
+                  ? (l10n?.unarchiveWalletTitle ?? 'Unarchive Wallet')
+                  : (l10n?.archiveWalletTitle ?? 'Archive Wallet'),
               style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 18,
@@ -1009,7 +1134,9 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
           ],
         ),
         content: Text(
-          l10n?.archiveWalletConfirmation(wallet.name) ?? 'Are you sure you want to archive this wallet? This action can be undone later.',
+          wallet.status == WalletStatus.archived
+              ? (l10n?.unarchiveWalletConfirmation(wallet.name) ?? 'Unarchive this wallet?')
+              : (l10n?.archiveWalletConfirmation(wallet.name) ?? 'Are you sure you want to archive this wallet? This action can be undone later.'),
           style: TextStyle(
             color: AppTheme.textSecondary,
             fontSize: 14,
@@ -1032,20 +1159,14 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: Text(l10n?.archive ?? 'Archive'),
+            child: Text(wallet.status == WalletStatus.archived ? (l10n?.unarchive ?? 'Unarchive') : (l10n?.archive ?? 'Archive')),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      // TODO: Implement archive wallet functionality
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Wallet "${wallet.name}" has been archived'),
-          backgroundColor: AppTheme.warningColor,
-        ),
-      );
+      onArchiveToggle();
     }
   }
 }

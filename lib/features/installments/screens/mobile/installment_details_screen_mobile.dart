@@ -174,10 +174,38 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ...payments.asMap().entries.map((entry) {
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.subtleBackgroundColor,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(11),
+                              topRight: Radius.circular(11),
+                            ),
+                            border: Border(
+                              bottom: BorderSide(color: AppTheme.subtleBorderColor),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${l10n?.scheduleHeader ?? 'Платежи'} (${payments.length}/${installment.termMonths})',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          height: 600,
+                          child: ListView(
+                            children: [
+                              ...payments.asMap().entries.map((entry) {
                           final index = entry.key;
                           final payment = entry.value;
                           
@@ -391,11 +419,12 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                               ),
                             ),
                           );
-                        }),
-                        
-                        // Add remaining payments if any
+                        }).toList(),
                         if (payments.length < installment.termMonths)
                           ..._buildRemainingPaymentsCardLayout(context),
+                        ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -436,6 +465,7 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
         paymentNumber: paymentNumber == 1 ? 0 : paymentNumber - 1, // Use 0 for down payment
         dueDate: expectedDate,
         expectedAmount: installment.monthlyPayment,
+        paidAmount: 0.0,
         isPaid: false,
         paidDate: null,
         createdAt: DateTime.now(),

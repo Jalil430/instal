@@ -3,6 +3,7 @@ import json
 import ydb
 import jwt
 import logging
+import time
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
@@ -127,17 +128,18 @@ def convert_date(d):
                 print(f"❌ String date parsing failed: {e}")
                 return None
 
-        # Handle numeric timestamps
+        # Handle numeric timestamps or YDB Date (days since epoch)
         if isinstance(d, (int, float)):
-            from datetime import datetime
+            from datetime import datetime, date, timedelta
             try:
-                if d > 1e10:  # Microseconds (YDB format)
+                if d > 1e10:  # Microseconds (YDB Timestamp)
                     result = datetime.fromtimestamp(d / 1000000).date().isoformat()
                 elif d > 1e9:  # Seconds (Unix timestamp)
                     result = datetime.fromtimestamp(d).date().isoformat()
                 else:
-                    print(f"❌ Invalid timestamp value: {d}")
-                    return None
+                    # Treat as YDB Date: days since 1970-01-01
+                    base = date(1970, 1, 1)
+                    result = (base + timedelta(days=int(d))).isoformat()
                 print(f"✅ Converted numeric timestamp: {result}")
                 return result
             except Exception as e:
@@ -223,6 +225,20 @@ def handler(event, context):
             def get_wallet_with_balance(session):
                 logger.info(f"GET-WALLET API - Querying wallet {wallet_id} for user {user_id}")
 
+                # Small retry helper for transient throttling
+                def _tx_exec_with_retry(prepared, params, *, max_attempts=5):
+                    backoff = 0.15
+                    for attempt in range(max_attempts):
+                        try:
+                            return session.transaction().execute(prepared, params, commit_tx=True)
+                        except Exception as e:
+                            msg = str(e)
+                            if 'ResourceExhausted' in msg or 'RESOURCE_EXHAUSTED' in msg:
+                                time.sleep(backoff)
+                                backoff = min(backoff * 2, 1.0)
+                                continue
+                            raise
+
                 # Fetch wallet without JOIN (matches list-wallets behavior)
                 wallet_query = session.prepare(
                     """
@@ -249,10 +265,9 @@ def handler(event, context):
                     """
                 )
 
-                w_rs = session.transaction().execute(
+                w_rs = _tx_exec_with_retry(
                     wallet_query,
-                    {'$wallet_id': wallet_id, '$user_id': user_id},
-                    commit_tx=True
+                    {'$wallet_id': wallet_id, '$user_id': user_id}
                 )
 
                 if not w_rs[0].rows:
@@ -320,10 +335,9 @@ def handler(event, context):
                         WHERE wallet_id = $wallet_id AND user_id = $user_id;
                         """
                     )
-                    b_rs = session.transaction().execute(
+                    b_rs = _tx_exec_with_retry(
                         bal_query,
-                        {'$wallet_id': wallet_id, '$user_id': user_id},
-                        commit_tx=True
+                        {'$wallet_id': wallet_id, '$user_id': user_id}
                     )
                     if b_rs[0].rows:
                         b_row = b_rs[0].rows[0]

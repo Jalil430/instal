@@ -126,7 +126,8 @@ def handler(event, context):
             # Query for the associated payments
             payments_query = """
                 DECLARE $installment_id AS Utf8;
-                SELECT id, installment_id, payment_number, due_date, expected_amount, 
+                SELECT id, installment_id, payment_number, due_date, expected_amount,
+                       COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) AS paid_amount,
                        is_paid, paid_date, created_at, updated_at
                 FROM installment_payments WHERE installment_id = $installment_id
                 ORDER BY payment_number;
@@ -201,6 +202,7 @@ def handler(event, context):
                     'payment_number': payment_row.payment_number,
                     'due_date': convert_date(payment_row.due_date),
                     'expected_amount': float(payment_row.expected_amount),
+                    'paid_amount': float(payment_row.paid_amount) if hasattr(payment_row, 'paid_amount') and payment_row.paid_amount is not None else 0.0,
                     'is_paid': payment_row.is_paid,
                     'paid_date': convert_date(payment_row.paid_date),
                     'created_at': convert_timestamp(payment_row.created_at),

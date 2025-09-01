@@ -19,6 +19,7 @@ class InstallmentModel extends Installment {
     required super.userId,
     required super.clientId,
     required super.investorId,
+    super.walletId,
     required super.productName,
     required super.cashPrice,
     required super.installmentPrice,
@@ -51,6 +52,9 @@ class InstallmentModel extends Installment {
       userId: map['user_id'] as String,
       clientId: map['client_id'] as String,
       investorId: map['investor_id'] as String,
+      walletId: (map.containsKey('wallet_id') && map['wallet_id'] != null && (map['wallet_id'] as String).isNotEmpty)
+          ? map['wallet_id'] as String
+          : null,
       productName: map['product_name'] as String,
       cashPrice: map['cash_price'] as double,
       installmentPrice: map['installment_price'] as double,
@@ -73,6 +77,9 @@ class InstallmentModel extends Installment {
       userId: map['user_id'] as String,
       clientId: map['client_id'] as String,
       investorId: map['investor_id'] as String,
+      walletId: (map.containsKey('wallet_id') && map['wallet_id'] != null && (map['wallet_id'] as String).isNotEmpty)
+          ? map['wallet_id'] as String
+          : null,
       productName: map['product_name'] as String,
       cashPrice: (map['cash_price'] as num).toDouble(),
       installmentPrice: (map['installment_price'] as num).toDouble(),
@@ -106,6 +113,7 @@ class InstallmentModel extends Installment {
       userId: installment.userId,
       clientId: installment.clientId,
       investorId: installment.investorId,
+      walletId: installment.walletId,
       productName: installment.productName,
       cashPrice: installment.cashPrice,
       installmentPrice: installment.installmentPrice,
@@ -148,6 +156,7 @@ class InstallmentModel extends Installment {
       'user_id': userId,
       'client_id': clientId,
       'investor_id': investorId,
+      if (walletId != null && walletId!.isNotEmpty) 'wallet_id': walletId,
       'product_name': productName,
       'cash_price': cashPrice,
       'installment_price': installmentPrice,

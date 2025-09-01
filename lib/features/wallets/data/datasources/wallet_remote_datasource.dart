@@ -10,6 +10,7 @@ abstract class WalletRemoteDataSource {
   Future<WalletModel> updateWallet(WalletModel wallet);
   Future<void> deleteWallet(String walletId);
   Future<void> archiveWallet(String walletId);
+  Future<void> unarchiveWallet(String walletId);
   void clearCache();
 
   Future<WalletBalanceModel?> getWalletBalance(String walletId);
@@ -25,6 +26,8 @@ abstract class WalletRemoteDataSource {
   Future<LedgerTransactionModel> createTransaction(LedgerTransactionModel transaction);
 
   Future<InvestmentSummaryModel?> getInvestmentSummary(String walletId);
+  Future<void> topUpWallet(String walletId, int amountMinorUnits, String description);
+  Future<void> withdrawWallet(String walletId, int amountMinorUnits, String description);
 
   Future<List<WalletModel>> searchWallets(String userId, String query);
   Future<List<WalletModel>> getWalletsByType(String userId, String type);

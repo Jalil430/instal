@@ -151,11 +151,11 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
     delete:
-      summary: Archive wallet (soft delete)
-      operationId: archive-wallet
+      summary: Delete wallet (hard delete; requires archived)
+      operationId: delete-wallet
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: d4eh92ksggk6b1hj8rlt
+        function_id: d4eosm3l252m3cb29ujd
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /wallets/{id}/balance:
@@ -195,6 +195,21 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4eacss6qhh0o9etq3kc
+        service_account_id: ajevsnimu8g62t29vlad
+        payload_format_version: '1.0'
+  /wallets/{id}/withdraw:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Withdraw funds from wallet
+      operationId: wallet-withdraw
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ekafudn8iu0jmll4v6
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /wallets/{id}/archive:

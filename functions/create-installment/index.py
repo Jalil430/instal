@@ -114,6 +114,7 @@ def handler(event, context):
 
         # Use authenticated user_id instead of body user_id for security
         body['user_id'] = user_id
+        wallet_id_opt = (body.get('wallet_id') or '').strip()
 
         try:
             driver_config = ydb.DriverConfig(
@@ -146,14 +147,16 @@ def handler(event, context):
                 SELECT full_name FROM clients WHERE id = $client_id;
                 """
                 client_result = tx.execute(session.prepare(client_query), {'$client_id': body['client_id']})
-                client_name = client_result[0].rows[0].full_name if client_result[0].rows else 'Unknown Client'
+                client_rows = client_result[0].rows if (client_result and len(client_result) > 0) else []
+                client_name = client_rows[0].full_name if client_rows else 'Unknown Client'
                 
                 investor_query = """
                 DECLARE $investor_id AS Utf8;
                 SELECT full_name FROM investors WHERE id = $investor_id;
                 """
                 investor_result = tx.execute(session.prepare(investor_query), {'$investor_id': body['investor_id']})
-                investor_name = investor_result[0].rows[0].full_name if investor_result[0].rows else 'Unknown Investor'
+                investor_rows = investor_result[0].rows if (investor_result and len(investor_result) > 0) else []
+                investor_name = investor_rows[0].full_name if investor_rows else 'Unknown Investor'
                 
                 # Calculate initial values for calculated fields
                 installment_price = Decimal(str(body['installment_price']))
@@ -214,8 +217,9 @@ def handler(event, context):
                     SELECT MAX(installment_number) AS max_num FROM installments WHERE user_id = $user_id;
                     """
                     max_result = tx.execute(session.prepare(max_query), {'$user_id': body['user_id']})
-                    if max_result[0].rows and hasattr(max_result[0].rows[0], 'max_num') and max_result[0].rows[0].max_num is not None:
-                        new_number = int(max_result[0].rows[0].max_num) + 1
+                    max_rows = max_result[0].rows if (max_result and len(max_result) > 0) else []
+                    if max_rows and hasattr(max_rows[0], 'max_num') and max_rows[0].max_num is not None:
+                        new_number = int(max_rows[0].max_num) + 1
                     else:
                         new_number = 1
                 else:
@@ -226,6 +230,7 @@ def handler(event, context):
                 DECLARE $user_id AS Utf8;
                 DECLARE $client_id AS Utf8;
                 DECLARE $investor_id AS Utf8;
+                DECLARE $wallet_id AS Utf8?;
                 DECLARE $product_name AS Utf8;
                 DECLARE $cash_price AS Decimal(22,9);
                 DECLARE $installment_price AS Decimal(22,9);
@@ -254,6 +259,7 @@ def handler(event, context):
                     user_id,
                     client_id,
                     investor_id,
+                    wallet_id,
                     product_name,
                     cash_price,
                     installment_price,
@@ -282,6 +288,7 @@ def handler(event, context):
                     $user_id,
                     $client_id,
                     $investor_id,
+                    $wallet_id,
                     $product_name,
                     $cash_price,
                     $installment_price,
@@ -315,6 +322,7 @@ def handler(event, context):
                         '$user_id': body['user_id'],
                         '$client_id': body['client_id'],
                         '$investor_id': body['investor_id'],
+                        '$wallet_id': wallet_id_opt if wallet_id_opt else None,
                         '$product_name': body['product_name'],
                         '$cash_price': Decimal(str(body['cash_price'])),
                         '$installment_price': installment_price,
@@ -371,6 +379,7 @@ def handler(event, context):
                             '$updated_at': now
                         }
                     )
+                    logger.info(f"CREATE-INSTALLMENT TX: down-payment schedule row created installment_id={installment_id} amount={body['down_payment']}")
 
                 # Monthly payments
                 monthly_payment_query = """
@@ -426,6 +435,291 @@ def handler(event, context):
                             '$updated_at': now
                         }
                     )
+                logger.info(f"CREATE-INSTALLMENT TX: monthly schedule created installment_id={installment_id} count={monthly_payments_count}")
+
+                # Auto-mark down payment regardless of wallet presence
+                if body['down_payment'] > 0:
+                    tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $installment_id AS Utf8; DECLARE $amount AS Decimal(22,9); DECLARE $date AS Date; DECLARE $ts AS Timestamp;
+                            UPDATE installment_payments SET paid_amount = COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) + $amount, is_paid = true, paid_date = $date, updated_at = $ts
+                            WHERE installment_id = $installment_id AND payment_number = 0;
+                            """
+                        ),
+                        {'$installment_id': installment_id, '$amount': Decimal(str(body['down_payment'])), '$date': down_payment_date, '$ts': now}
+                    )
+                    logger.info("CREATE-INSTALLMENT TX: down-payment marked paid (schedule)")
+
+                # If wallet_id provided, perform allocation of cash price, handle ledger entries, and update aggregates
+                if wallet_id_opt:
+                    # Validate wallet exists and active for this user
+                    wallet_q = session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT type FROM wallets WHERE id = $wallet_id AND user_id = $user_id AND status = 'active';
+                        """
+                    )
+                    w_rs = tx.execute(wallet_q, {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']})
+                    if not (w_rs and len(w_rs) > 0 and w_rs[0].rows):
+                        tx.rollback()
+                        return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Wallet not found or inactive'})}
+
+                    # Fetch wallet balance/version
+                    wb_q = session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT balance_minor_units, version FROM wallet_balances WHERE wallet_id = $wallet_id AND user_id = $user_id;
+                        """
+                    )
+                    logger.info("CREATE-INSTALLMENT TX: ledger debit created for cash price")
+                    wb_rs = tx.execute(wb_q, {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']})
+                    if not (wb_rs and len(wb_rs) > 0 and wb_rs[0].rows):
+                        tx.rollback()
+                        return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Wallet balance not initialized'})}
+                    current_balance = int(wb_rs[0].rows[0].balance_minor_units or 0)
+                    current_version = int(wb_rs[0].rows[0].version or 0)
+
+                    from decimal import ROUND_HALF_UP as RHU
+                    cash_price_mu = int((Decimal(str(body['cash_price'])) * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+                    logger.info(f"CREATE-INSTALLMENT TX: allocation preparing, cash_price_mu={cash_price_mu}")
+                    if current_balance < cash_price_mu:
+                        tx.rollback()
+                        return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Insufficient wallet balance for cash price'})}
+
+                    import uuid as _uuid
+                    # Allocation record (active)
+                    alloc_id = str(_uuid.uuid4())
+                    tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $id AS Utf8; DECLARE $installment_id AS Utf8; DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $amount AS Int64; DECLARE $created_at AS Timestamp;
+                            INSERT INTO installment_allocations (id, installment_id, wallet_id, user_id, amount_minor_units, transaction_id, status, created_at)
+                            VALUES ($id, $installment_id, $wallet_id, $user_id, $amount, NULL, 'active', $created_at);
+                            """
+                        ),
+                        {'$id': alloc_id, '$installment_id': installment_id, '$wallet_id': wallet_id_opt, '$user_id': body['user_id'], '$amount': cash_price_mu, '$created_at': now}
+                    )
+
+                    # Ledger debit for cash purchase
+                    debit_id = str(_uuid.uuid4())
+                    tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $id AS Utf8; DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $amt AS Int64; DECLARE $ref AS Utf8; DECLARE $ts AS Timestamp; DECLARE $desc AS Utf8;
+                            INSERT INTO ledger_transactions (id, wallet_id, user_id, direction, amount_minor_units, currency, reference_type, reference_id, description, created_by, created_at)
+                            VALUES ($id, $wallet_id, $user_id, 'debit', $amt, CAST('RUB' AS Utf8), CAST('installment' AS Utf8), $ref, $desc, $user_id, $ts);
+                            """
+                        ),
+                        {'$id': debit_id, '$wallet_id': wallet_id_opt, '$user_id': body['user_id'], '$amt': cash_price_mu, '$ref': installment_id, '$ts': now, '$desc': 'Installment cash purchase'}
+                    )
+
+                    new_balance = current_balance - cash_price_mu
+                    paid_mu = 0
+                    if body['down_payment'] > 0:
+                        dp_mu = int((Decimal(str(body['down_payment'])) * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+                        # Ledger credit for down payment
+                        credit_id = str(_uuid.uuid4())
+                        tx.execute(
+                            session.prepare(
+                                """
+                                DECLARE $id AS Utf8; DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $amt AS Int64; DECLARE $ref AS Utf8; DECLARE $ts AS Timestamp; DECLARE $desc AS Utf8;
+                                INSERT INTO ledger_transactions (id, wallet_id, user_id, direction, amount_minor_units, currency, reference_type, reference_id, description, created_by, created_at)
+                                VALUES ($id, $wallet_id, $user_id, 'credit', $amt, CAST('RUB' AS Utf8), CAST('installment' AS Utf8), $ref, $desc, $user_id, $ts);
+                                """
+                            ),
+                            {'$id': credit_id, '$wallet_id': wallet_id_opt, '$user_id': body['user_id'], '$amt': dp_mu, '$ref': installment_id, '$ts': now, '$desc': 'Down payment received'}
+                        )
+                        logger.info("CREATE-INSTALLMENT TX: ledger credit created for down payment")
+                        new_balance += dp_mu
+                        paid_mu += dp_mu
+
+                    # Recompute aggregates for wallet: total remaining, due_to_get, expected revenue
+                    total_rem_rs = tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                            SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
+                            FROM (
+                                SELECT i.id,
+                                  CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
+                                FROM installments i
+                                LEFT JOIN (
+                                    SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
+                                    FROM installment_payments GROUP BY installment_id
+                                ) AS p ON p.installment_id = i.id
+                                WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id
+                            );
+                            """
+                        ),
+                        {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']}
+                    )
+                    tr_rows = total_rem_rs[0].rows if (total_rem_rs and len(total_rem_rs) > 0) else []
+                    total_remaining_dec = Decimal(str(tr_rows[0].total_remaining or 0)) if tr_rows else Decimal('0')
+                    total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+
+                    due_rows = tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                            SELECT ip.expected_amount AS exp, COALESCE(ip.paid_amount, CAST(0 AS Decimal(22,9))) AS paid
+                            FROM installment_payments ip INNER JOIN installments i ON i.id = ip.installment_id
+                            WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id AND ip.is_paid = false;
+                            """
+                        ),
+                        {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']}
+                    )
+                    due_sum_dec = Decimal('0')
+                    dr_rows = due_rows[0].rows if (due_rows and len(due_rows) > 0) else []
+                    for r in dr_rows:
+                        due_sum_dec += (Decimal(str(r.exp)) - Decimal(str(r.paid)))
+                    due_to_get_mu = int((due_sum_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+
+                    exp_rev_rs = tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                            SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS profit_sum
+                            FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                            """
+                        ),
+                        {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']}
+                    )
+                    er_rows = exp_rev_rs[0].rows if (exp_rev_rs and len(exp_rev_rs) > 0) else []
+                    profit_sum = Decimal(str(er_rows[0].profit_sum or 0)) if er_rows else Decimal('0')
+                    expected_revenue_mu = int((profit_sum * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+
+                    # Update wallet balance and aggregates
+                    upd_q = session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $new_balance AS Int64; DECLARE $new_version AS Uint64; DECLARE $curr_version AS Uint64; DECLARE $now AS Timestamp;
+                        DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $paid_mu AS Int64;
+                        UPDATE wallet_balances SET balance_minor_units = $new_balance, version = $new_version, updated_at = $now,
+                          total_allocated_minor_units = $total_alloc, due_to_get_minor_units = $due_to_get,
+                          expected_revenue_minor_units = $exp_rev,
+                          paid_amount_minor_units = COALESCE(paid_amount_minor_units, 0) + $paid_mu
+                        WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $curr_version;
+                        """
+                    )
+                    upd_res = tx.execute(upd_q, {'$wallet_id': wallet_id_opt, '$user_id': body['user_id'], '$new_balance': new_balance, '$new_version': current_version + 1, '$curr_version': current_version, '$now': now, '$total_alloc': total_alloc_mu, '$due_to_get': due_to_get_mu, '$exp_rev': expected_revenue_mu, '$paid_mu': paid_mu})
+                    try:
+                        ra = getattr(getattr(upd_res[0], 'stats', None), 'rows_affected', None) if (upd_res and len(upd_res) > 0) else None
+                    except Exception:
+                        ra = None
+                    logger.info(f"CREATE-INSTALLMENT TX: wallet_balances updated new_balance={new_balance} rows_affected={(ra if ra is not None else 'unknown')} total_alloc_mu={total_alloc_mu} due_to_get_mu={due_to_get_mu} exp_rev_mu={expected_revenue_mu} paid_mu_delta={paid_mu}")
+                    if ra is not None and ra == 0:
+                        tx.rollback()
+                        return {'statusCode': 409, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Concurrent wallet update detected'})}
+
+                
+                # Recompute installment aggregates and status
+                payment_stats_query = """
+DECLARE $installment_id AS Utf8;
+SELECT 
+    COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) as paid_amount,
+    CAST(COUNT(*) AS Int32) as total_payments,
+    CAST(SUM(CASE WHEN is_paid = true THEN CAST(1 AS Int32) ELSE CAST(0 AS Int32) END) AS Int32) as paid_payments,
+    CAST(SUM(CASE WHEN is_paid = false AND due_date < CurrentUtcDate() THEN CAST(1 AS Int32) ELSE CAST(0 AS Int32) END) AS Int32) as overdue_count,
+    MIN(CASE WHEN is_paid = false THEN due_date ELSE NULL END) as next_payment_date,
+    MAX(CASE WHEN is_paid = true THEN paid_date ELSE NULL END) as last_payment_date
+FROM installment_payments
+WHERE installment_id = $installment_id;
+"""
+                stats_result = tx.execute(
+                    session.prepare(payment_stats_query),
+                    {'$installment_id': installment_id}
+                )
+                if stats_result and len(stats_result) > 0 and stats_result[0].rows:
+                    srow = stats_result[0].rows[0]
+                    paid_amount_stat = srow.paid_amount
+                    total_payments_stat = srow.total_payments
+                    paid_payments_stat = srow.paid_payments
+                    overdue_count_stat = srow.overdue_count
+                    next_payment_date_stat = srow.next_payment_date
+                    last_payment_date_stat = srow.last_payment_date
+                else:
+                    from decimal import Decimal as _D
+                    paid_amount_stat = _D('0')
+                    total_payments_stat = 0
+                    paid_payments_stat = 0
+                    overdue_count_stat = 0
+                    next_payment_date_stat = None
+                    last_payment_date_stat = None
+
+                remaining_amount_stat = installment_price - paid_amount_stat
+
+                next_amount_query = """
+DECLARE $installment_id AS Utf8;
+SELECT id, expected_amount, due_date, is_paid FROM installment_payments 
+WHERE installment_id = $installment_id AND is_paid = false 
+ORDER BY due_date ASC LIMIT 1;
+"""
+                next_amount_result = tx.execute(
+                    session.prepare(next_amount_query),
+                    {'$installment_id': installment_id}
+                )
+                if next_amount_result and len(next_amount_result) > 0 and next_amount_result[0].rows:
+                    nr = next_amount_result[0].rows[0]
+                    next_payment_amount_stat = nr.expected_amount
+                else:
+                    next_payment_amount_stat = None
+
+                update_installment_query = """
+DECLARE $installment_id AS Utf8;
+DECLARE $paid_amount AS Decimal(22,9);
+DECLARE $remaining_amount AS Decimal(22,9);
+DECLARE $total_payments AS Int32;
+DECLARE $paid_payments AS Int32;
+DECLARE $overdue_count AS Int32;
+DECLARE $next_payment_date AS Date?;
+DECLARE $next_payment_amount AS Decimal(22,9)?;
+DECLARE $last_payment_date AS Date?;
+DECLARE $updated_at AS Timestamp;
+
+UPDATE installments SET
+    paid_amount = $paid_amount,
+    remaining_amount = $remaining_amount,
+    total_payments = $total_payments,
+    paid_payments = $paid_payments,
+    overdue_count = $overdue_count,
+    next_payment_date = $next_payment_date,
+    next_payment_amount = $next_payment_amount,
+    last_payment_date = $last_payment_date,
+    updated_at = $updated_at
+WHERE id = $installment_id;
+"""
+                tx.execute(
+                    session.prepare(update_installment_query),
+                    {
+                        '$installment_id': installment_id,
+                        '$paid_amount': paid_amount_stat,
+                        '$remaining_amount': remaining_amount_stat,
+                        '$total_payments': total_payments_stat,
+                        '$paid_payments': paid_payments_stat,
+                        '$overdue_count': overdue_count_stat,
+                        '$next_payment_date': next_payment_date_stat,
+                        '$next_payment_amount': next_payment_amount_stat,
+                        '$last_payment_date': last_payment_date_stat,
+                        '$updated_at': now
+                    }
+                )
+
+                tx.execute(
+                    session.prepare(
+                        """
+                        DECLARE $installment_id AS Utf8;
+                        UPDATE installments SET
+                            payment_status = CASE
+                                WHEN overdue_count > 0 THEN CAST('просрочено' AS Utf8)
+                                WHEN paid_payments = total_payments AND total_payments > 0 THEN CAST('оплачено' AS Utf8)
+                                WHEN next_payment_date IS NOT NULL AND next_payment_date <= CurrentUtcDate() THEN CAST('к оплате' AS Utf8)
+                                ELSE CAST('предстоящий' AS Utf8)
+                            END
+                        WHERE id = $installment_id;
+                        """
+                    ),
+                    {'$installment_id': installment_id}
+                )
 
                 # Commit the transaction
                 tx.commit()
