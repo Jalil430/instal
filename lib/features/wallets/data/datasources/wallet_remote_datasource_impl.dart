@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../../../core/api/api_client.dart' as api;
+import '../../../../core/api/cache_service.dart';
 import '../../domain/entities/wallet.dart';
 import '../models/wallet_model.dart';
 import '../models/wallet_balance_model.dart';
@@ -8,45 +9,20 @@ import '../models/investment_summary_model.dart';
 import 'wallet_remote_datasource.dart';
 
 class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
-  final Map<String, dynamic> _cache = {};
-
-  // Simple cache methods
-  void _setCache(String key, dynamic value) {
-    _cache[key] = {'value': value, 'timestamp': DateTime.now()};
-  }
-
-  dynamic _getCache(String key) {
-    final cached = _cache[key];
-    if (cached != null) {
-      final timestamp = cached['timestamp'] as DateTime;
-      if (DateTime.now().difference(timestamp).inMinutes < 5) {
-        return cached['value'];
-      }
-    }
-    return null;
-  }
-
-  void _clearCache(String key) {
-    _cache.remove(key);
-  }
-
-  void _clearAllCache() {
-    _cache.clear();
-  }
+  final CacheService _cache = CacheService();
 
   // Public method to clear cache from outside
   void clearCache() {
-    _clearAllCache();
+    _cache.clearWalletCaches();
   }
 
   @override
   Future<List<WalletModel>> getAllWallets(String userId) async {
     try {
-      const cacheKey = 'wallets';
-      final cached = _getCache(cacheKey);
+      final cacheKey = CacheService.walletsKey(userId);
+      final cached = _cache.get<List<WalletModel>>(cacheKey);
       if (cached != null) {
-        final List<dynamic> cachedList = cached as List<dynamic>;
-        return cachedList.map((json) => WalletModel.fromJson(json)).toList();
+        return cached;
       }
 
       final response = await api.ApiClient.get('/wallets');
@@ -55,7 +31,7 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         final List<dynamic> walletsJson = json.decode(response.body) as List<dynamic>;
         final wallets = walletsJson.map((json) => WalletModel.fromJson(json)).toList();
 
-        _setCache(cacheKey, walletsJson);
+        _cache.set(cacheKey, wallets, duration: const Duration(minutes: 3));
         return wallets;
       } else {
         throw Exception('Failed to load wallets: ${response.statusCode}');
@@ -70,11 +46,11 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
     try {
       print('🔍 getWalletById: Fetching wallet $walletId');
 
-      final cacheKey = 'wallet_$walletId';
-      final cached = _getCache(cacheKey);
+      final cacheKey = CacheService.walletKey(walletId);
+      final cached = _cache.get<WalletModel>(cacheKey);
       if (cached != null) {
         print('📦 getWalletById: Found cached wallet $walletId');
-        return WalletModel.fromJson(cached as Map<String, dynamic>);
+        return cached;
       }
 
       print('🌐 getWalletById: Making API call to /wallets/$walletId');
@@ -86,7 +62,7 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         final walletJson = json.decode(response.body) as Map<String, dynamic>;
         final wallet = WalletModel.fromJson(walletJson);
 
-        _setCache(cacheKey, walletJson);
+        _cache.set(cacheKey, wallet);
         print('💾 getWalletById: Cached wallet $walletId');
         return wallet;
       } else if (response.statusCode == 404) {
@@ -116,7 +92,9 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         final createdWalletJson = json.decode(response.body) as Map<String, dynamic>;
         final createdWallet = WalletModel.fromJson(createdWalletJson);
 
-        _clearCache('wallets');
+        // Invalidate list and balances caches for the user
+        _cache.remove(CacheService.walletsKey(createdWallet.userId));
+        _cache.remove(CacheService.walletBalancesKey(createdWallet.userId));
         return createdWallet;
       } else {
         throw Exception('Failed to create wallet: ${response.statusCode}');
@@ -138,8 +116,9 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         final updatedWalletJson = json.decode(response.body) as Map<String, dynamic>;
         final updatedWallet = WalletModel.fromJson(updatedWalletJson);
 
-        _clearCache('wallet_${wallet.id}');
-        _clearCache('wallets');
+        _cache.remove(CacheService.walletKey(wallet.id));
+        _cache.remove(CacheService.walletsKey(wallet.userId));
+        _cache.remove(CacheService.walletBalancesKey(wallet.userId));
         return updatedWallet;
       } else {
         throw Exception('Failed to update wallet: ${response.statusCode}');
@@ -152,10 +131,23 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
   @override
   Future<void> deleteWallet(String walletId) async {
     try {
+      // Try to fetch wallet to get userId for targeted invalidation
+      String? userId;
+      try {
+        final existing = await getWalletById(walletId);
+        userId = existing?.userId;
+      } catch (_) {}
+
       final response = await api.ApiClient.delete('/wallets/$walletId');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        _clearAllCache();
+        _cache.remove(CacheService.walletKey(walletId));
+        if (userId != null) {
+          _cache.remove(CacheService.walletsKey(userId));
+          _cache.remove(CacheService.walletBalancesKey(userId));
+        } else {
+          _cache.clearWalletCaches();
+        }
       } else {
         throw Exception('Failed to delete wallet: ${response.statusCode}');
       }
@@ -171,7 +163,7 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
       final response = await api.ApiClient.put('/wallets/$walletId', {'status': 'archived'});
 
       if (response.statusCode == 200) {
-        _clearAllCache();
+        _cache.clearWalletCaches();
       } else {
         throw Exception('Failed to archive wallet: ${response.statusCode}');
       }
@@ -186,7 +178,7 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
       final response = await api.ApiClient.put('/wallets/$walletId', {'status': 'active'});
 
       if (response.statusCode == 200) {
-        _clearAllCache();
+        _cache.clearWalletCaches();
       } else {
         throw Exception('Failed to unarchive wallet: ${response.statusCode}');
       }
@@ -198,10 +190,10 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
   @override
   Future<WalletBalanceModel?> getWalletBalance(String walletId) async {
     try {
-      final cacheKey = 'balance_$walletId';
-      final cached = _getCache(cacheKey);
+      final cacheKey = CacheService.walletBalanceKey(walletId);
+      final cached = _cache.get<WalletBalanceModel>(cacheKey);
       if (cached != null) {
-        return WalletBalanceModel.fromJson(cached as Map<String, dynamic>);
+        return cached;
       }
 
       final response = await api.ApiClient.get('/wallets/$walletId/balance');
@@ -210,7 +202,7 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         final balanceJson = json.decode(response.body) as Map<String, dynamic>;
         final balance = WalletBalanceModel.fromJson(balanceJson);
 
-        _setCache(cacheKey, balanceJson);
+        _cache.set(cacheKey, balance);
         return balance;
       } else if (response.statusCode == 404) {
         return null;
@@ -225,11 +217,10 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
   @override
   Future<List<WalletBalanceModel>> getAllWalletBalances(String userId) async {
     try {
-      const cacheKey = 'balances';
-      final cached = _getCache(cacheKey);
+      final cacheKey = CacheService.walletBalancesKey(userId);
+      final cached = _cache.get<List<WalletBalanceModel>>(cacheKey);
       if (cached != null) {
-        final List<dynamic> cachedList = cached as List<dynamic>;
-        return cachedList.map((json) => WalletBalanceModel.fromJson(json)).toList();
+        return cached;
       }
 
       // Try dedicated balances endpoint first
@@ -248,12 +239,14 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
               'version': ((w['balance'] ?? {})['version'] ?? 1),
               'updated_at': ((w['balance'] ?? {})['updated_at'] ?? DateTime.now().toIso8601String()),
             }).toList();
-            _setCache(cacheKey, synthesized);
-            return synthesized.map((json) => WalletBalanceModel.fromJson(json as Map<String, dynamic>)).toList();
+            final models = synthesized.map((json) => WalletBalanceModel.fromJson(json as Map<String, dynamic>)).toList();
+            _cache.set(cacheKey, models, duration: const Duration(minutes: 3));
+            return models;
           }
         }
-        _setCache(cacheKey, balancesJson);
-        return balancesJson.map((json) => WalletBalanceModel.fromJson(json as Map<String, dynamic>)).toList();
+        final models = balancesJson.map((json) => WalletBalanceModel.fromJson(json as Map<String, dynamic>)).toList();
+        _cache.set(cacheKey, models, duration: const Duration(minutes: 3));
+        return models;
       } else {
         // On failure, synthesize from /wallets as fallback
         final walletsResp = await api.ApiClient.get('/wallets');
@@ -266,8 +259,9 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
             'version': ((w['balance'] ?? {})['version'] ?? 1),
             'updated_at': ((w['balance'] ?? {})['updated_at'] ?? DateTime.now().toIso8601String()),
           }).toList();
-          _setCache(cacheKey, synthesized);
-          return synthesized.map((json) => WalletBalanceModel.fromJson(json as Map<String, dynamic>)).toList();
+          final models = synthesized.map((json) => WalletBalanceModel.fromJson(json as Map<String, dynamic>)).toList();
+          _cache.set(cacheKey, models, duration: const Duration(minutes: 3));
+          return models;
         }
         throw Exception('Failed to load wallet balances: ${response.statusCode}');
       }
@@ -324,7 +318,9 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
           createdAt: DateTime.now(),
         );
 
-        _clearCache('balance_${transaction.walletId}');
+        _cache.remove(CacheService.walletBalanceKey(transaction.walletId));
+        // Balance lists may change; clear all wallet caches for safety
+        _cache.clearWalletCaches();
         return createdTransaction;
       } else {
         throw Exception('Failed to create transaction: ${response.statusCode}');
@@ -365,9 +361,8 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         'description': description,
       });
       if (response.statusCode == 200) {
-        _clearCache('balance_$walletId');
-        _clearCache('wallet_$walletId');
-        _clearCache('wallets');
+        _cache.remove(CacheService.walletBalanceKey(walletId));
+        _cache.clearWalletCaches();
       } else {
         throw Exception('Top-up failed: ${response.statusCode}');
       }
@@ -384,9 +379,8 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         'description': description,
       });
       if (response.statusCode == 200) {
-        _clearCache('balance_$walletId');
-        _clearCache('wallet_$walletId');
-        _clearCache('wallets');
+        _cache.remove(CacheService.walletBalanceKey(walletId));
+        _cache.clearWalletCaches();
       } else {
         throw Exception('Withdraw failed: ${response.statusCode}');
       }

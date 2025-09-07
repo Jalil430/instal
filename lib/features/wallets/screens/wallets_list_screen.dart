@@ -276,6 +276,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
       if (currentUser != null) {
         cache.remove(CacheService.walletsKey(currentUser.id));
+        cache.remove(CacheService.walletBalancesKey(currentUser.id));
       }
 
       // Show loading indicator
@@ -459,6 +460,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
         if (currentUser != null) {
           cache.remove(CacheService.walletsKey(currentUser.id));
+          cache.remove(CacheService.walletBalancesKey(currentUser.id));
         }
         cache.remove(CacheService.walletKey(wallet.id));
 
