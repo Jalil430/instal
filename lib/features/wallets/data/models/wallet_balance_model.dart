@@ -10,6 +10,7 @@ class WalletBalanceModel {
   final int dueToGetMinorUnits;
   final int expectedRevenueMinorUnits;
   final int paidAmountMinorUnits;
+  final int spentOnProductsMinorUnits;
 
   const WalletBalanceModel({
     required this.walletId,
@@ -21,6 +22,7 @@ class WalletBalanceModel {
     this.dueToGetMinorUnits = 0,
     this.expectedRevenueMinorUnits = 0,
     this.paidAmountMinorUnits = 0,
+    this.spentOnProductsMinorUnits = 0,
   });
 
   factory WalletBalanceModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class WalletBalanceModel {
       dueToGetMinorUnits: (json['due_to_get_minor_units'] as num?)?.toInt() ?? 0,
       expectedRevenueMinorUnits: (json['expected_revenue_minor_units'] as num?)?.toInt() ?? 0,
       paidAmountMinorUnits: (json['paid_amount_minor_units'] as num?)?.toInt() ?? 0,
+      spentOnProductsMinorUnits: (json['spent_on_products_minor_units'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -48,6 +51,7 @@ class WalletBalanceModel {
       'due_to_get_minor_units': dueToGetMinorUnits,
       'expected_revenue_minor_units': expectedRevenueMinorUnits,
       'paid_amount_minor_units': paidAmountMinorUnits,
+      'spent_on_products_minor_units': spentOnProductsMinorUnits,
     };
   }
 
@@ -62,6 +66,7 @@ class WalletBalanceModel {
       dueToGetMinorUnits: dueToGetMinorUnits,
       expectedRevenueMinorUnits: expectedRevenueMinorUnits,
       paidAmountMinorUnits: paidAmountMinorUnits,
+      spentOnProductsMinorUnits: spentOnProductsMinorUnits,
     );
   }
 
@@ -76,6 +81,7 @@ class WalletBalanceModel {
       dueToGetMinorUnits: balance.dueToGetMinorUnits,
       expectedRevenueMinorUnits: balance.expectedRevenueMinorUnits,
       paidAmountMinorUnits: balance.paidAmountMinorUnits,
+      spentOnProductsMinorUnits: balance.spentOnProductsMinorUnits,
     );
   }
 }

@@ -191,7 +191,8 @@ def handler(event, context):
                     wb.updated_at AS balance_updated_at,
                     wb.total_allocated_minor_units AS total_allocated_minor_units,
                     wb.due_to_get_minor_units AS due_to_get_minor_units,
-                    wb.expected_revenue_minor_units AS expected_revenue_minor_units
+                    wb.expected_revenue_minor_units AS expected_revenue_minor_units,
+                    wb.spent_on_products_minor_units AS spent_on_products_minor_units
                 FROM wallets w
                 LEFT JOIN wallet_balances wb ON wb.wallet_id = w.id AND wb.user_id = w.user_id
                 WHERE w.user_id = '{user_id}'
@@ -283,6 +284,7 @@ def handler(event, context):
                             'total_allocated_minor_units': int(_val('total_allocated_minor_units') or 0),
                             'due_to_get_minor_units': int(_val('due_to_get_minor_units') or 0),
                             'expected_revenue_minor_units': int(_val('expected_revenue_minor_units') or 0),
+                            'spent_on_products_minor_units': int(_val('spent_on_products_minor_units') or 0),
                         }
                     }
 

@@ -31,7 +31,7 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         final List<dynamic> walletsJson = json.decode(response.body) as List<dynamic>;
         final wallets = walletsJson.map((json) => WalletModel.fromJson(json)).toList();
 
-        _cache.set(cacheKey, wallets, duration: const Duration(minutes: 3));
+        _cache.set(cacheKey, wallets, duration: const Duration(minutes: 30));
         return wallets;
       } else {
         throw Exception('Failed to load wallets: ${response.statusCode}');

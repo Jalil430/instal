@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:instal_app/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:instal_app/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:instal_app/features/auth/domain/entities/auth_state.dart';
 
 class ApiClient {
   static const String _baseUrl = 'https://d5degr4sfnv9p7i065ga.kf69zffa.apigw.yandexcloud.net';
@@ -10,6 +12,7 @@ class ApiClient {
   
   static final http.Client _httpClient = http.Client();
   static final AuthLocalDataSource _authLocalDataSource = AuthLocalDataSourceImpl();
+  static final AuthRemoteDataSource _authRemoteDataSource = AuthRemoteDataSourceImpl();
   
 
   
@@ -35,17 +38,21 @@ class ApiClient {
       headers['X-API-Key'] = _apiKey;
     } else {
       // Business endpoints require JWT authentication
-      final authState = await _authLocalDataSource.getAuthState();
+      var authState = await _authLocalDataSource.getAuthState();
       
       if (!authState.isAuthenticated || authState.accessToken == null) {
         throw UnauthorizedException('User not authenticated');
       }
       
-      // Simple token check - tokens now last 7 days so no need for complex refresh logic
+      // If token expired, attempt refresh once using refresh token
       if (authState.isTokenExpired) {
-        // Token is expired, clear auth state and require re-login
-        await _authLocalDataSource.clearAuthState();
-        throw TokenExpiredException('Session expired. Please log in again.');
+        final refreshed = await _tryRefreshToken(authState);
+        if (!refreshed) {
+          await _authLocalDataSource.clearAuthState();
+          throw TokenExpiredException('Session expired. Please log in again.');
+        }
+        // Reload auth state after refresh
+        authState = await _authLocalDataSource.getAuthState();
       }
       
       // Use the current token (valid for 7 days)
@@ -110,6 +117,16 @@ class ApiClient {
       
       // If we get a 401 Unauthorized, the token is expired - clear auth state
       if (response.statusCode == 401) {
+        // Try to refresh once and retry the original request
+        final authState = await _authLocalDataSource.getAuthState();
+        final refreshed = authState.isAuthenticated ? await _tryRefreshToken(authState) : false;
+        if (refreshed) {
+          // Retry once with new token
+          final retryResponse = await requestFunction();
+          if (retryResponse.statusCode != 401) {
+            return retryResponse;
+          }
+        }
         await _authLocalDataSource.clearAuthState();
         throw TokenExpiredException('Session expired. Please log in again.');
       }
@@ -120,6 +137,19 @@ class ApiClient {
         rethrow;
       }
       throw ApiException('Network error: $e');
+    }
+  }
+
+  // Attempt to refresh tokens using stored refresh token
+  static Future<bool> _tryRefreshToken(AuthState current) async {
+    try {
+      final refreshToken = current.refreshToken;
+      if (refreshToken == null || refreshToken.isEmpty) return false;
+      final newState = await _authRemoteDataSource.refreshToken(refreshToken);
+      await _authLocalDataSource.saveAuthState(newState);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

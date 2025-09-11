@@ -115,6 +115,24 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
     });
   }
 
+  // Public helpers to allow external control
+  void requestFocusAndOpen() {
+    _focusNode.requestFocus();
+    _openDropdown();
+  }
+
+  void close() {
+    _closeDropdown();
+  }
+
+  void toggle() {
+    if (_isOpen) {
+      _closeDropdown();
+    } else {
+      requestFocusAndOpen();
+    }
+  }
+
   void _scrollToSelectedItem() {
     if (!_scrollController.hasClients || _filteredItems.isEmpty) return;
     
@@ -177,9 +195,9 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
       _controller.clear();
     }
     _closeDropdown();
+    // First notify selection
     widget.onChanged(item);
-    
-    // Move to next field after selection
+    // Then move focus after this frame so Enter key-up doesn't trigger next field submit
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onNext?.call();
     });
@@ -234,19 +252,25 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
             onKey: (RawKeyEvent event) {
               if (event is RawKeyDownEvent) {
                 if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                  setState(() {
-                    _selectedIndex = (_selectedIndex + 1) % _filteredItems.length;
-                  });
-                  _scrollToSelectedItem();
-                  _overlayEntry?.markNeedsBuild();
+                  if (_filteredItems.isNotEmpty) {
+                    setState(() {
+                      _selectedIndex = (_selectedIndex + 1) % _filteredItems.length;
+                    });
+                    _scrollToSelectedItem();
+                    _overlayEntry?.markNeedsBuild();
+                  }
                 } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                  setState(() {
-                    _selectedIndex = (_selectedIndex - 1) % _filteredItems.length;
-                    if (_selectedIndex < 0) _selectedIndex = _filteredItems.length - 1;
-                  });
-                  _scrollToSelectedItem();
-                  _overlayEntry?.markNeedsBuild();
-                } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+                  if (_filteredItems.isNotEmpty) {
+                    setState(() {
+                      _selectedIndex = (_selectedIndex - 1) % _filteredItems.length;
+                      if (_selectedIndex < 0) _selectedIndex = _filteredItems.length - 1;
+                    });
+                    _scrollToSelectedItem();
+                    _overlayEntry?.markNeedsBuild();
+                  }
+                }
+              } else if (event is RawKeyUpEvent) {
+                if (event.logicalKey == LogicalKeyboardKey.enter) {
                   _handleSubmit();
                 } else if (event.logicalKey == LogicalKeyboardKey.escape) {
                   _closeDropdown();
@@ -256,9 +280,12 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
             child: TextFormField(
               controller: _controller,
               focusNode: _focusNode,
-              textInputAction: TextInputAction.next,
+              // Prevent framework implicit next-focus; we manage focus manually
+              textInputAction: TextInputAction.none,
               onChanged: _filterItems,
-              onFieldSubmitted: (_) => _handleSubmit(),
+              // We handle Enter via RawKeyboardListener only
+              onFieldSubmitted: (_) {},
+              onEditingComplete: () {},
               onTap: () {
                 if (!_isOpen) _openDropdown();
               },
@@ -287,9 +314,15 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
                   borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                suffixIcon: Icon(
-                  _isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: AppTheme.textSecondary,
+                suffixIcon: IconButton(
+                  splashRadius: 18,
+                  onPressed: () {
+                    toggle();
+                  },
+                  icon: Icon(
+                    _isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -304,68 +337,78 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
     final size = renderBox.size;
 
     return OverlayEntry(
-      builder: (context) => Positioned(
-        width: size.width,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: Offset(0, size.height / 1.45),
-          child: Material(
-            elevation: 8,
-            borderRadius: BorderRadius.circular(12),
-            color: AppTheme.surfaceColor,
-            shadowColor: Colors.black.withOpacity(0.1),
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.subtleBorderColor),
-              ),
-              child: _filteredItems.isEmpty
-                  ? _buildNoItemsWidget()
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: _filteredItems.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredItems[index];
-                          final isSelected = index == _selectedIndex;
-                          
-                          return InkWell(
-                            onTap: () => _selectItem(item),
-                            child: Container(
-                              height: 48, // Fixed height for consistent scrolling
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppTheme.subtleBackgroundColor
-                                    : Colors.transparent,
-                              ),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  widget.getDisplayText(item),
-                                  style: TextStyle(
-                                    color: isSelected 
-                                        ? AppTheme.brightPrimaryColor
-                                        : AppTheme.textPrimary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+      builder: (context) => Stack(
+        children: [
+          // Full-screen translucent tap catcher to close on outside clicks
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _closeDropdown,
+            ),
+          ),
+          // The dropdown, positioned relative to the field
+          CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            offset: Offset(0, size.height / 1.45),
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.surfaceColor,
+              shadowColor: Colors.black.withOpacity(0.1),
+              child: Container(
+                width: size.width,
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.subtleBorderColor),
+                ),
+                child: _filteredItems.isEmpty
+                    ? _buildNoItemsWidget()
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: _filteredItems.length,
+                          itemBuilder: (context, index) {
+                            final item = _filteredItems[index];
+                            final isSelected = index == _selectedIndex;
+                            
+                            return InkWell(
+                              onTap: () => _selectItem(item),
+                              child: Container(
+                                height: 48, // Fixed height for consistent scrolling
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppTheme.subtleBackgroundColor
+                                      : Colors.transparent,
+                                ),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    widget.getDisplayText(item),
+                                    style: TextStyle(
+                                      color: isSelected 
+                                          ? AppTheme.brightPrimaryColor
+                                          : AppTheme.textPrimary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

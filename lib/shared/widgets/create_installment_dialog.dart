@@ -197,6 +197,10 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
 
   void _focusWalletDropdown() {
     setState(() => _currentStep = 1);
+    // Programmatically focus and open the wallet dropdown for smooth keyboard flow
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _walletDropdownKey.currentState?.requestFocusAndOpen();
+    });
   }
 
   void _focusProductName() {
@@ -306,7 +310,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         id: const Uuid().v4(),
         userId: currentUser.id,
         clientId: _selectedClient!.id,
-        investorId: _selectedWallet?.id ?? '', // Keep for backward compatibility
+        // Do not populate investorId anymore; use walletId only
+        investorId: '',
         walletId: _selectedWallet?.id,
         productName: _productNameController.text,
         cashPrice: double.parse(_cashPriceController.text),
@@ -398,7 +403,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         },
         onWalletSelected: (wallet) {
           setState(() => _selectedWallet = wallet);
-          _focusProductName();
+          // Do not shift focus to product name here; child moves focus to installment number directly
         },
         onClientDropdownFocus: _focusClientDropdown,
         onWalletDropdownFocus: _focusWalletDropdown,
@@ -445,7 +450,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         },
         onWalletSelected: (wallet) {
           setState(() => _selectedWallet = wallet);
-          _focusProductName();
+          // Do not shift focus to product name here; child moves focus to installment number directly
         },
         onClientDropdownFocus: _focusClientDropdown,
         onWalletDropdownFocus: _focusWalletDropdown,

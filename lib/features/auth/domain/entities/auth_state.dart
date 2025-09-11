@@ -53,7 +53,8 @@ class AuthState {
 
   bool get isTokenExpired {
     if (expiresAt == null) return true;
-    return DateTime.now().isAfter(expiresAt!);
+    // Small clock skew to refresh a bit early
+    return DateTime.now().isAfter(expiresAt!.subtract(const Duration(seconds: 15)));
   }
 
   // Removed needsRefresh - tokens now last 7 days, no need for proactive refresh

@@ -340,19 +340,20 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
   Widget _buildFinancialSummaryTable(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    // Calculate key metrics
+    // Calculate key metrics (rubles)
     final currentBalance = balance?.balance ?? 0;
+    final paidAmount = balance?.paidAmount ?? 0;
+    final toReceiveAll = balance?.totalAllocated ?? 0; // К получению
+    final toReceiveSoon = balance?.dueToGet ?? 0; // Скоро к получению
+    final expectedProfit = balance?.expectedRevenue ?? 0; // Ожидаемая прибыль
+
+    final totalInstallmentsAmount = paidAmount + toReceiveAll; // Объём рассрочек
+    final spentOnProducts = (balance?.spentOnProducts ?? (totalInstallmentsAmount - expectedProfit))
+        .clamp(0, double.infinity);
+
     final initialInvestment = investmentSummary?.totalInvested ??
         (wallet.isPersonalWallet ? wallet.startingAmount : wallet.investmentAmount) ?? 0;
-    // Use persisted aggregates
-    final totalAllocated = balance?.totalAllocated ?? (investmentSummary?.totalAllocated ?? 0);
-    final expectedReturns = balance?.expectedRevenue ?? (investmentSummary?.expectedReturns ?? 0);
-    final paidAmount = balance?.paidAmount ?? 0;
-    final dueAmount = balance?.dueToGet ?? (investmentSummary?.dueAmount ?? 0);
-
-    final totalWalletValue = currentBalance + totalAllocated;
-    final totalProfit = expectedReturns;
-    final roi = initialInvestment > 0 ? (totalProfit / initialInvestment) * 100 : 0;
+    final roi = initialInvestment > 0 ? (expectedProfit / initialInvestment) * 100 : 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -368,50 +369,18 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                // Row 1: Initial Investment vs Current Balance
+                // Row 1: Current Balance | Paid
                 Row(
                   children: [
                     Expanded(
                       child: _buildSummaryCell(
-                        wallet.isPersonalWallet
-                            ? (l10n?.startingAmount ?? 'Starting Amount')
-                            : (l10n?.initialInvestment ?? 'Initial Investment'),
-                        initialInvestment > 0 ? stripTrailingZeroMoney(currencyFormat.format(initialInvestment)) : '—',
-                        Icons.account_balance,
-                        AppTheme.primaryColor,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 60,
-                      color: AppTheme.borderColor,
-                    ),
-                    Expanded(
-                      child: _buildSummaryCell(
-                        l10n?.currentBalance ?? 'Current Balance',
+                        context,
+                        l10n?.currentBalance ?? 'Текущий баланс',
                         stripTrailingZeroMoney(currencyFormat.format(currentBalance)),
                         Icons.account_balance_wallet,
                         AppTheme.successColor,
+                        tooltip: l10n?.tooltipCurrentBalance,
                         isHighlight: true,
-                      ),
-                    ),
-                  ],
-                ),
-
-                Container(
-                  height: 1,
-                  color: AppTheme.borderColor,
-                ),
-
-                // Row 2: Allocated vs Expected Returns (Expected Returns shown only for investor)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCell(
-                        l10n?.givenForInstallmentDetail ?? 'Given for Installment',
-                        stripTrailingZeroMoney(currencyFormat.format(totalAllocated)),
-                        Icons.money_off,
-                        AppTheme.warningColor,
                       ),
                     ),
                     Container(
@@ -421,10 +390,12 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     ),
                     Expanded(
                       child: _buildSummaryCell(
+                        context,
                         l10n?.paidAmount ?? 'Оплачено',
                         stripTrailingZeroMoney(currencyFormat.format(paidAmount)),
                         Icons.payments,
                         AppTheme.successColor,
+                        tooltip: l10n?.tooltipPaidAmount,
                       ),
                     ),
                   ],
@@ -435,15 +406,17 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   color: AppTheme.borderColor,
                 ),
 
-                // Row 3: Due Amount vs Total Value
+                // Row 2: To Receive (all) | To Receive Soon
                 Row(
                   children: [
                     Expanded(
                       child: _buildSummaryCell(
-                        l10n?.dueToGetDetail ?? 'Due to Get',
-                        stripTrailingZeroMoney(currencyFormat.format(dueAmount)),
-                        Icons.schedule,
+                        context,
+                        'К получению',
+                        stripTrailingZeroMoney(currencyFormat.format(toReceiveAll)),
+                        Icons.assignment_turned_in,
                         AppTheme.warningColor,
+                        tooltip: l10n?.tooltipToReceiveAll,
                       ),
                     ),
                     Container(
@@ -453,10 +426,48 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     ),
                     Expanded(
                       child: _buildSummaryCell(
-                        l10n?.totalValue ?? 'Total Value',
-                        stripTrailingZeroMoney(currencyFormat.format(totalWalletValue)),
+                        context,
+                        l10n?.dueToGetDetail ?? 'Скоро к получению',
+                        stripTrailingZeroMoney(currencyFormat.format(toReceiveSoon)),
+                        Icons.schedule,
+                        AppTheme.warningColor,
+                        tooltip: l10n?.tooltipToReceiveSoon,
+                      ),
+                    ),
+                  ],
+                ),
+
+                Container(
+                  height: 1,
+                  color: AppTheme.borderColor,
+                ),
+
+                // Row 3: Spent on Products | Total Installments Amount
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCell(
+                        context,
+                        'Сумма закупок',
+                        stripTrailingZeroMoney(currencyFormat.format(spentOnProducts)),
+                        Icons.shopping_bag,
+                        AppTheme.primaryColor,
+                        tooltip: l10n?.tooltipSpentOnProducts,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 60,
+                      color: AppTheme.borderColor,
+                    ),
+                    Expanded(
+                      child: _buildSummaryCell(
+                        context,
+                        'Объём рассрочек',
+                        stripTrailingZeroMoney(currencyFormat.format(totalInstallmentsAmount)),
                         Icons.calculate,
                         AppTheme.primaryColor,
+                        tooltip: l10n?.tooltipTotalInstallments,
                         isHighlight: true,
                       ),
                     ),
@@ -468,16 +479,18 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                   color: AppTheme.borderColor,
                 ),
 
-                // Row 4: Profit vs ROI (only for investor and if there's investment data)
+                // Row 4: Expected Profit | ROI (investor only)
                 if (isInvestor && initialInvestment > 0) ...[
                   Row(
                     children: [
                       Expanded(
                         child: _buildSummaryCell(
-                          l10n?.expectedProfit ?? 'Expected Profit',
-                          stripTrailingZeroMoney(currencyFormat.format(totalProfit)),
-                          totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
-                          totalProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                          context,
+                          l10n?.profit ?? 'Прибыль',
+                          stripTrailingZeroMoney(currencyFormat.format(expectedProfit)),
+                          expectedProfit >= 0 ? Icons.trending_up : Icons.trending_down,
+                          expectedProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                          tooltip: l10n?.tooltipExpectedProfit,
                         ),
                       ),
                       Container(
@@ -487,10 +500,12 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                       ),
                       Expanded(
                         child: _buildSummaryCell(
+                          context,
                           l10n?.locale.languageCode == 'ru' ? 'Доходность инвестиций' : 'Return on Investment',
                           '${roi.toStringAsFixed(1)}%',
                           Icons.percent,
-                          totalProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                          expectedProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                          tooltip: l10n?.tooltipROI,
                         ),
                       ),
                     ],
@@ -504,7 +519,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCell(String label, String value, IconData icon, Color color, {bool isHighlight = false}) {
+  Widget _buildSummaryCell(BuildContext context, String label, String value, IconData icon, Color color, {bool isHighlight = false, String? tooltip}) {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -527,13 +542,31 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
             child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w400,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    if (tooltip != null && tooltip.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      _ClickTooltip(
+                        message: tooltip!,
+                        icon: Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1167,6 +1200,141 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
 
     if (confirmed == true) {
       onArchiveToggle();
+    }
+  }
+
+  // Click-to-show tooltip that closes when clicking outside
+  // Local to this screen to avoid extra files; desktop-only use.
+}
+
+class _ClickTooltip extends StatefulWidget {
+  final String message;
+  final Widget icon;
+
+  const _ClickTooltip({required this.message, required this.icon});
+
+  @override
+  State<_ClickTooltip> createState() => _ClickTooltipState();
+}
+
+class _ClickTooltipState extends State<_ClickTooltip> {
+  final LayerLink _link = LayerLink();
+  OverlayEntry? _entry;
+  bool _open = false;
+  final GlobalKey _anchorKey = GlobalKey();
+  Offset _offset = const Offset(0, 24);
+
+  void _show() {
+    if (_open) return;
+    _computeSmartOffset();
+    _entry = _buildEntry();
+    Overlay.of(context).insert(_entry!);
+    setState(() => _open = true);
+  }
+
+  void _hide() {
+    if (!_open) return;
+    _entry?.remove();
+    _entry = null;
+    setState(() => _open = false);
+  }
+
+  void _toggle() {
+    _open ? _hide() : _show();
+  }
+
+  OverlayEntry _buildEntry() {
+    // Position tooltip slightly below the icon
+    return OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Tap outside to close
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _hide,
+            ),
+          ),
+          CompositedTransformFollower(
+            link: _link,
+            showWhenUnlinked: false,
+            offset: _offset,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 280),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: AppTheme.subtleBorderColor),
+                ),
+                child: Text(
+                  widget.message,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _link,
+      key: _anchorKey,
+      child: GestureDetector(
+        onTap: _toggle,
+        behavior: HitTestBehavior.opaque,
+        child: widget.icon,
+      ),
+    );
+  }
+
+  void _computeSmartOffset() {
+    try {
+      final box = _anchorKey.currentContext!.findRenderObject() as RenderBox;
+      final pos = box.localToGlobal(Offset.zero);
+      final size = box.size;
+      final mq = MediaQuery.of(context);
+      final screenW = mq.size.width;
+      final screenH = mq.size.height;
+      const tooltipW = 280.0;
+      const tooltipH = 120.0; // heuristic
+      const margin = 12.0;
+
+      double dx = 0.0;
+      // If near right edge, shift left
+      if (pos.dx + tooltipW + margin > screenW) {
+        dx = -(tooltipW - size.width);
+      }
+      // Clamp so it doesn't go off the left side
+      if (pos.dx + dx < margin) {
+        dx = margin - pos.dx;
+      }
+
+      double dy = 24.0; // below by default
+      // If near bottom, place above
+      if (pos.dy + size.height + tooltipH + margin > screenH) {
+        dy = -(tooltipH + margin);
+      }
+
+      _offset = Offset(dx, dy);
+    } catch (_) {
+      _offset = const Offset(0, 24);
     }
   }
 }

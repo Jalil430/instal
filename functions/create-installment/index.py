@@ -558,22 +558,30 @@ def handler(event, context):
                     total_remaining_dec = Decimal(str(tr_rows[0].total_remaining or 0)) if tr_rows else Decimal('0')
                     total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
 
-                    due_rows = tx.execute(
-                        session.prepare(
-                            """
-                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
-                            SELECT ip.expected_amount AS exp, COALESCE(ip.paid_amount, CAST(0 AS Decimal(22,9))) AS paid
-                            FROM installment_payments ip INNER JOIN installments i ON i.id = ip.installment_id
-                            WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id AND ip.is_paid = false;
-                            """
-                        ),
-                        {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']}
+                    # due_to_get = sum of next unpaid payment per installment linked to this wallet
+                    next_due_q = session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT COALESCE(SUM(
+                          CAST(ip.expected_amount AS Decimal(22,9)) - CAST(COALESCE(ip.paid_amount, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))
+                        ), CAST(0 AS Decimal(22,9))) AS due_next_sum
+                        FROM installment_payments ip
+                        INNER JOIN installments i ON i.id = ip.installment_id
+                        INNER JOIN (
+                          SELECT ip2.installment_id AS inst_id, MIN(ip2.due_date) AS next_due
+                          FROM installment_payments ip2
+                          INNER JOIN installments i2 ON i2.id = ip2.installment_id
+                          WHERE i2.wallet_id = $wallet_id AND i2.user_id = $user_id AND ip2.is_paid = false
+                          GROUP BY ip2.installment_id
+                        ) nu ON nu.inst_id = ip.installment_id AND ip.due_date = nu.next_due
+                        WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                        """
                     )
-                    due_sum_dec = Decimal('0')
-                    dr_rows = due_rows[0].rows if (due_rows and len(due_rows) > 0) else []
-                    for r in dr_rows:
-                        due_sum_dec += (Decimal(str(r.exp)) - Decimal(str(r.paid)))
-                    due_to_get_mu = int((due_sum_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+                    nd_rs = tx.execute(next_due_q, {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']})
+                    due_next_dec = Decimal('0')
+                    if nd_rs[0].rows:
+                        due_next_dec = Decimal(str(nd_rs[0].rows[0].due_next_sum or 0))
+                    due_to_get_mu = int((due_next_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
 
                     exp_rev_rs = tx.execute(
                         session.prepare(
@@ -589,19 +597,34 @@ def handler(event, context):
                     profit_sum = Decimal(str(er_rows[0].profit_sum or 0)) if er_rows else Decimal('0')
                     expected_revenue_mu = int((profit_sum * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
 
+                    # Spent on products = sum of cash_price
+                    spent_rs = tx.execute(
+                        session.prepare(
+                            """
+                            DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                            SELECT COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum
+                            FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                            """
+                        ),
+                        {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']}
+                    )
+                    spent_sum = Decimal(str(spent_rs[0].rows[0].spent_sum or 0)) if spent_rs[0].rows else Decimal('0')
+                    spent_mu = int((spent_sum * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+
                     # Update wallet balance and aggregates
                     upd_q = session.prepare(
                         """
                         DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $new_balance AS Int64; DECLARE $new_version AS Uint64; DECLARE $curr_version AS Uint64; DECLARE $now AS Timestamp;
-                        DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $paid_mu AS Int64;
+                        DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $paid_mu AS Int64; DECLARE $spent_mu AS Int64;
                         UPDATE wallet_balances SET balance_minor_units = $new_balance, version = $new_version, updated_at = $now,
                           total_allocated_minor_units = $total_alloc, due_to_get_minor_units = $due_to_get,
                           expected_revenue_minor_units = $exp_rev,
+                          spent_on_products_minor_units = $spent_mu,
                           paid_amount_minor_units = COALESCE(paid_amount_minor_units, 0) + $paid_mu
                         WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $curr_version;
                         """
                     )
-                    upd_res = tx.execute(upd_q, {'$wallet_id': wallet_id_opt, '$user_id': body['user_id'], '$new_balance': new_balance, '$new_version': current_version + 1, '$curr_version': current_version, '$now': now, '$total_alloc': total_alloc_mu, '$due_to_get': due_to_get_mu, '$exp_rev': expected_revenue_mu, '$paid_mu': paid_mu})
+                    upd_res = tx.execute(upd_q, {'$wallet_id': wallet_id_opt, '$user_id': body['user_id'], '$new_balance': new_balance, '$new_version': current_version + 1, '$curr_version': current_version, '$now': now, '$total_alloc': total_alloc_mu, '$due_to_get': due_to_get_mu, '$exp_rev': expected_revenue_mu, '$paid_mu': paid_mu, '$spent_mu': spent_mu})
                     try:
                         ra = getattr(getattr(upd_res[0], 'stats', None), 'rows_affected', None) if (upd_res and len(upd_res) > 0) else None
                     except Exception:

@@ -51,7 +51,7 @@ class InstallmentModel extends Installment {
       id: map['id'] as String,
       userId: map['user_id'] as String,
       clientId: map['client_id'] as String,
-      investorId: map['investor_id'] as String,
+      investorId: (map['investor_id'] as String?) ?? '',
       walletId: (map.containsKey('wallet_id') && map['wallet_id'] != null && (map['wallet_id'] as String).isNotEmpty)
           ? map['wallet_id'] as String
           : null,
@@ -76,7 +76,7 @@ class InstallmentModel extends Installment {
       id: map['id'] as String,
       userId: map['user_id'] as String,
       clientId: map['client_id'] as String,
-      investorId: map['investor_id'] as String,
+      investorId: (map['investor_id'] as String?) ?? '',
       walletId: (map.containsKey('wallet_id') && map['wallet_id'] != null && (map['wallet_id'] as String).isNotEmpty)
           ? map['wallet_id'] as String
           : null,
@@ -152,9 +152,10 @@ class InstallmentModel extends Installment {
 
   // For API requests, we need to format data properly
   Map<String, dynamic> toApiMap() {
-    return {
+    final map = <String, dynamic>{
       'user_id': userId,
       'client_id': clientId,
+      // Keep investor_id key for backward-compat; value is empty when unused
       'investor_id': investorId,
       if (walletId != null && walletId!.isNotEmpty) 'wallet_id': walletId,
       'product_name': productName,
@@ -168,6 +169,7 @@ class InstallmentModel extends Installment {
       'installment_end_date': _formatDate(installmentEndDate),
       if (installmentNumber != null) 'installment_number': installmentNumber,
     };
+    return map;
   }
 
   static DateTime _parseDateTime(dynamic value) {

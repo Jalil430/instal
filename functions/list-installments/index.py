@@ -120,10 +120,13 @@ def handler(event, context):
                 # Optimized query that uses pre-calculated fields to avoid N+1 queries
                 query = """
                 DECLARE $user_id AS Utf8;
+                DECLARE $wallet_id AS Utf8?;
+                DECLARE $client_id AS Utf8?;
+                DECLARE $investor_id AS Utf8?;
                 DECLARE $limit AS Uint64;
                 DECLARE $offset AS Uint64;
                 SELECT 
-                    id, user_id, client_id, investor_id, product_name,
+                    id, user_id, client_id, investor_id, wallet_id, product_name,
                     cash_price, installment_price, down_payment, term_months, monthly_payment,
                     down_payment_date, installment_start_date, installment_end_date,
                     installment_number,
@@ -142,6 +145,9 @@ def handler(event, context):
                     last_payment_date
                 FROM installments
                 WHERE user_id = $user_id
+                  AND ($wallet_id IS NULL OR wallet_id = $wallet_id)
+                  AND ($client_id IS NULL OR client_id = $client_id)
+                  AND ($investor_id IS NULL OR investor_id = $investor_id)
                 ORDER BY 
                     CASE payment_status
                         WHEN 'просрочено' THEN 1
@@ -154,9 +160,21 @@ def handler(event, context):
                 LIMIT $limit OFFSET $offset;
                 """
                 prepared_query = session.prepare(query)
+                # Optional filters from query parameters
+                qs = event.get('queryStringParameters', {}) or {}
+                wallet_param = (qs.get('wallet_id') or '').strip() or None
+                client_param = (qs.get('client_id') or '').strip() or None
+                investor_param = (qs.get('investor_id') or '').strip() or None
                 result_sets = session.transaction(ydb.SerializableReadWrite()).execute(
                     prepared_query,
-                    {'$user_id': user_id, '$limit': limit, '$offset': offset},
+                    {
+                        '$user_id': user_id,
+                        '$wallet_id': wallet_param,
+                        '$client_id': client_param,
+                        '$investor_id': investor_param,
+                        '$limit': limit,
+                        '$offset': offset
+                    },
                     commit_tx=True
                 )
                 
@@ -177,6 +195,7 @@ def handler(event, context):
                         'user_id': row.user_id,
                         'client_id': row.client_id,
                         'investor_id': row.investor_id,
+                        'wallet_id': getattr(row, 'wallet_id', None),
                         'product_name': row.product_name,
                         'cash_price': float(row.cash_price),
                         'installment_price': float(row.installment_price),

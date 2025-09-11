@@ -201,6 +201,7 @@ def handler(event, context):
                     total_allocated_minor_units,
                     due_to_get_minor_units,
                     expected_revenue_minor_units,
+                    spent_on_products_minor_units,
                     paid_amount_minor_units
                 FROM wallet_balances
                 WHERE wallet_id = '{wallet_id}' AND user_id = '{user_id}';
@@ -250,6 +251,7 @@ def handler(event, context):
                     'total_allocated_minor_units': convert_int64(row.get('total_allocated_minor_units')),
                     'due_to_get_minor_units': convert_int64(row.get('due_to_get_minor_units')),
                     'expected_revenue_minor_units': convert_int64(row.get('expected_revenue_minor_units')),
+                    'spent_on_products_minor_units': convert_int64(row.get('spent_on_products_minor_units')),
                     'paid_amount_minor_units': convert_int64(row.get('paid_amount_minor_units')),
                 }
 

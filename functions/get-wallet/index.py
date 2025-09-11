@@ -330,7 +330,7 @@ def handler(event, context):
                         DECLARE $wallet_id AS Utf8;
                         DECLARE $user_id AS Utf8;
                         SELECT balance_minor_units, version, updated_at,
-                               total_allocated_minor_units, due_to_get_minor_units, expected_revenue_minor_units
+                               total_allocated_minor_units, due_to_get_minor_units, expected_revenue_minor_units, spent_on_products_minor_units
                         FROM wallet_balances
                         WHERE wallet_id = $wallet_id AND user_id = $user_id;
                         """
@@ -349,10 +349,12 @@ def handler(event, context):
                             total_allocated_mu = int(b_row['total_allocated_minor_units'] or 0)
                             due_to_get_mu = int(b_row['due_to_get_minor_units'] or 0)
                             expected_revenue_mu = int(b_row['expected_revenue_minor_units'] or 0)
+                            spent_on_products_mu = int(b_row.get('spent_on_products_minor_units') or 0)
                         except Exception:
                             total_allocated_mu = 0
                             due_to_get_mu = 0
                             expected_revenue_mu = 0
+                            spent_on_products_mu = 0
                     else:
                         balance_updated_at = None
                 except Exception as e:
@@ -417,6 +419,7 @@ def handler(event, context):
                         'total_allocated_minor_units': int(locals().get('total_allocated_mu', 0)),
                         'due_to_get_minor_units': int(locals().get('due_to_get_mu', 0)),
                         'expected_revenue_minor_units': int(locals().get('expected_revenue_mu', 0)),
+                        'spent_on_products_minor_units': int(locals().get('spent_on_products_mu', 0)),
                     }
                 }
 

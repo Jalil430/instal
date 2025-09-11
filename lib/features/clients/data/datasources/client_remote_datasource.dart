@@ -31,8 +31,8 @@ class ClientRemoteDataSourceImpl implements ClientRemoteDataSource {
     final List<dynamic> jsonList = json.decode(response.body);
     final clients = jsonList.map((json) => ClientModel.fromMap(json)).toList();
     
-    // Cache the result
-    _cache.set(cacheKey, clients);
+    // Cache the result for longer since this list is low-volatility
+    _cache.set(cacheKey, clients, duration: const Duration(minutes: 30));
     
     return clients;
   }

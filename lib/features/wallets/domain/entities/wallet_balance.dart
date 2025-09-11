@@ -9,6 +9,7 @@ class WalletBalance {
   final int dueToGetMinorUnits; // sum unpaid (expected - paid)
   final int expectedRevenueMinorUnits; // sum(profit) or investor share per backend
   final int paidAmountMinorUnits; // accumulated actual paid from installments
+  final int spentOnProductsMinorUnits; // sum of cash_price across linked installments
 
   const WalletBalance({
     required this.walletId,
@@ -20,6 +21,7 @@ class WalletBalance {
     this.dueToGetMinorUnits = 0,
     this.expectedRevenueMinorUnits = 0,
     this.paidAmountMinorUnits = 0,
+    this.spentOnProductsMinorUnits = 0,
   });
 
   double get balance => balanceMinorUnits / 100.0; // Convert to rubles
@@ -27,6 +29,7 @@ class WalletBalance {
   double get dueToGet => dueToGetMinorUnits / 100.0;
   double get expectedRevenue => expectedRevenueMinorUnits / 100.0;
   double get paidAmount => paidAmountMinorUnits / 100.0;
+  double get spentOnProducts => spentOnProductsMinorUnits / 100.0;
 
   WalletBalance copyWith({
     String? walletId,
@@ -38,6 +41,7 @@ class WalletBalance {
     int? dueToGetMinorUnits,
     int? expectedRevenueMinorUnits,
     int? paidAmountMinorUnits,
+    int? spentOnProductsMinorUnits,
   }) {
     return WalletBalance(
       walletId: walletId ?? this.walletId,
@@ -49,6 +53,7 @@ class WalletBalance {
       dueToGetMinorUnits: dueToGetMinorUnits ?? this.dueToGetMinorUnits,
       expectedRevenueMinorUnits: expectedRevenueMinorUnits ?? this.expectedRevenueMinorUnits,
       paidAmountMinorUnits: paidAmountMinorUnits ?? this.paidAmountMinorUnits,
+      spentOnProductsMinorUnits: spentOnProductsMinorUnits ?? this.spentOnProductsMinorUnits,
     );
   }
 

@@ -47,8 +47,8 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     final List<dynamic> jsonList = json.decode(response.body);
     final installments = jsonList.map((json) => InstallmentModel.fromMapOptimized(json)).toList();
     
-    // Cache the result with longer duration since it includes more data
-    _cache.set(cacheKey, installments, duration: const Duration(minutes: 3));
+    // Cache the result for longer (low-volatility list)
+    _cache.set(cacheKey, installments, duration: const Duration(minutes: 30));
     
     return installments;
   }

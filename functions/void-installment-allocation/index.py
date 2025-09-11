@@ -227,9 +227,23 @@ def void_installment_allocation(installment_id, allocation_id, user_id):
                         updated_at = $now,
                         total_allocated_minor_units = $total_alloc,
                         due_to_get_minor_units = $due_to_get,
-                        expected_revenue_minor_units = $exp_rev
+                        expected_revenue_minor_units = $exp_rev,
+                        spent_on_products_minor_units = $spent_mu
                     WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $version
                     """
+                    # Spent on products = sum of cash_price
+                    spent_rs = tx.execute(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum
+                        FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                        """,
+                        {'$wallet_id': allocation.wallet_id, '$user_id': user_id}
+                    )
+                    from decimal import Decimal as _D, ROUND_HALF_UP as RHU
+                    spent_sum_dec = _D(str(spent_rs[0].rows[0].spent_sum or 0)) if spent_rs[0].rows else _D('0')
+                    spent_mu = int((spent_sum_dec * _D('100')).quantize(_D('1'), rounding=RHU))
+
                     result = tx.execute(balance_update_query, {
                         '$amount': allocation.amount_minor_units,
                         '$now': now_iso,
@@ -238,7 +252,8 @@ def void_installment_allocation(installment_id, allocation_id, user_id):
                         '$version': wallet_version,
                         '$total_alloc': total_alloc_mu,
                         '$due_to_get': due_to_get_mu,
-                        '$exp_rev': expected_revenue_mu
+                        '$exp_rev': expected_revenue_mu,
+                        '$spent_mu': spent_mu
                     })
                     ra = None
                     try:

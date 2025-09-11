@@ -278,6 +278,32 @@ class AppLocalizations {
       : 'The sum of shares must be 100%';
   String get enterContactNumber =>
       locale.languageCode == 'ru' ? 'Введите контактный номер' : 'Enter contact number';
+
+  // ===== Tooltips: Wallet Metrics =====
+  String get tooltipCurrentBalance => locale.languageCode == 'ru'
+      ? 'Средства на кошельке сейчас. Не включает будущие платежи.'
+      : 'Funds currently in the wallet. Does not include future payments.';
+  String get tooltipPaidAmount => locale.languageCode == 'ru'
+      ? 'Сумма полученных платежей по всем рассрочкам.'
+      : 'Total amount received across all installments.';
+  String get tooltipToReceiveAll => locale.languageCode == 'ru'
+      ? 'Остаток по всем рассрочкам = сумма будущих платежей.'
+      : 'Outstanding across all installments = sum of future payments.';
+  String get tooltipToReceiveSoon => locale.languageCode == 'ru'
+      ? 'Сумма ближайших непогашенных платежей (по одному на рассрочку).'
+      : 'Sum of the next unpaid payment per installment.';
+  String get tooltipSpentOnProducts => locale.languageCode == 'ru'
+      ? 'Потрачено на закупку товаров по рассрочкам.'
+      : 'Total spent on purchasing products for installments.';
+  String get tooltipTotalInstallments => locale.languageCode == 'ru'
+      ? 'Общая сумма всех договоров = Оплачено + К получению.'
+      : 'Total of all contracts = Paid + To receive.';
+  String get tooltipExpectedProfit => locale.languageCode == 'ru'
+      ? 'Плановая прибыль = сумма в рассрочку − сумма закупок.'
+      : 'Planned profit = total installment price − purchase cost.';
+  String get tooltipROI => locale.languageCode == 'ru'
+      ? 'Ожидаемая прибыль в процентах от первоначальной инвестиции.'
+      : 'Expected profit as a percentage of initial investment.';
   String get enterPassportNumber =>
       locale.languageCode == 'ru' ? 'Введите номер паспорта' : 'Enter passport number';
   String get enterAddress =>

@@ -335,19 +335,25 @@ class WalletDetailsScreenMobile extends StatelessWidget {
   Widget _buildFinancialSummaryTable(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    // Calculate key metrics
+    // Calculate key metrics (rubles)
     final currentBalance = balance?.balance ?? 0;
+    final paidAmount = balance?.paidAmount ?? 0;
+    // totalAllocated acts as "К получению" (all remaining)
+    final toReceiveAll = balance?.totalAllocated ?? 0;
+    // dueToGet acts as "Скоро к получению" (next payments)
+    final toReceiveSoon = balance?.dueToGet ?? 0;
+    final expectedProfit = balance?.expectedRevenue ?? 0;
+
+    // Объём рассрочек = Оплачено + К получению = Σ installment_price
+    final totalInstallmentsAmount = paidAmount + toReceiveAll;
+    // Сумма закупок — используем поле из баланса, если доступно; иначе производное
+    final spentOnProducts = (balance?.spentOnProducts ?? (totalInstallmentsAmount - expectedProfit))
+        .clamp(0, double.infinity);
+
+    // Investor ROI (use initial investment for investor wallets)
     final initialInvestment = investmentSummary?.totalInvested ??
         (wallet.isPersonalWallet ? wallet.startingAmount : wallet.investmentAmount) ?? 0;
-    // Use persisted aggregates from wallet_balances when available
-    final totalAllocated = balance?.totalAllocated ?? (investmentSummary?.totalAllocated ?? 0);
-    final expectedReturns = balance?.expectedRevenue ?? (investmentSummary?.expectedReturns ?? 0);
-    final paidAmount = balance?.paidAmount ?? 0;
-    final dueAmount = balance?.dueToGet ?? (investmentSummary?.dueAmount ?? 0);
-
-    final totalWalletValue = currentBalance + totalAllocated;
-    final totalProfit = expectedReturns; // show expected revenue as profit for clarity
-    final roi = initialInvestment > 0 ? (totalProfit / initialInvestment) * 100 : 0;
+    final roi = initialInvestment > 0 ? (expectedProfit / initialInvestment) * 100 : 0;
 
     return Column(
       children: [
@@ -360,50 +366,17 @@ class WalletDetailsScreenMobile extends StatelessWidget {
           ),
           child: Column(
             children: [
-              // Row 1: Initial Investment | Current Balance
+              // Row 1: Current Balance | Paid
               Row(
                 children: [
-                  Expanded(
-                    child: _buildMobileSummaryCell(
-                      wallet.isPersonalWallet
-                          ? (l10n?.startingAmount ?? 'Начальная сумма')
-                          : (l10n?.initialInvestment ?? 'Первоначальная инвестиция'),
-                      initialInvestment > 0 ? stripTrailingZeroMoney(currencyFormat.format(initialInvestment)) : '—',
-                      Icons.account_balance,
-                      AppTheme.primaryColor,
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 80,
-                    color: AppTheme.borderColor,
-                  ),
                   Expanded(
                     child: _buildMobileSummaryCell(
                       l10n?.currentBalance ?? 'Текущий баланс',
                       stripTrailingZeroMoney(currencyFormat.format(currentBalance)),
                       Icons.account_balance_wallet,
                       AppTheme.successColor,
+                      tooltip: l10n?.tooltipCurrentBalance,
                       isHighlight: true,
-                    ),
-                  ),
-                ],
-              ),
-
-              Container(
-                height: 1,
-                color: AppTheme.borderColor,
-              ),
-
-              // Row 2: Allocated | Expected Returns (Expected Returns shown only for investor)
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMobileSummaryCell(
-                      l10n?.givenForInstallmentDetail ?? 'Выдано в рассрочку',
-                      stripTrailingZeroMoney(currencyFormat.format(totalAllocated)),
-                      Icons.money_off,
-                      AppTheme.warningColor,
                     ),
                   ),
                   Container(
@@ -417,6 +390,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                       stripTrailingZeroMoney(currencyFormat.format(paidAmount)),
                       Icons.payments,
                       AppTheme.successColor,
+                      tooltip: l10n?.tooltipPaidAmount,
                     ),
                   ),
                 ],
@@ -427,15 +401,16 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                 color: AppTheme.borderColor,
               ),
 
-              // Row 3: Due Amount | Total Value
+              // Row 2: To Receive (all) | To Receive Soon
               Row(
                 children: [
                   Expanded(
                     child: _buildMobileSummaryCell(
-                      l10n?.dueToGetDetail ?? 'Скоро к получению',
-                      stripTrailingZeroMoney(currencyFormat.format(dueAmount)),
-                      Icons.schedule,
+                      'К получению',
+                      stripTrailingZeroMoney(currencyFormat.format(toReceiveAll)),
+                      Icons.assignment_turned_in,
                       AppTheme.warningColor,
+                      tooltip: l10n?.tooltipToReceiveAll,
                     ),
                   ),
                   Container(
@@ -445,10 +420,45 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   ),
                   Expanded(
                     child: _buildMobileSummaryCell(
-                      l10n?.totalValue ?? 'Общая стоимость',
-                      stripTrailingZeroMoney(currencyFormat.format(totalWalletValue)),
+                      l10n?.dueToGetDetail ?? 'Скоро к получению',
+                      stripTrailingZeroMoney(currencyFormat.format(toReceiveSoon)),
+                      Icons.schedule,
+                      AppTheme.warningColor,
+                      tooltip: l10n?.tooltipToReceiveSoon,
+                    ),
+                  ),
+                ],
+              ),
+
+              Container(
+                height: 1,
+                color: AppTheme.borderColor,
+              ),
+
+              // Row 3: Spent on Products | Total Installments Amount
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMobileSummaryCell(
+                      'Сумма закупок',
+                      stripTrailingZeroMoney(currencyFormat.format(spentOnProducts)),
+                      Icons.shopping_bag,
+                      AppTheme.primaryColor,
+                      tooltip: l10n?.tooltipSpentOnProducts,
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 80,
+                    color: AppTheme.borderColor,
+                  ),
+                  Expanded(
+                    child: _buildMobileSummaryCell(
+                      'Объём рассрочек',
+                      stripTrailingZeroMoney(currencyFormat.format(totalInstallmentsAmount)),
                       Icons.calculate,
                       AppTheme.primaryColor,
+                      tooltip: l10n?.tooltipTotalInstallments,
                       isHighlight: true,
                     ),
                   ),
@@ -465,10 +475,11 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildMobileSummaryCell(
-                        l10n?.expectedProfit ?? 'Ожидаемая прибыль',
-                        stripTrailingZeroMoney(currencyFormat.format(totalProfit)),
-                        totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
-                        totalProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                        l10n?.profit ?? 'Прибыль',
+                        stripTrailingZeroMoney(currencyFormat.format(expectedProfit)),
+                        expectedProfit >= 0 ? Icons.trending_up : Icons.trending_down,
+                        expectedProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                        tooltip: l10n?.tooltipExpectedProfit,
                       ),
                     ),
                     Container(
@@ -481,7 +492,8 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                         l10n?.locale.languageCode == 'ru' ? 'Доходность инвестиций' : 'Return on Investment',
                         '${roi.toStringAsFixed(1)}%',
                         Icons.percent,
-                        totalProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                        expectedProfit >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                        tooltip: l10n?.tooltipROI,
                       ),
                     ),
                   ],
@@ -494,7 +506,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileSummaryCell(String label, String value, IconData icon, Color color, {bool isHighlight = false}) {
+  Widget _buildMobileSummaryCell(String label, String value, IconData icon, Color color, {bool isHighlight = false, String? tooltip}) {
     return Container(
       padding: const EdgeInsets.all(12),
       child: Column(

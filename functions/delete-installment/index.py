@@ -269,7 +269,7 @@ def handler(event, context):
                     """
                     DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
                     DECLARE $new_balance AS Int64; DECLARE $new_version AS Uint64;
-                    DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $paid_mu AS Int64;
+                    DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $paid_mu AS Int64; DECLARE $spent_mu AS Int64;
                     DECLARE $curr_version AS Uint64; DECLARE $now AS Timestamp;
                     UPDATE wallet_balances
                     SET balance_minor_units = $new_balance,
@@ -278,10 +278,26 @@ def handler(event, context):
                         total_allocated_minor_units = $total_alloc,
                         due_to_get_minor_units = $due_to_get,
                         expected_revenue_minor_units = $exp_rev,
+                        spent_on_products_minor_units = $spent_mu,
                         paid_amount_minor_units = COALESCE(paid_amount_minor_units, 0) - $paid_mu
                     WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $curr_version;
                     """
                 )
+                # Spent on products = sum of cash_price
+                spent_rs = tx.execute(
+                    session.prepare(
+                        """
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        SELECT COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum
+                        FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                        """
+                    ),
+                    {'$wallet_id': wallet_id, '$user_id': user_id}
+                )
+                from decimal import Decimal as _D, ROUND_HALF_UP as RHU
+                spent_sum_dec = _D(str(spent_rs[0].rows[0].spent_sum or 0)) if spent_rs[0].rows else _D('0')
+                spent_mu = int((spent_sum_dec * _D('100')).quantize(_D('1'), rounding=RHU))
+
                 tx.execute(wb_update_q, {
                     '$wallet_id': wallet_id,
                     '$user_id': user_id,
@@ -290,6 +306,7 @@ def handler(event, context):
                     '$total_alloc': total_alloc_mu,
                     '$due_to_get': due_to_get_mu,
                     '$exp_rev': expected_revenue_mu,
+                    '$spent_mu': spent_mu,
                     '$paid_mu': paid_sum_mu,
                     '$curr_version': int(current_version),
                     '$now': datetime.utcnow()

@@ -379,8 +379,6 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
       isLoading: isLoadingData,
       onWalletSelected: (wallet) {
         onWalletSelected(wallet);
-        // After choosing wallet, move focus to installment number
-        installmentNumberFocus?.requestFocus();
       },
       onCreateWallet: onCreateWallet,
       dropdownKey: walletDropdownKey,
