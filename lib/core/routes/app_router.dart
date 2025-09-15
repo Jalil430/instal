@@ -5,8 +5,6 @@ import '../../features/installments/screens/installments_list_screen.dart';
 import '../../features/installments/screens/installment_details_screen.dart';
 import '../../features/clients/screens/clients_list_screen.dart';
 import '../../features/clients/screens/client_details_screen.dart';
-import '../../features/investors/screens/investors_list_screen.dart';
-import '../../features/investors/screens/investor_details_screen.dart';
 import '../../features/wallets/screens/wallets_list_screen.dart';
 import '../../features/wallets/screens/wallet_details_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -104,32 +102,6 @@ class AppRouter {
         },
       ),
       
-      // Investors routes
-      GoRoute(
-        path: '/investors',
-        name: 'investors',
-        pageBuilder: (context, state) => MaterialPage(
-          child: AuthGuard(
-            child: SubscriptionGuard(
-              child: ResponsiveMainLayout(child: const InvestorsListScreen()),
-            ),
-          ),
-        ),
-      ),
-      GoRoute(
-        path: '/investors/:id',
-        name: 'investor-details',
-        pageBuilder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return MaterialPage(
-            child: AuthGuard(
-              child: SubscriptionGuard(
-                child: ResponsiveMainLayout(child: InvestorDetailsScreen(investorId: id)),
-              ),
-            ),
-          );
-        },
-      ),
       // Wallets routes
       GoRoute(
         path: '/wallets',

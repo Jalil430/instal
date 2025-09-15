@@ -95,7 +95,6 @@ def handler(event, context):
         # Get search parameters from query string - enforce user_id from JWT
         query_params = event.get('queryStringParameters') or {}
         client_id = query_params.get('client_id')
-        investor_id = query_params.get('investor_id')
         product_name = query_params.get('product_name')
         installment_number = query_params.get('installment_number')
         
@@ -123,10 +122,6 @@ def handler(event, context):
                 where_conditions.append("client_id = $client_id")
                 params['$client_id'] = client_id
                 
-            if investor_id:
-                where_conditions.append("investor_id = $investor_id")
-                params['$investor_id'] = investor_id
-                
             if product_name:
                 where_conditions.append("product_name LIKE $product_name")
                 params['$product_name'] = f"%{product_name}%"
@@ -142,8 +137,6 @@ def handler(event, context):
             declare_statements = ["DECLARE $user_id AS Utf8;"]
             if client_id:
                 declare_statements.append("DECLARE $client_id AS Utf8;")
-            if investor_id:
-                declare_statements.append("DECLARE $investor_id AS Utf8;")
             if product_name:
                 declare_statements.append("DECLARE $product_name AS Utf8;")
             if installment_number:
@@ -156,7 +149,6 @@ def handler(event, context):
                 id,
                 user_id,
                 client_id,
-                investor_id,
                 product_name,
                 cash_price,
                 installment_price,
@@ -201,7 +193,6 @@ def handler(event, context):
                 'id': row.id,
                 'user_id': row.user_id,
                 'client_id': row.client_id,
-                'investor_id': row.investor_id,
                 'product_name': row.product_name,
                 'cash_price': float(row.cash_price),
                 'installment_price': float(row.installment_price),

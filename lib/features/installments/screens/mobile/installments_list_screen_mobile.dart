@@ -181,10 +181,24 @@ class InstallmentsListScreenMobile extends StatelessWidget {
                       // Create next payment from optimized data
                       InstallmentPayment? nextPayment;
                       if (installment is InstallmentModel && installment.nextPaymentDate != null) {
+                        // Determine correct next payment number
+                        int paymentNumber;
+                        if (installment.downPayment > 0 &&
+                            installment.nextPaymentDate == installment.downPaymentDate) {
+                          paymentNumber = 0; // Down payment due next
+                        } else {
+                          int monthlyPaymentsPaid = installment.paidPayments ?? 0;
+                          if (installment.downPayment > 0) {
+                            monthlyPaymentsPaid = monthlyPaymentsPaid - 1; // subtract down payment
+                          }
+                          if (monthlyPaymentsPaid < 0) monthlyPaymentsPaid = 0;
+                          paymentNumber = monthlyPaymentsPaid + 1; // next monthly payment number
+                        }
+
                         nextPayment = InstallmentPayment(
                           id: '${installment.id}_next',
                           installmentId: installment.id,
-                          paymentNumber: 1,
+                          paymentNumber: paymentNumber,
                           dueDate: installment.nextPaymentDate!,
                           expectedAmount: installment.nextPaymentAmount ?? 0.0,
                           paidAmount: 0.0,
@@ -632,9 +646,10 @@ class InstallmentsListScreenMobile extends StatelessWidget {
       position: position,
       payment: payment,
       onPaymentRegistered: (updatedInstallment) {
-        // This will refresh the data
+        // Legacy path: still refresh in case background mode not used
         state.forceRefresh();
       },
+      onSubmitInBackground: state.submitPaymentInBackground,
     );
   }
-} 
+}

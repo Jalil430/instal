@@ -5,6 +5,7 @@ import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/responsive_layout.dart';
+import '../../../../core/api/api_client.dart';
 import '../widgets/auth_service_provider.dart';
 import 'desktop/register_screen_desktop.dart';
 import 'mobile/register_screen_mobile.dart';
@@ -74,9 +75,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
+        final message = _friendlyErrorMessage(e, l10n);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${l10n?.registrationFailed ?? 'Registration failed'}: $e'),
+            content: Text(message),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -86,6 +88,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  String _friendlyErrorMessage(Object e, AppLocalizations? l10n) {
+    if (e is RequestTimeoutException) {
+      return l10n?.noInternetConnection ?? 'No internet connection. Please check your network and try again.';
+    }
+    if (e is ApiException) {
+      final lower = e.message.toLowerCase();
+      if (lower.contains('socketexception') || lower.contains('failed host lookup') || lower.contains('network error')) {
+        return l10n?.noInternetConnection ?? 'No internet connection. Please check your network and try again.';
+      }
+    }
+    final base = l10n?.registrationFailed ?? 'Registration failed';
+    return '$base: $e';
   }
 
   @override

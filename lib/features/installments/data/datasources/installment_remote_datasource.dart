@@ -149,7 +149,7 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   Future<List<InstallmentModel>> searchInstallments(String userId, String query) async {
     final encodedQuery = Uri.encodeComponent(query);
     final response = await ApiClient.get('/installments/search?user_id=$userId&query=$encodedQuery',
-        timeout: const Duration(seconds: 20));
+        timeout: const Duration(seconds: 30));
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);

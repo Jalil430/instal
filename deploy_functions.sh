@@ -7,6 +7,7 @@ if ! command -v yc >/dev/null 2>&1; then
   exit 1
 fi
 
+: "${API_KEY:?API_KEY env var must be set}"
 : "${JWT_SECRET_KEY:?JWT_SECRET_KEY env var must be set}"
 : "${YDB_ENDPOINT:?YDB_ENDPOINT env var must be set}"
 : "${YDB_DATABASE:?YDB_DATABASE env var must be set}"
@@ -14,8 +15,8 @@ fi
 SERVICE_ACCOUNT_ID="aje6aqidkl72tp8qttce"
 RUNTIME="python39"
 ENTRYPOINT="index.handler"
-MEMORY="512m"
-TIMEOUT="30s"
+MEMORY="1024m"
+TIMEOUT="45s"
 
 ensure_function() {
   local name="$1"
@@ -34,48 +35,93 @@ deploy() {
     --execution-timeout="${TIMEOUT}" \
     --service-account-id="${SERVICE_ACCOUNT_ID}" \
     --source-path="${src}" \
+    --environment API_KEY="${API_KEY}" \
     --environment JWT_SECRET_KEY="${JWT_SECRET_KEY}" \
     --environment YDB_ENDPOINT="${YDB_ENDPOINT}" \
     --environment YDB_DATABASE="${YDB_DATABASE}" >/dev/null
   yc serverless function get --name "${name}" --format json | jq -r '.id'
 }
 
-echo "Starting deployment (focused mode)."
+echo "Starting deployment (full mode)."
 echo "Tip: source deploy_env.sh before running this script."
 
-# Create functions if they don't exist yet (focused set)
-ensure_function list-installments
-ensure_function list-wallets
-ensure_function get-wallet
-ensure_function get-wallet-balance
-ensure_function create-installment
-ensure_function update-installment-payment
-ensure_function allocate-installment
-ensure_function void-installment-allocation
-ensure_function delete-installment
+# Functions to exclude (investor-related slated for removal)
+EXCLUDE_FUNCS=(
+  "create-investor"
+  "list-investors"
+  "search-investors"
+  "get-investor"
+  "update-investor"
+  "delete-investor"
+)
 
-
-# Deploy the updated functions
-LIST_INSTALLMENTS_ID=$(deploy list-installments                 functions/list-installments/)
-LIST_WALLETS_ID=$(deploy list-wallets                           functions/list-wallets/)
-GET_WALLET_ID=$(deploy get-wallet                               functions/get-wallet/)
-GET_WALLET_BALANCE_ID=$(deploy get-wallet-balance               functions/get-wallet-balance/)
-CREATE_INSTALLMENT_ID=$(deploy create-installment               functions/create-installment/)
-UPDATE_INSTALLMENT_PAYMENT_ID=$(deploy update-installment-payment  functions/update-installment-payment/)
-ALLOCATE_INSTALLMENT_ID=$(deploy allocate-installment           functions/allocate-installment/)
-VOID_INSTALLMENT_ALLOCATION_ID=$(deploy void-installment-allocation functions/void-installment-allocation/)
-DELETE_INSTALLMENT_ID=$(deploy delete-installment               functions/delete-installment/)
+is_excluded() {
+  local candidate="$1"
+  for ex in "${EXCLUDE_FUNCS[@]}"; do
+    if [[ "$candidate" == "$ex" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 echo ""
-echo "Function IDs (copy into instal-api.yaml where needed):"
-echo "  list-installments:               $LIST_INSTALLMENTS_ID"
-echo "  list-wallets:                    $LIST_WALLETS_ID"
-echo "  get-wallet:                      $GET_WALLET_ID"
-echo "  get-wallet-balance:              $GET_WALLET_BALANCE_ID"
-echo "  create-installment:              $CREATE_INSTALLMENT_ID"
-echo "  update-installment-payment:      $UPDATE_INSTALLMENT_PAYMENT_ID"
-echo "  allocate-installment:            $ALLOCATE_INSTALLMENT_ID"
-echo "  void-installment-allocation:     $VOID_INSTALLMENT_ALLOCATION_ID"
-echo "  delete-installment:              $DELETE_INSTALLMENT_ID"
+echo "Deployed function IDs:"
+
+if [[ "$#" -gt 0 ]]; then
+  # Deploy only functions passed as args
+  for name in "$@"; do
+    if is_excluded "$name"; then
+      echo "Skipping excluded function: ${name}"
+      continue
+    fi
+    dir="functions/${name}/"
+    if [[ ! -f "${dir}index.py" ]]; then
+      echo "Warning: source not found for ${name} at ${dir}index.py" >&2
+      continue
+    fi
+    ensure_function "$name"
+    id=$(deploy "$name" "$dir")
+    printf "  %-32s %s\n" "$name" "$id"
+  done
+else
+  # Discover and deploy all functions (excluding investor-related)
+  for dir in functions/*/ ; do
+    name="$(basename "$dir")"
+    [[ -f "${dir}index.py" ]] || continue
+    if is_excluded "$name"; then
+      echo "Skipping excluded function: ${name}"
+      continue
+    fi
+    ensure_function "$name"
+    id=$(deploy "$name" "$dir")
+    printf "  %-32s %s\n" "$name" "$id"
+  done
+fi
+
 echo ""
-echo "Done."
+
+# Optionally deploy API Gateway if DEPLOY_GATEWAY=1 is set
+if [[ "${DEPLOY_GATEWAY:-0}" == "1" ]]; then
+  deploy_api_gateway() {
+    local spec_file="instal-api.yaml"
+    local gateway_name="instal-api"
+    [[ -f "$spec_file" ]] || { echo "API spec $spec_file not found" >&2; return 1; }
+
+    if yc serverless api-gateway get --name "$gateway_name" >/dev/null 2>&1; then
+      echo "Updating API Gateway: $gateway_name"
+      yc serverless api-gateway update --name "$gateway_name" --spec "$spec_file" >/dev/null
+    else
+      echo "Creating API Gateway: $gateway_name"
+      yc serverless api-gateway create --name "$gateway_name" --spec "$spec_file" >/dev/null
+    fi
+
+    yc serverless api-gateway get --name "$gateway_name" --format json | jq -r '.domain // .status.domain // "(domain unavailable)"'
+  }
+
+  echo "Deploying API Gateway (DEPLOY_GATEWAY=1)"
+  deploy_api_gateway || echo "API Gateway deployment failed" >&2
+  echo ""
+fi
+
+echo "Deployment complete."

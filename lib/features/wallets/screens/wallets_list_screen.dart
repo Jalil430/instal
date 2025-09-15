@@ -39,6 +39,7 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
   bool isSelectionMode = false;
   final Set<String> selectedWalletIds = {};
   bool showArchived = false;
+  final Set<String> loadingItemOperations = {}; // Track per-item background operations (delete)
 
   late AnimationController fadeController;
   late Animation<double> fadeAnimation;
@@ -279,7 +280,8 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
         cache.remove(CacheService.walletBalancesKey(currentUser.id));
       }
 
-      // Show loading indicator
+      // Show loading indicator (ensure any existing is hidden first)
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -300,6 +302,11 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
         ),
       );
 
+      // Mark selected as busy
+      setStateWrapper(() {
+        loadingItemOperations.addAll(selectedWalletIds);
+      });
+
       // Delete all selected wallets
       for (final id in selectedWalletIds) {
         cache.remove(CacheService.walletKey(id));
@@ -310,15 +317,18 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       // Immediately remove from local state to update UI
-      setState(() {
+      setStateWrapper(() {
         wallets.removeWhere((w) => selectedWalletIds.contains(w.id));
+        for (final id in selectedWalletIds) {
+          walletBalances.remove(id);
+        }
+        loadingItemOperations.removeAll(selectedWalletIds);
       });
 
       // Clear selection
       clearSelection();
 
-      // Also reload data from server to ensure consistency
-      loadData();
+      // Keep list persistent without full reload
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -341,8 +351,14 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
             backgroundColor: AppTheme.errorColor,
           ),
         );
-        // Reload data on error to ensure UI consistency
-        loadData();
+        // Keep list persistent without full reload
+        setStateWrapper(() {
+          loadingItemOperations.removeAll(selectedWalletIds);
+        });
+      }
+    } finally {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
     }
   }
@@ -352,8 +368,6 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       context: context,
       builder: (context) => CreateEditWalletDialog(
         onSuccess: () async {
-          print('🎉 Wallet created, refreshing data...');
-
           // Clear cache to ensure fresh data after wallet creation
           final cache = CacheService();
           final authService = AuthServiceProvider.of(context);
@@ -361,12 +375,11 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
           if (currentUser != null) {
             cache.remove(CacheService.walletsKey(currentUser.id));
-            print('🗑️ Global cache cleared after wallet creation');
+            cache.remove(CacheService.walletBalancesKey(currentUser.id));
           }
 
           // Clear repository cache as well
           walletRepository.clearCache();
-          print('🗑️ Repository cache cleared after wallet creation');
 
           // Reload data immediately after wallet creation
           await loadData();
@@ -453,6 +466,10 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
     if (confirmed == true) {
       try {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        setStateWrapper(() {
+          loadingItemOperations.add(wallet.id);
+        });
         // Clear cache to ensure fresh data after deletion
         final cache = CacheService();
         final authService = AuthServiceProvider.of(context);
@@ -465,7 +482,15 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
         cache.remove(CacheService.walletKey(wallet.id));
 
         await walletRepository.deleteWallet(wallet.id);
-        await loadData();
+        // Remove from local state without full reload
+        setStateWrapper(() {
+          wallets.removeWhere((w) => w.id == wallet.id);
+          walletBalances.remove(wallet.id);
+          selectedWalletIds.remove(wallet.id);
+          if (selectedWalletIds.isEmpty) {
+            isSelectionMode = false;
+          }
+        });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -477,12 +502,20 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
         }
       } catch (e) {
         if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context)!.investorDeleteError(e)),
               backgroundColor: AppTheme.errorColor,
             ),
           );
+        }
+      } finally {
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          setStateWrapper(() {
+            loadingItemOperations.remove(wallet.id);
+          });
         }
       }
     }

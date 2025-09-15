@@ -264,6 +264,7 @@ class ClientsListScreenDesktop extends StatelessWidget {
                                         onSelect: () => state.toggleSelection(client.id),
                                         onSelectionToggle: () => state.toggleSelection(client.id),
                                         isSelected: state.selectedClientIds.contains(client.id),
+                                        isBusy: state.loadingItemOperations.contains(client.id),
                                       );
                                     },
                                   ),

@@ -78,7 +78,7 @@ class WalletSelector extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Loading wallets...',
+                  l10n?.loadingWallets ?? 'Загрузка кошельков...',
                   style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 14,
@@ -115,7 +115,7 @@ class WalletSelector extends StatelessWidget {
       },
       label: l10n?.wallet ?? 'Wallet',
       hint: '${l10n?.search ?? 'Search'}...',
-      noItemsMessage: 'No wallets found',
+      noItemsMessage: l10n?.noWalletsFound ?? 'No wallets found',
       onCreateNew: onCreateWallet,
     );
   }

@@ -258,24 +258,27 @@ def handler(event, context):
             
             def check_and_create_client(session):
                 # Check if client with passport number already exists
-                query = """
-                DECLARE $passport_number AS Utf8;
-                SELECT id FROM clients WHERE passport_number = $passport_number;
-                """
-                prepared_query = session.prepare(query)
-                result_sets = session.transaction().execute(
-                    prepared_query,
-                    {'$passport_number': sanitized_data['passport_number']},
-                    commit_tx=True
-                )
-                
-                if result_sets[0].rows:
-                    logger.info(f"Duplicate passport number attempt: {sanitized_data['passport_number'][:4]}****")
-                    return {
-                        'statusCode': 409,
-                        'headers': {'Content-Type': 'application/json'},
-                        'body': json.dumps({'error': 'Client with this passport number already exists'})
-                    }
+                # Skip duplicate check if passport_number is not provided
+                if sanitized_data['passport_number'] is not None:
+                    query = """
+                    DECLARE $passport_number AS Utf8?;
+                    SELECT id FROM clients WHERE passport_number = $passport_number;
+                    """
+                    prepared_query = session.prepare(query)
+                    result_sets = session.transaction().execute(
+                        prepared_query,
+                        {'$passport_number': sanitized_data['passport_number']},
+                        commit_tx=True
+                    )
+                    
+                    if result_sets[0].rows:
+                        safe_passport = sanitized_data['passport_number']
+                        logger.info(f"Duplicate passport number attempt: {safe_passport[:4]}****")
+                        return {
+                            'statusCode': 409,
+                            'headers': {'Content-Type': 'application/json'},
+                            'body': json.dumps({'error': 'Client with this passport number already exists'})
+                        }
 
                 # Create new client
                 new_client_id = str(uuid.uuid4())
@@ -285,8 +288,8 @@ def handler(event, context):
                 DECLARE $id AS Utf8;
                 DECLARE $user_id AS Utf8;
                 DECLARE $full_name AS Utf8;
-                DECLARE $contact_number AS Utf8;
-                DECLARE $passport_number AS Utf8;
+                DECLARE $contact_number AS Utf8?;
+                DECLARE $passport_number AS Utf8?;
                 DECLARE $address AS Utf8?;
                 DECLARE $guarantor_full_name AS Utf8?;
                 DECLARE $guarantor_contact_number AS Utf8?;

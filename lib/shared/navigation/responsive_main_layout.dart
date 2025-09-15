@@ -82,12 +82,6 @@ class _MobileMainLayoutState extends State<_MobileMainLayout> {
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
-                  icon: Icons.attach_money_outlined,
-                  label: l10n?.investors ?? 'Инвесторы',
-                  route: '/investors',
-                  currentRoute: currentRoute,
-                ),
-                _buildNavItem(
                   icon: Icons.account_balance_wallet_outlined,
                   label: l10n?.wallets ?? 'Кошельки',
                   route: '/wallets',

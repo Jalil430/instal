@@ -318,7 +318,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Loading clients...',
+                  l10n?.loadingClients ?? 'Загрузка клиентов...',
                   style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 14,
@@ -342,7 +342,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
       onNext: onWalletDropdownFocus,
       label: l10n.client ?? 'Client',
       hint: '${l10n.search ?? 'Search'}...',
-      noItemsMessage: 'No clients found',
+      noItemsMessage: l10n.noClientsFound,
       onCreateNew: onCreateClient,
       autoFocus: currentStep == 0 && !isLoadingData,
     );

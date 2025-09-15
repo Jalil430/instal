@@ -152,6 +152,7 @@ class WalletsListScreenMobile extends StatelessWidget {
                               balance: balance,
                               isSelected: state.selectedWalletIds.contains(wallet.id),
                               isSelectionMode: state.isSelectionMode,
+                              isBusy: state.loadingItemOperations.contains(wallet.id),
                               onTap: () {
                                 if (state.isSelectionMode) {
                                   state.toggleSelection(wallet.id);

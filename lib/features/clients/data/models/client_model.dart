@@ -21,8 +21,9 @@ class ClientModel extends Client {
       id: map['id'] as String,
       userId: map['user_id'] as String,
       fullName: map['full_name'] as String,
-      contactNumber: map['contact_number'] as String,
-      passportNumber: map['passport_number'] as String,
+      // Backend may return null for optional fields; default to empty string for UI compatibility
+      contactNumber: (map['contact_number'] as String?) ?? '',
+      passportNumber: (map['passport_number'] as String?) ?? '',
       address: map['address'] as String?,
       guarantorFullName: map['guarantor_full_name'] as String?,
       guarantorContactNumber: map['guarantor_contact_number'] as String?,

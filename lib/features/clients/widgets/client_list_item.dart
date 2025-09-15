@@ -14,6 +14,8 @@ class ClientListItem extends StatefulWidget {
   final VoidCallback? onSelect;
   final VoidCallback? onSelectionToggle;
   final bool isSelected;
+  // Show small spinner while background ops are running on this item (e.g., deleting)
+  final bool isBusy;
 
   const ClientListItem({
     super.key,
@@ -24,6 +26,7 @@ class ClientListItem extends StatefulWidget {
     this.onSelect,
     this.onSelectionToggle,
     this.isSelected = false,
+    this.isBusy = false,
   });
 
   @override
@@ -206,6 +209,18 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                         ),
                       ),
                     ),
+                    // Trailing small spinner when busy
+                    if (widget.isBusy) ...[
+                      const SizedBox(width: 8),
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

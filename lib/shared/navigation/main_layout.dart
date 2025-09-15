@@ -95,12 +95,6 @@ class _MainLayoutState extends State<MainLayout> {
                   currentRoute: currentRoute,
                 ),
                 _buildNavItem(
-                  icon: Icons.attach_money_outlined, // Better paper-money icon for investors
-                  label: l10n?.investors ?? 'Инвесторы',
-                  route: '/investors',
-                  currentRoute: currentRoute,
-                ),
-                _buildNavItem(
                   icon: Icons.account_balance_wallet_outlined,
                   label: l10n?.wallets ?? 'Кошельки',
                   route: '/wallets',

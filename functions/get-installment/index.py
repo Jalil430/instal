@@ -115,7 +115,7 @@ def handler(event, context):
             installment_query = """
                 DECLARE $installment_id AS Utf8;
                 DECLARE $user_id AS Utf8;
-                SELECT id, user_id, client_id, investor_id, product_name, cash_price, 
+                SELECT id, user_id, client_id, wallet_id, product_name, cash_price, 
                        installment_price, down_payment, term_months, down_payment_date, 
                        installment_start_date, installment_end_date, monthly_payment, 
                        installment_number,
@@ -178,7 +178,7 @@ def handler(event, context):
                 'id': row.id,
                 'user_id': row.user_id,
                 'client_id': row.client_id,
-                'investor_id': row.investor_id,
+                'wallet_id': getattr(row, 'wallet_id', None),
                 'product_name': row.product_name,
                 'cash_price': float(row.cash_price),
                 'installment_price': float(row.installment_price),

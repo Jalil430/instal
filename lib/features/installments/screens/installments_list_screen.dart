@@ -52,6 +52,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
   final Map<String, bool> expandedStates = {}; // Track expansion state by installment ID
   final Set<String> selectedInstallmentIds = {}; // Track selected installments
   final Set<String> loadingPayments = {}; // Track which installments are loading payments
+  final Set<String> loadingItemOperations = {}; // Track per-item background ops (delete, payment updates)
   bool isLoading = true;
   bool isInitialized = false;
   bool isSelectionMode = false;
@@ -308,6 +309,88 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
     }
   }
 
+  /// Submit a payment register/delete in background and show item-level spinner
+  Future<void> submitPaymentInBackground(InstallmentPayment updatedPayment) async {
+    final installmentId = updatedPayment.installmentId;
+    if (!mounted) return;
+    setState(() {
+      loadingItemOperations.add(installmentId);
+    });
+
+    try {
+      final updatedInstallment = await installmentRepository.updatePayment(updatedPayment);
+      if (!mounted) return;
+      setState(() {
+        final index = installments.indexWhere((i) => i.id == updatedInstallment.id);
+        if (index != -1) {
+          final prev = installments[index];
+          final merged = () {
+            if (updatedInstallment.installmentNumber != null) {
+              return updatedInstallment;
+            }
+            if (updatedInstallment is InstallmentModel) {
+              final u = updatedInstallment;
+              return InstallmentModel(
+                id: u.id,
+                userId: u.userId,
+                clientId: u.clientId,
+                investorId: u.investorId,
+                walletId: u.walletId,
+                productName: u.productName,
+                cashPrice: u.cashPrice,
+                installmentPrice: u.installmentPrice,
+                termMonths: u.termMonths,
+                downPayment: u.downPayment,
+                monthlyPayment: u.monthlyPayment,
+                downPaymentDate: u.downPaymentDate,
+                installmentStartDate: u.installmentStartDate,
+                installmentEndDate: u.installmentEndDate,
+                installmentNumber: prev.installmentNumber,
+                createdAt: u.createdAt,
+                updatedAt: u.updatedAt,
+                // optimized fields
+                clientName: u.clientName,
+                walletName: u.walletName,
+                paidAmount: u.paidAmount,
+                remainingAmount: u.remainingAmount,
+                nextPaymentDate: u.nextPaymentDate,
+                nextPaymentAmount: u.nextPaymentAmount,
+                paymentStatus: u.paymentStatus,
+                overdueCount: u.overdueCount,
+                totalPayments: u.totalPayments,
+                paidPayments: u.paidPayments,
+                lastPaymentDate: u.lastPaymentDate,
+              );
+            }
+            return updatedInstallment.copyWith(
+              installmentNumber: prev.installmentNumber,
+            );
+          }();
+
+          installments[index] = merged;
+          // Collapse and clear payments so the user can re-expand to refresh
+          expandedStates[merged.id] = false;
+          installmentPayments[merged.id] = [];
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)?.error ?? 'Ошибка'}: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          loadingItemOperations.remove(installmentId);
+        });
+      }
+    }
+  }
+
   List<Installment> get filteredAndSortedInstallments {
     // First filter by search query
     var filtered = installments.where((installment) {
@@ -465,7 +548,8 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         cache.remove(CacheService.analyticsKey(currentUser.id));
       }
       
-      // Show loading indicator
+      // Show loading indicator (ensure any existing is hidden first)
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -486,6 +570,11 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         ),
       );
       
+      // Mark selected as busy
+      setState(() {
+        loadingItemOperations.addAll(selectedInstallmentIds);
+      });
+
       // Delete all selected installments
       for (final id in selectedInstallmentIds) {
         cache.remove(CacheService.installmentKey(id));
@@ -503,14 +592,14 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
           installmentPayments.remove(id);
           expandedStates.remove(id);
           loadingPayments.remove(id);
+          loadingItemOperations.remove(id);
         }
       });
       
       // Clear selection
       clearSelection();
       
-      // Also reload data from server to ensure consistency
-      loadData();
+      // Keep list persistent without full reload
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -533,8 +622,14 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
             backgroundColor: AppTheme.errorColor,
           ),
         );
-        // Reload data on error to ensure UI consistency
-        loadData();
+        // Keep list persistent without full reload
+        setState(() {
+          loadingItemOperations.removeAll(selectedInstallmentIds);
+        });
+      }
+    } finally {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
     }
   }
@@ -638,6 +733,11 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
     );
     if (confirmed == true) {
       try {
+        // Ensure any previous progress snackbar is hidden
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        setState(() {
+          loadingItemOperations.add(installment.id);
+        });
         // Clear cache to ensure fresh data after deletion
         final cache = CacheService();
         final authService = AuthServiceProvider.of(context);
@@ -661,8 +761,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
           loadingPayments.remove(installment.id);
         });
         
-        // Also reload data from server to ensure consistency
-        loadData();
+        // No full reload; list stays persistent
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -674,14 +773,21 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         }
       } catch (e) {
         if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n?.installmentDeleteError(e) ?? 'Ошибка удаления: $e'),
               backgroundColor: AppTheme.errorColor,
             ),
           );
-          // Reload data on error to ensure UI consistency
-          loadData();
+          // Keep list as-is; user can retry
+        }
+      } finally {
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          setState(() {
+            loadingItemOperations.remove(installment.id);
+          });
         }
       }
     }

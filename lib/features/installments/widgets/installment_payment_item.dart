@@ -12,13 +12,23 @@ import 'payment_deletion_dialog.dart';
 class InstallmentPaymentItem extends StatefulWidget {
   final InstallmentPayment payment;
   final Function(Installment) onPaymentUpdated;
+  // Optional background submission handler; when provided, dialogs will close immediately
+  // and this callback will perform repo updates while the parent shows an item-level spinner.
+  final void Function(InstallmentPayment updatedPayment)? onSubmitPaymentInBackground;
   final bool isExpanded;
+  // Permissions: only allow registering the next unpaid payment,
+  // and deleting the most recent paid payment
+  final bool canRegister;
+  final bool canDelete;
 
   const InstallmentPaymentItem({
     super.key,
     required this.payment,
     required this.onPaymentUpdated,
     this.isExpanded = false,
+    this.canRegister = true,
+    this.canDelete = true,
+    this.onSubmitPaymentInBackground,
   });
 
   @override
@@ -50,6 +60,21 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
   }
 
   void _handlePaymentRegistration(Offset position) {
+    // Guard: allow only if this is the next unpaid payment
+    if (!widget.canRegister) {
+      final l10n = AppLocalizations.of(context);
+      final isRu = l10n?.locale.languageCode == 'ru';
+      final message = isRu
+          ? 'Можно регистрировать только следующий платеж'
+          : 'Only the next payment can be registered';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
     // Get the button's position in the screen coordinate system
     if (_actionButtonKey.currentContext != null) {
       final RenderBox renderBox = _actionButtonKey.currentContext!.findRenderObject() as RenderBox;
@@ -67,6 +92,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         position: position.dx > 0 && position.dy > 0 ? position : centerPosition,
         payment: widget.payment,
         onPaymentRegistered: widget.onPaymentUpdated,
+        onSubmitInBackground: widget.onSubmitPaymentInBackground,
       );
     } else {
       // Fallback to whatever position is given
@@ -75,11 +101,27 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         position: position,
         payment: widget.payment,
         onPaymentRegistered: widget.onPaymentUpdated,
+        onSubmitInBackground: widget.onSubmitPaymentInBackground,
       );
     }
   }
 
   void _handlePaymentDeletion(Offset position) {
+    // Guard: allow only if this is the most recent paid payment
+    if (!widget.canDelete) {
+      final l10n = AppLocalizations.of(context);
+      final isRu = l10n?.locale.languageCode == 'ru';
+      final message = isRu
+          ? 'Можно отменять только последний оплаченный платеж'
+          : 'Only the last paid payment can be deleted';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
     // Get the button's position in the screen coordinate system
     if (_actionButtonKey.currentContext != null) {
       final RenderBox renderBox = _actionButtonKey.currentContext!.findRenderObject() as RenderBox;
@@ -97,6 +139,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         position: position.dx > 0 && position.dy > 0 ? position : centerPosition,
         payment: widget.payment,
         onPaymentDeleted: widget.onPaymentUpdated,
+        onSubmitInBackground: widget.onSubmitPaymentInBackground,
       );
     } else {
       // Fallback to whatever position is given
@@ -105,6 +148,7 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
         position: position,
         payment: widget.payment,
         onPaymentDeleted: widget.onPaymentUpdated,
+        onSubmitInBackground: widget.onSubmitPaymentInBackground,
       );
     }
   }

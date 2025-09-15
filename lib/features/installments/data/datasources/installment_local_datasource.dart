@@ -133,17 +133,8 @@ class InstallmentLocalDataSourceImpl implements InstallmentLocalDataSource {
 
   @override
   Future<List<InstallmentModel>> getInstallmentsByInvestorId(String investorId) async {
-    final db = await _databaseHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'installments',
-      where: 'investor_id = ?',
-      whereArgs: [investorId],
-      orderBy: 'created_at DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return InstallmentModel.fromMap(maps[i]);
-    });
+    // Investor column removed from local DB; no local filter support now
+    return [];
   }
 
   // Payment operations

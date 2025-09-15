@@ -8,7 +8,6 @@ import '../../../../shared/widgets/custom_button.dart';
 import '../../domain/entities/installment.dart';
 import '../../domain/entities/installment_payment.dart';
 import '../../../clients/domain/entities/client.dart';
-import '../../../investors/domain/entities/investor.dart';
 import '../../widgets/installment_payment_item.dart';
 import '../../widgets/payment_registration_dialog.dart';
 import '../../widgets/payment_deletion_dialog.dart';
@@ -16,7 +15,7 @@ import '../../widgets/payment_deletion_dialog.dart';
 class InstallmentDetailsScreenMobile extends StatelessWidget {
   final Installment installment;
   final Client client;
-  final Investor? investor;
+  final String? walletName;
   final List<InstallmentPayment> payments;
   final DateFormat dateFormat;
   final NumberFormat currencyFormat;
@@ -27,7 +26,7 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
     Key? key,
     required this.installment,
     required this.client,
-    this.investor,
+    this.walletName,
     required this.payments,
     required this.dateFormat,
     required this.currencyFormat,
@@ -127,13 +126,13 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                     onTap: () => context.go('/clients/${client.id}'),
                   ),
                   
-                  // Investor Info (moved to top)
-                  if (investor != null)
+                  // Wallet Info (new, replaces investor for display)
+                  if (installment.walletId != null && walletName != null && walletName!.isNotEmpty)
                     _buildInfoRowWithClickableValue(
                       context,
-                      l10n?.investor ?? 'Инвестор',
-                      investor!.fullName,
-                      onTap: () => context.go('/investors/${investor!.id}'),
+                      l10n?.wallet ?? 'Кошелек',
+                      walletName!,
+                      onTap: () => context.go('/wallets/${installment.walletId}'),
                     ),
                     
                   // Installment number
@@ -205,9 +204,21 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                           height: 600,
                           child: ListView(
                             children: [
-                              ...payments.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final payment = entry.value;
+                              ...(() {
+                                // Compute next unpaid and last paid once
+                                InstallmentPayment? nextUnpaid;
+                                InstallmentPayment? lastPaid;
+                                for (final p in payments) {
+                                  if (!p.isPaid && nextUnpaid == null) {
+                                    nextUnpaid = p;
+                                  }
+                                  if (p.isPaid) {
+                                    lastPaid = p;
+                                  }
+                                }
+                                return payments.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final payment = entry.value;
                           
                           // Determine payment status
                           final now = DateTime.now();
@@ -227,6 +238,9 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                             statusText = l10n?.overdue ?? 'Просрочено';
                           }
                           
+                          final canRegister = (!isPaid) && (payment.id == nextUnpaid?.id);
+                          final canDelete = (isPaid) && (payment.id == lastPaid?.id);
+
                           return Container(
                             margin: EdgeInsets.only(bottom: 8),
                             decoration: BoxDecoration(
@@ -377,6 +391,16 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                                         final position = Offset(screenSize.width / 2, screenSize.height / 2);
                                         
                                         if (isPaid) {
+                                          if (!canDelete) {
+                                            final isRu = l10n?.locale.languageCode == 'ru';
+                                            final msg = isRu
+                                                ? 'Можно отменять только последний оплаченный платеж'
+                                                : 'Only the last paid payment can be deleted';
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text(msg), backgroundColor: AppTheme.errorColor),
+                                            );
+                                            return;
+                                          }
                                           // Show payment deletion dialog
                                           PaymentDeletionDialog.show(
                                             context: context,
@@ -388,6 +412,16 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                                             },
                                           );
                                         } else {
+                                          if (!canRegister) {
+                                            final isRu = l10n?.locale.languageCode == 'ru';
+                                            final msg = isRu
+                                                ? 'Можно регистрировать только следующий платеж'
+                                                : 'Only the next payment can be registered';
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text(msg), backgroundColor: AppTheme.errorColor),
+                                            );
+                                            return;
+                                          }
                                           // Show payment registration dialog
                                           PaymentRegistrationDialog.show(
                                             context: context,
@@ -419,10 +453,11 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                               ),
                             ),
                           );
-                        }).toList(),
-                        if (payments.length < installment.termMonths)
-                          ..._buildRemainingPaymentsCardLayout(context),
-                        ],
+                                }).toList();
+                              })(),
+                              if (payments.length < installment.termMonths)
+                                ..._buildRemainingPaymentsCardLayout(context),
+                            ],
                           ),
                         ),
                       ],
@@ -580,7 +615,7 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
+                if (i == 0) SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
@@ -588,7 +623,7 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                       final screenSize = MediaQuery.of(context).size;
                       final position = Offset(screenSize.width / 2, screenSize.height / 2);
                       
-                      // Always show registration dialog since this is a future payment
+                      // Only the immediate next future payment is allowed on mobile details
                       PaymentRegistrationDialog.show(
                         context: context,
                         position: position,

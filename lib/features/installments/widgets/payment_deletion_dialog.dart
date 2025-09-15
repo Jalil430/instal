@@ -18,11 +18,12 @@ class PaymentDeletionDialog {
     required Offset position,
     required InstallmentPayment payment,
     required Function(Installment) onPaymentDeleted,
+    void Function(InstallmentPayment updatedPayment)? onSubmitInBackground,
   }) async {
     final result = await CustomContextualDialog.show<Installment>(
       context: context,
       position: position,
-      child: _PaymentDeletionContent(payment: payment),
+      child: _PaymentDeletionContent(payment: payment, onSubmitInBackground: onSubmitInBackground),
       width: 300.0,
       estimatedHeight: 140.0,
     );
@@ -35,8 +36,9 @@ class PaymentDeletionDialog {
 
 class _PaymentDeletionContent extends ContextualDialogContent {
   final InstallmentPayment payment;
+  final void Function(InstallmentPayment updatedPayment)? onSubmitInBackground;
 
-  const _PaymentDeletionContent({required this.payment});
+  const _PaymentDeletionContent({required this.payment, this.onSubmitInBackground});
 
   @override
   void onKeyDown(RawKeyDownEvent event) {
@@ -56,14 +58,16 @@ class _PaymentDeletionContent extends ContextualDialogContent {
     return _PaymentDeletionState(
       key: _deletionKey,
       payment: payment,
+      onSubmitInBackground: onSubmitInBackground,
     );
   }
 }
 
 class _PaymentDeletionState extends StatefulWidget {
   final InstallmentPayment payment;
+  final void Function(InstallmentPayment updatedPayment)? onSubmitInBackground;
 
-  const _PaymentDeletionState({super.key, required this.payment});
+  const _PaymentDeletionState({super.key, required this.payment, this.onSubmitInBackground});
 
   @override
   State<_PaymentDeletionState> createState() => _PaymentDeletionStateState();
@@ -282,7 +286,10 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
   Future<void> _handleDeletion() async {
     if (_isLoading) return; // Prevent multiple calls
     
-    setState(() => _isLoading = true);
+    final backgroundMode = widget.onSubmitInBackground != null;
+    if (!backgroundMode) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       // Add a small delay to ensure UI updates before the API call
@@ -295,14 +302,20 @@ class _PaymentDeletionStateState extends State<_PaymentDeletionState> {
         paidAmount: 0.0,
       );
       
-      final updatedInstallment = await _repository.updatePayment(updatedPayment);
-      
-      if (mounted) {
-        Navigator.of(context).pop(updatedInstallment); // Return the updated installment
+      if (backgroundMode) {
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+        widget.onSubmitInBackground?.call(updatedPayment);
+      } else {
+        final updatedInstallment = await _repository.updatePayment(updatedPayment);
+        if (mounted) {
+          Navigator.of(context).pop(updatedInstallment); // Return the updated installment
+        }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        if (!backgroundMode) setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocalizations.of(context)?.error ?? 'Ошибка'}: $e'),

@@ -23,11 +23,15 @@ class InstallmentListItem extends StatefulWidget {
   final InstallmentPayment? nextPayment;
   final bool isExpanded;
   final bool isLoadingPayments;
+  // Shows generic per-item busy state for background operations (delete, update payment)
+  final bool isBusy;
   final VoidCallback onTap;
   final VoidCallback? onClientTap;
   final Function(bool) onExpansionChanged;
   final VoidCallback? onDataChanged;
   final Function(Installment)? onInstallmentUpdated;
+  // Background submission handler for payment register/delete
+  final void Function(InstallmentPayment updatedPayment)? onSubmitPaymentInBackground;
   final VoidCallback? onDelete;
   final VoidCallback? onSelect;
   final bool isSelected;
@@ -45,12 +49,14 @@ class InstallmentListItem extends StatefulWidget {
     this.nextPayment,
     required this.isExpanded,
     this.isLoadingPayments = false,
+    this.isBusy = false,
     required this.onTap,
     this.onClientTap,
     required this.onExpansionChanged,
     this.onDataChanged,
     this.onInstallmentUpdated,
     this.onDelete,
+    this.onSubmitPaymentInBackground,
     this.onSelect,
     this.isSelected = false,
     this.onSelectionToggle,
@@ -190,11 +196,14 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
         position: position,
         payment: widget.nextPayment!,
         onPaymentRegistered: (updatedInstallment) {
-          // Update the specific installment without refreshing the entire list
-          widget.onInstallmentUpdated?.call(updatedInstallment);
-          // Fallback to full refresh if the specific update callback is not provided
-          widget.onDataChanged?.call();
+          // Update in place if handler provided, else fallback to full refresh
+          if (widget.onInstallmentUpdated != null) {
+            widget.onInstallmentUpdated!.call(updatedInstallment);
+          } else {
+            widget.onDataChanged?.call();
+          }
         },
+        onSubmitInBackground: widget.onSubmitPaymentInBackground,
       );
     }
   }
@@ -341,8 +350,8 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                           child: Padding(
                             padding: const EdgeInsets.only(right: 16),
                             child: Text(
-                              widget.installmentNumber != null
-                                  ? '${widget.installmentNumber}'
+                              (widget.installmentNumber ?? widget.installment.installmentNumber) != null
+                                  ? '${widget.installmentNumber ?? widget.installment.installmentNumber}'
                                   : '-',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontSize: 14,
@@ -490,7 +499,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                     rotation: widget.isExpanded ? 0.5 : 0.0, // Use rotation property
                                   ),
                                   // Loading indicator to the right of arrow
-                                  if (widget.isLoadingPayments) ...[
+                                  if (widget.isLoadingPayments || widget.isBusy) ...[
                                     const SizedBox(width: 8),
                                     const SizedBox(
                                       width: 16,
@@ -526,18 +535,40 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
               child: Column(
                 children: [
                   // Payment items as table rows
-                  ...widget.payments.map((payment) {
-                    return InstallmentPaymentItem(
-                      payment: payment,
-                      onPaymentUpdated: (updatedInstallment) {
-                        // Update the specific installment without refreshing the entire list
-                        widget.onInstallmentUpdated?.call(updatedInstallment);
-                        // Fallback to full refresh if the specific update callback is not provided
-                        widget.onDataChanged?.call();
-                      },
-                      isExpanded: true, // Expanded in list item
-                    );
-                  }),
+                  ...() {
+                    // Determine permissions per payment
+                    final payments = widget.payments;
+                    InstallmentPayment? nextUnpaid;
+                    InstallmentPayment? lastPaid;
+                    for (final p in payments) {
+                      if (!p.isPaid && nextUnpaid == null) {
+                        nextUnpaid = p;
+                      }
+                      if (p.isPaid) {
+                        lastPaid = p; // will end as most recent paid if list is ordered
+                      }
+                    }
+
+                    return payments.map((payment) {
+                      final canRegister = (!payment.isPaid) && (payment.id == nextUnpaid?.id);
+                      final canDelete = (payment.isPaid) && (payment.id == lastPaid?.id);
+                      return InstallmentPaymentItem(
+                        payment: payment,
+                        onPaymentUpdated: (updatedInstallment) {
+                          // Update in place if handler provided, else fallback to full refresh
+                          if (widget.onInstallmentUpdated != null) {
+                            widget.onInstallmentUpdated!(updatedInstallment);
+                          } else {
+                            widget.onDataChanged?.call();
+                          }
+                        },
+                        isExpanded: true, // Expanded in list item
+                        canRegister: canRegister,
+                        canDelete: canDelete,
+                        onSubmitPaymentInBackground: widget.onSubmitPaymentInBackground,
+                      );
+                    });
+                  }(),
                 ],
               ),
             ),

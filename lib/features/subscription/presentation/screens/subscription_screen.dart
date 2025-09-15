@@ -103,7 +103,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.subscriptionActivatedSuccess),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          backgroundColor: Colors.green,
         ),
       );
     }

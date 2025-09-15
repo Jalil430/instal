@@ -13,10 +13,10 @@ import '../../clients/domain/entities/client.dart';
 import '../../clients/domain/repositories/client_repository.dart';
 import '../../clients/data/repositories/client_repository_impl.dart';
 import '../../clients/data/datasources/client_remote_datasource.dart';
-import '../../investors/domain/entities/investor.dart';
-import '../../investors/domain/repositories/investor_repository.dart';
-import '../../investors/data/repositories/investor_repository_impl.dart';
-import '../../investors/data/datasources/investor_remote_datasource.dart';
+import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/domain/repositories/wallet_repository.dart';
+import '../../wallets/data/repositories/wallet_repository_impl.dart';
+import '../../wallets/data/datasources/wallet_remote_datasource_impl.dart';
 import '../widgets/installment_payment_item.dart';
 import '../../../shared/widgets/custom_confirmation_dialog.dart';
 import '../../../shared/widgets/responsive_layout.dart';
@@ -38,11 +38,12 @@ class InstallmentDetailsScreen extends StatefulWidget {
 class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
   late InstallmentRepository _installmentRepository;
   late ClientRepository _clientRepository;
-  late InvestorRepository _investorRepository;
+  late WalletRepository _walletRepository;
 
   Installment? _installment;
   Client? _client;
-  Investor? _investor;
+  
+  Wallet? _wallet;
   List<InstallmentPayment> _payments = [];
   bool _isLoading = true;
   bool _isInitialized = false;
@@ -69,8 +70,8 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
     _clientRepository = ClientRepositoryImpl(
       ClientRemoteDataSourceImpl(),
     );
-    _investorRepository = InvestorRepositoryImpl(
-      InvestorRemoteDataSourceImpl(),
+    _walletRepository = WalletRepositoryImpl(
+      WalletRemoteDataSourceImpl(),
     );
   }
 
@@ -97,9 +98,11 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       
       if (!mounted) return;
       
-      final investor = installment.investorId.isNotEmpty
-          ? await _investorRepository.getInvestorById(installment.investorId)
-          : null;
+      // Fetch wallet if present to display wallet name
+      Wallet? wallet;
+      if (installment.walletId != null && installment.walletId!.isNotEmpty) {
+        wallet = await _walletRepository.getWalletById(installment.walletId!);
+      }
           
       if (!mounted) return;
       
@@ -108,8 +111,8 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       setState(() {
         _installment = installment;
         _client = client;
-        _investor = investor;
         _payments = payments;
+        _wallet = wallet;
         _isLoading = false;
       });
     } catch (e) {
@@ -200,7 +203,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       mobile: InstallmentDetailsScreenMobile(
         installment: _installment!,
         client: _client!,
-        investor: _investor,
+        walletName: _wallet?.name,
         payments: _payments,
         dateFormat: dateFormat,
         currencyFormat: currencyFormat,
@@ -210,7 +213,7 @@ class _InstallmentDetailsScreenState extends State<InstallmentDetailsScreen> {
       desktop: InstallmentDetailsScreenDesktop(
         installment: _installment!,
         client: _client!,
-        investor: _investor,
+        walletName: _wallet?.name,
         payments: _payments,
         dateFormat: dateFormat,
         currencyFormat: currencyFormat,

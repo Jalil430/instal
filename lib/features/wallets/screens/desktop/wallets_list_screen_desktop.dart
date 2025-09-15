@@ -280,6 +280,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                         },
                                         onDelete: () => state.deleteWallet(wallet),
                                         onSelect: () => state.toggleSelection(wallet.id),
+                                        isBusy: state.loadingItemOperations.contains(wallet.id),
                                       );
                                     },
                                   ),
@@ -304,6 +305,7 @@ class _WalletListItem extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final VoidCallback onSelect;
+  final bool isBusy;
 
   const _WalletListItem({
     required this.wallet,
@@ -314,6 +316,7 @@ class _WalletListItem extends StatefulWidget {
     required this.onTap,
     required this.onDelete,
     required this.onSelect,
+    this.isBusy = false,
   });
 
   @override
@@ -480,6 +483,18 @@ class _WalletListItemState extends State<_WalletListItem> with TickerProviderSta
                                 ),
                           ),
                         ),
+                        // trailing spinner when busy
+                        if (widget.isBusy) ...[
+                          const SizedBox(width: 8),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

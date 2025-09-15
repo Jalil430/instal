@@ -25,7 +25,7 @@ class ClientRemoteDataSourceImpl implements ClientRemoteDataSource {
     }
 
     final response = await ApiClient.get('/clients?user_id=$userId&limit=50000&offset=0',
-        timeout: const Duration(seconds: 20));
+        timeout: const Duration(seconds: 30));
     ApiClient.handleResponse(response);
     
     final List<dynamic> jsonList = json.decode(response.body);

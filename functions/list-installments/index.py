@@ -122,18 +122,16 @@ def handler(event, context):
                 DECLARE $user_id AS Utf8;
                 DECLARE $wallet_id AS Utf8?;
                 DECLARE $client_id AS Utf8?;
-                DECLARE $investor_id AS Utf8?;
                 DECLARE $limit AS Uint64;
                 DECLARE $offset AS Uint64;
                 SELECT 
-                    id, user_id, client_id, investor_id, wallet_id, product_name,
+                    id, user_id, client_id, wallet_id, product_name,
                     cash_price, installment_price, down_payment, term_months, monthly_payment,
                     down_payment_date, installment_start_date, installment_end_date,
                     installment_number,
                     created_at, updated_at,
                     -- Pre-calculated fields (eliminates N+1 queries!)
                     COALESCE(client_name, 'Unknown Client') as client_name,
-                    COALESCE(investor_name, 'Unknown Investor') as investor_name,
                     COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) as paid_amount,
                     COALESCE(remaining_amount, installment_price) as remaining_amount,
                     next_payment_date,
@@ -147,7 +145,6 @@ def handler(event, context):
                 WHERE user_id = $user_id
                   AND ($wallet_id IS NULL OR wallet_id = $wallet_id)
                   AND ($client_id IS NULL OR client_id = $client_id)
-                  AND ($investor_id IS NULL OR investor_id = $investor_id)
                 ORDER BY 
                     CASE payment_status
                         WHEN 'просрочено' THEN 1
@@ -164,14 +161,12 @@ def handler(event, context):
                 qs = event.get('queryStringParameters', {}) or {}
                 wallet_param = (qs.get('wallet_id') or '').strip() or None
                 client_param = (qs.get('client_id') or '').strip() or None
-                investor_param = (qs.get('investor_id') or '').strip() or None
                 result_sets = session.transaction(ydb.SerializableReadWrite()).execute(
                     prepared_query,
                     {
                         '$user_id': user_id,
                         '$wallet_id': wallet_param,
                         '$client_id': client_param,
-                        '$investor_id': investor_param,
                         '$limit': limit,
                         '$offset': offset
                     },
@@ -194,7 +189,6 @@ def handler(event, context):
                         'id': row.id,
                         'user_id': row.user_id,
                         'client_id': row.client_id,
-                        'investor_id': row.investor_id,
                         'wallet_id': getattr(row, 'wallet_id', None),
                         'product_name': row.product_name,
                         'cash_price': float(row.cash_price),
@@ -211,7 +205,6 @@ def handler(event, context):
                         
                         # Pre-calculated display fields (no additional queries needed!)
                         'client_name': row.client_name,
-                        'investor_name': row.investor_name,
                         'paid_amount': float(row.paid_amount),
                         'remaining_amount': float(row.remaining_amount),
                         'next_payment_date': convert_date(row.next_payment_date),

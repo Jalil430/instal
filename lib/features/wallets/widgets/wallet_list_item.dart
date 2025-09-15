@@ -13,6 +13,7 @@ class WalletListItem extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onDelete;
+  final bool isBusy;
 
   const WalletListItem({
     super.key,
@@ -23,6 +24,7 @@ class WalletListItem extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onDelete,
+    this.isBusy = false,
   });
 
   @override
@@ -44,7 +46,9 @@ class WalletListItem extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: InkWell(
+      child: Stack(
+        children: [
+          InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
@@ -156,9 +160,25 @@ class WalletListItem extends StatelessWidget {
                   ),
                 ],
               ),
+              // delete button could be somewhere else; spinner overlay will handle busy
             ],
           ),
         ),
+          ),
+          if (isBusy)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

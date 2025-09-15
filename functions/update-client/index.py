@@ -285,7 +285,7 @@ def handler(event, context):
                 if 'contact_number' in sanitized_data:
                     update_query = """
                     DECLARE $client_id AS Utf8;
-                    DECLARE $contact_number AS Utf8;
+                    DECLARE $contact_number AS Utf8?;
                     DECLARE $updated_at AS Timestamp;
                     UPDATE clients 
                     SET contact_number = $contact_number, updated_at = $updated_at 
@@ -305,7 +305,7 @@ def handler(event, context):
                 if 'passport_number' in sanitized_data:
                     update_query = """
                     DECLARE $client_id AS Utf8;
-                    DECLARE $passport_number AS Utf8;
+                    DECLARE $passport_number AS Utf8?;
                     DECLARE $updated_at AS Timestamp;
                     UPDATE clients 
                     SET passport_number = $passport_number, updated_at = $updated_at 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/localization/app_localizations.dart';
 
 class KeyboardNavigableDropdown<T> extends StatefulWidget {
   final T? value;
@@ -414,13 +415,14 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
   }
 
   Widget _buildNoItemsWidget() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            widget.noItemsMessage ?? 'No items found',
+            widget.noItemsMessage ?? (l10n?.notFound ?? 'No items found'),
             style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 14,
@@ -429,7 +431,7 @@ class KeyboardNavigableDropdownState<T> extends State<KeyboardNavigableDropdown<
           if (widget.onCreateNew != null && _searchQuery.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              'Press Enter to create "${_searchQuery}"',
+              l10n?.pressEnterToCreate(_searchQuery) ?? 'Нажмите Enter, чтобы создать "${_searchQuery}"',
               style: TextStyle(
                 color: AppTheme.primaryColor,
                 fontSize: 12,

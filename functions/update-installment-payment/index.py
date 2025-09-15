@@ -888,11 +888,11 @@ WHERE id = $installment_id;
             updated_installment_query = """
 DECLARE $installment_id AS Utf8;
 SELECT 
-    id, user_id, client_id, investor_id, product_name,
+    id, user_id, client_id, product_name,
     cash_price, installment_price, down_payment, term_months, monthly_payment,
     down_payment_date, installment_start_date, installment_end_date,
     created_at, updated_at,
-    client_name, investor_name, paid_amount, remaining_amount,
+    client_name, paid_amount, remaining_amount,
     next_payment_date, next_payment_amount, payment_status,
     overdue_count, total_payments, paid_payments, last_payment_date
 FROM installments
@@ -935,9 +935,8 @@ WHERE id = $installment_id;
         installment_data = {
             'id': updated_installment.id,
             'user_id': updated_installment.user_id,
-            'client_id': updated_installment.client_id,
-            'investor_id': updated_installment.investor_id,
-            'product_name': updated_installment.product_name,
+        'client_id': updated_installment.client_id,
+        'product_name': updated_installment.product_name,
             'cash_price': float(updated_installment.cash_price),
             'installment_price': float(updated_installment.installment_price),
             'down_payment': float(updated_installment.down_payment),
@@ -949,7 +948,6 @@ WHERE id = $installment_id;
             'created_at': convert_timestamp(updated_installment.created_at),
             'updated_at': convert_timestamp(updated_installment.updated_at),
             'client_name': updated_installment.client_name,
-            'investor_name': updated_installment.investor_name,
             'paid_amount': float(updated_installment.paid_amount) if updated_installment.paid_amount else 0.0,
             'remaining_amount': float(updated_installment.remaining_amount) if updated_installment.remaining_amount else 0.0,
             'next_payment_date': convert_date(updated_installment.next_payment_date),

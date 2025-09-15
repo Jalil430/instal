@@ -141,7 +141,7 @@ def handler(event, context):
                 # Create a transaction first
                 tx = session.transaction(ydb.SerializableReadWrite())
                 
-                # First, get client and investor names for calculated fields
+                # First, get client name for calculated fields
                 client_query = """
                 DECLARE $client_id AS Utf8;
                 SELECT full_name FROM clients WHERE id = $client_id;
@@ -150,13 +150,7 @@ def handler(event, context):
                 client_rows = client_result[0].rows if (client_result and len(client_result) > 0) else []
                 client_name = client_rows[0].full_name if client_rows else 'Unknown Client'
                 
-                investor_query = """
-                DECLARE $investor_id AS Utf8;
-                SELECT full_name FROM investors WHERE id = $investor_id;
-                """
-                investor_result = tx.execute(session.prepare(investor_query), {'$investor_id': body['investor_id']})
-                investor_rows = investor_result[0].rows if (investor_result and len(investor_result) > 0) else []
-                investor_name = investor_rows[0].full_name if investor_rows else 'Unknown Investor'
+                # No denormalized wallet_name stored anymore
                 
                 # Calculate initial values for calculated fields
                 installment_price = Decimal(str(body['installment_price']))
@@ -229,7 +223,6 @@ def handler(event, context):
                 DECLARE $id AS Utf8;
                 DECLARE $user_id AS Utf8;
                 DECLARE $client_id AS Utf8;
-                DECLARE $investor_id AS Utf8;
                 DECLARE $wallet_id AS Utf8?;
                 DECLARE $product_name AS Utf8;
                 DECLARE $cash_price AS Decimal(22,9);
@@ -244,7 +237,6 @@ def handler(event, context):
                 DECLARE $created_at AS Timestamp;
                 DECLARE $updated_at AS Timestamp;
                 DECLARE $client_name AS Utf8;
-                DECLARE $investor_name AS Utf8;
                 DECLARE $paid_amount AS Decimal(22,9);
                 DECLARE $remaining_amount AS Decimal(22,9);
                 DECLARE $next_payment_date AS Date;
@@ -258,7 +250,6 @@ def handler(event, context):
                     id,
                     user_id,
                     client_id,
-                    investor_id,
                     wallet_id,
                     product_name,
                     cash_price,
@@ -273,7 +264,6 @@ def handler(event, context):
                     created_at,
                     updated_at,
                     client_name,
-                    investor_name,
                     paid_amount,
                     remaining_amount,
                     next_payment_date,
@@ -287,7 +277,6 @@ def handler(event, context):
                     $id,
                     $user_id,
                     $client_id,
-                    $investor_id,
                     $wallet_id,
                     $product_name,
                     $cash_price,
@@ -302,7 +291,6 @@ def handler(event, context):
                     $created_at,
                     $updated_at,
                     $client_name,
-                    $investor_name,
                     $paid_amount,
                     $remaining_amount,
                     $next_payment_date,
@@ -321,7 +309,6 @@ def handler(event, context):
                         '$id': installment_id,
                         '$user_id': body['user_id'],
                         '$client_id': body['client_id'],
-                        '$investor_id': body['investor_id'],
                         '$wallet_id': wallet_id_opt if wallet_id_opt else None,
                         '$product_name': body['product_name'],
                         '$cash_price': Decimal(str(body['cash_price'])),
@@ -336,7 +323,6 @@ def handler(event, context):
                         '$created_at': now,
                         '$updated_at': now,
                         '$client_name': client_name,
-                        '$investor_name': investor_name,
                         '$paid_amount': paid_amount,
                         '$remaining_amount': remaining_amount,
                         '$next_payment_date': next_payment_date,

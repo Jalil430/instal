@@ -8,13 +8,12 @@ import '../../../../shared/widgets/custom_button.dart';
 import '../../domain/entities/installment.dart';
 import '../../domain/entities/installment_payment.dart';
 import '../../../clients/domain/entities/client.dart';
-import '../../../investors/domain/entities/investor.dart';
 import '../../widgets/installment_payment_item.dart';
 
 class InstallmentDetailsScreenDesktop extends StatelessWidget {
   final Installment installment;
   final Client client;
-  final Investor? investor;
+  final String? walletName;
   final List<InstallmentPayment> payments;
   final DateFormat dateFormat;
   final NumberFormat currencyFormat;
@@ -25,7 +24,7 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
     Key? key,
     required this.installment,
     required this.client,
-    this.investor,
+    this.walletName,
     required this.payments,
     required this.dateFormat,
     required this.currencyFormat,
@@ -104,13 +103,13 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                               onTap: () => context.go('/clients/${client.id}'),
                             ),
                             
-                            // Investor Info (moved to top)
-                            if (investor != null)
+                            // Wallet Info (new, replaces investor for display)
+                            if (installment.walletId != null && walletName != null && walletName!.isNotEmpty)
                               _buildInfoRowWithClickableValue(
                                 context,
-                                l10n?.investor ?? 'Инвестор',
-                                investor!.fullName,
-                                onTap: () => context.go('/investors/${investor!.id}'),
+                                l10n?.wallet ?? 'Кошелек',
+                                walletName!,
+                                onTap: () => context.go('/wallets/${installment.walletId}'),
                               ),
                               
                              // Installment number
@@ -168,13 +167,31 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                           height: 600,
                           child: ListView(
                             children: [
-                              ...payments.map((payment) {
-                                return InstallmentPaymentItem(
-                                  payment: payment,
-                                  onPaymentUpdated: (updatedInstallment) {},
-                                  isExpanded: false,
-                                );
-                              }).toList(),
+                              ...() {
+                                // Compute next unpaid and last paid for permission logic
+                                InstallmentPayment? nextUnpaid;
+                                InstallmentPayment? lastPaid;
+                                for (final p in payments) {
+                                  if (!p.isPaid && nextUnpaid == null) {
+                                    nextUnpaid = p;
+                                  }
+                                  if (p.isPaid) {
+                                    lastPaid = p;
+                                  }
+                                }
+
+                                return payments.map((payment) {
+                                  final canRegister = (!payment.isPaid) && (payment.id == nextUnpaid?.id);
+                                  final canDelete = (payment.isPaid) && (payment.id == lastPaid?.id);
+                                  return InstallmentPaymentItem(
+                                    payment: payment,
+                                    onPaymentUpdated: (updatedInstallment) {},
+                                    isExpanded: false,
+                                    canRegister: canRegister,
+                                    canDelete: canDelete,
+                                  );
+                                }).toList();
+                              }(),
                               if (payments.length < installment.termMonths)
                                 ..._buildRemainingPayments(context),
                             ],

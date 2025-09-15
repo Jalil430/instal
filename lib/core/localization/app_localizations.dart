@@ -54,6 +54,10 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Нет данных' : 'No data';
   String get selectDate =>
       locale.languageCode == 'ru' ? 'Выберите дату' : 'Select Date';
+  String pressEnterToCreate(String name) =>
+      locale.languageCode == 'ru'
+          ? 'Нажмите Enter, чтобы создать "$name"'
+          : 'Press Enter to create "$name"';
 
   // ===== Navigation =====
   String get installments =>
@@ -987,6 +991,9 @@ class AppLocalizations {
       ? 'Разархивировать кошелек "$name"?'
       : 'Unarchive wallet "$name"?';
   String get unarchive => locale.languageCode == 'ru' ? 'Разархивировать' : 'Unarchive';
+
+  String get loadingClients => locale.languageCode == 'ru' ? 'Загрузка клиентов...' : 'Loading clients...';
+  String get noClientsFound => locale.languageCode == 'ru' ? 'Клиенты не найдены' : 'No clients found';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

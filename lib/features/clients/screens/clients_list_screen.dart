@@ -35,6 +35,7 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
   bool isInitialized = false;
   bool isSelectionMode = false;
   final Set<String> selectedClientIds = {};
+  final Set<String> loadingItemOperations = {}; // Track per-item background operations (delete)
   
   late AnimationController fadeController;
   late Animation<double> fadeAnimation;
@@ -225,8 +226,9 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
         cache.remove(CacheService.analyticsKey(currentUser.id));
       }
       
-      // Show loading indicator
+      // Show loading indicator (ensure any existing is hidden first)
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -248,6 +250,11 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
         );
       }
       
+      // Mark all as busy
+      setState(() {
+        loadingItemOperations.addAll(selectedClientIds);
+      });
+
       // Delete all selected clients
       for (final id in selectedClientIds) {
         if (!mounted) return;
@@ -263,13 +270,13 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
       // Immediately remove from local state to update UI
       setState(() {
         clients.removeWhere((c) => selectedClientIds.contains(c.id));
+        loadingItemOperations.removeAll(selectedClientIds);
       });
       
       // Clear selection
       clearSelection();
       
-      // Also reload data from server to ensure consistency
-      await loadData();
+      // Keep list persistent without full reload
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -292,8 +299,14 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
             backgroundColor: AppTheme.errorColor,
           ),
         );
-        // Reload data on error to ensure UI consistency
-        await loadData();
+        // Keep current list; show error only
+      }
+    } finally {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        setState(() {
+          loadingItemOperations.removeAll(selectedClientIds);
+        });
       }
     }
   }
@@ -361,6 +374,11 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
 
     if (confirmed == true) {
       try {
+        // Ensure any previous progress snackbar is hidden
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        setState(() {
+          loadingItemOperations.add(client.id);
+        });
         // Clear cache to ensure fresh data after deletion
         final cache = CacheService();
         final authService = AuthServiceProvider.of(context);
@@ -378,8 +396,14 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
         
         if (!mounted) return;
         
-        // Immediately refresh the list after deletion
-        await loadData();
+        // Remove from local state without full reload
+        setState(() {
+          clients.removeWhere((c) => c.id == client.id);
+          selectedClientIds.remove(client.id);
+          if (selectedClientIds.isEmpty) {
+            isSelectionMode = false;
+          }
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -390,12 +414,20 @@ class ClientsListScreenState extends State<ClientsListScreen> with TickerProvide
         }
       } catch (e) {
         if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context)!.clientDeleteError(e)),
               backgroundColor: AppTheme.errorColor,
             ),
           );
+        }
+      } finally {
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          setState(() {
+            loadingItemOperations.remove(client.id);
+          });
         }
       }
     }

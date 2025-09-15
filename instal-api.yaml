@@ -14,6 +14,7 @@ paths:
         type: cloud_functions
         function_id: d4e607k429lt9lqo0dkj
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     get:
       summary: List all clients
@@ -22,6 +23,7 @@ paths:
         type: cloud_functions
         function_id: d4e2hioa9nvq86e1fhtv
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
   /clients/search:
     get:
       summary: Search for clients
@@ -30,6 +32,7 @@ paths:
         type: cloud_functions
         function_id: d4e46icm3kuqf5mshnbq
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /clients/{id}:
     parameters:
@@ -45,6 +48,7 @@ paths:
         type: cloud_functions
         function_id: d4e8b3od95f0h2fiernq
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     put:
       summary: Update a client
@@ -53,6 +57,7 @@ paths:
         type: cloud_functions
         function_id: d4egqldupji1j6a52h1v
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     delete:
       summary: Delete a client
@@ -61,6 +66,7 @@ paths:
         type: cloud_functions
         function_id: d4emvjk3b8bslg8tnibd
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /investors:
     post:
@@ -110,6 +116,7 @@ paths:
         type: cloud_functions
         function_id: d4es4rs5t9appi6q5p0d
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     get:
       summary: List user's wallets with balances
@@ -126,6 +133,7 @@ paths:
         type: cloud_functions
         function_id: d4euk9q4c0debf439iej
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}:
     parameters:
@@ -141,6 +149,7 @@ paths:
         type: cloud_functions
         function_id: d4e91fateph6r1msg096
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     put:
       summary: Update wallet details
@@ -149,6 +158,7 @@ paths:
         type: cloud_functions
         function_id: d4epa3d73vqo5flpjfk4
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     delete:
       summary: Delete wallet (hard delete; requires archived)
@@ -157,6 +167,7 @@ paths:
         type: cloud_functions
         function_id: d4eosm3l252m3cb29ujd
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/balance:
     parameters:
@@ -172,6 +183,7 @@ paths:
         type: cloud_functions
         function_id: d4e14cmjjbkaah5f00mm
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/balances:
     get:
@@ -181,6 +193,7 @@ paths:
         type: cloud_functions
         function_id: d4ekhnheg9jntl1go6gg
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/top-up:
     parameters:
@@ -196,6 +209,7 @@ paths:
         type: cloud_functions
         function_id: d4eacss6qhh0o9etq3kc
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/withdraw:
     parameters:
@@ -211,6 +225,7 @@ paths:
         type: cloud_functions
         function_id: d4ekafudn8iu0jmll4v6
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/archive:
     parameters:
@@ -226,6 +241,7 @@ paths:
         type: cloud_functions
         function_id: d4eh92ksggk6b1hj8rlt
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/ledger:
     parameters:
@@ -272,6 +288,7 @@ paths:
         type: cloud_functions
         function_id: d4e9uc7dn0rk9lcbu6a0
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /installments:
     post:
@@ -281,6 +298,7 @@ paths:
         type: cloud_functions
         function_id: d4ejin4kah34cvt6mbt8
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     get:
       summary: List all installments
@@ -289,6 +307,7 @@ paths:
         type: cloud_functions
         function_id: d4eji2a3n3b9kmgvkcni
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
   /installments/search:
     get:
       summary: Search for installments
@@ -297,6 +316,7 @@ paths:
         type: cloud_functions
         function_id: d4edfrgpjcc1ohgj6efo
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /installments/{id}:
     parameters:
@@ -312,6 +332,7 @@ paths:
         type: cloud_functions
         function_id: d4etn874nnro96omhmdk
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
 
     delete:
@@ -321,6 +342,7 @@ paths:
         type: cloud_functions
         function_id: d4e6t65nb39k5dksq7s7
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /installment-payments/{id}:
     parameters:
@@ -336,6 +358,7 @@ paths:
         type: cloud_functions
         function_id: d4ec86pvqoqla7ck2qv7
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /analytics-optimized:
     get:
@@ -347,6 +370,7 @@ paths:
         type: cloud_functions
         function_id: d4e8s7pip0ssrbj54dcm
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /auth/register:
     post:
@@ -358,6 +382,7 @@ paths:
         type: cloud_functions
         function_id: d4e4t4mv875gkg24at8a
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /auth/login:
     post:
@@ -369,6 +394,7 @@ paths:
         type: cloud_functions
         function_id: d4e8jcns4qe2bkvh7rvv
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /auth/refresh:
     post:
@@ -380,6 +406,7 @@ paths:
         type: cloud_functions
         function_id: d4evah37mne0rubchbl8
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /auth/verify:
     post:
@@ -391,6 +418,7 @@ paths:
         type: cloud_functions
         function_id: d4ebrg3ucrog7lqe4egr
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /auth/user:
     get:
@@ -402,6 +430,7 @@ paths:
         type: cloud_functions
         function_id: d4eni47g77jfmhonbhde
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     put:
       summary: Update user profile
@@ -412,6 +441,7 @@ paths:
         type: cloud_functions
         function_id: d4e5tijqfm1q7ikuj0c5
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /whatsapp/settings:
     get:
@@ -435,6 +465,7 @@ paths:
         type: cloud_functions
         function_id: d4eu4h1irj55no6jt4jn
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
     put:
       summary: Update WhatsApp reminder settings
@@ -465,6 +496,7 @@ paths:
         type: cloud_functions
         function_id: d4efejgin025sorlklin
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /whatsapp/test-connection:
     post:
@@ -496,6 +528,7 @@ paths:
         type: cloud_functions
         function_id: d4e9f146f73o17mdfg5k
         service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
         payload_format_version: '1.0'
   /whatsapp/send-manual-reminder:
     post:

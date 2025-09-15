@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:instal_app/features/auth/data/datasources/auth_local_datasource.dart';
@@ -8,7 +9,8 @@ class ApiClient {
   static const String _baseUrl = 'https://d5degr4sfnv9p7i065ga.kf69zffa.apigw.yandexcloud.net';
   static const String _apiKey = '05edf99238bc0c342aa0cc48be2363ffcebbbf15b7d0eaca4f31dbd6a03d30be';
   
-  static const Duration _defaultTimeout = Duration(seconds: 10);
+  // Default overall request timeout. Heavy endpoints override when needed.
+  static const Duration _defaultTimeout = Duration(seconds: 20);
   
   static final http.Client _httpClient = http.Client();
   static final AuthLocalDataSource _authLocalDataSource = AuthLocalDataSourceImpl();
@@ -65,7 +67,7 @@ class ApiClient {
 
 
   static Future<http.Response> get(String endpoint, {Duration? timeout}) async {
-    return _makeRequest(() async {
+    return _makeRequest('GET', () async {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final headers = await _getHeaders(endpoint);
       return await _httpClient.get(
@@ -76,7 +78,7 @@ class ApiClient {
   }
 
   static Future<http.Response> post(String endpoint, Map<String, dynamic> body, {Duration? timeout}) async {
-    return _makeRequest(() async {
+    return _makeRequest('POST', () async {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final bodyJson = json.encode(body);
       final headers = await _getHeaders(endpoint);
@@ -89,7 +91,7 @@ class ApiClient {
   }
 
   static Future<http.Response> put(String endpoint, Map<String, dynamic> body, {Duration? timeout}) async {
-    return _makeRequest(() async {
+    return _makeRequest('PUT', () async {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final headers = await _getHeaders(endpoint);
       return await _httpClient.put(
@@ -101,7 +103,7 @@ class ApiClient {
   }
 
   static Future<http.Response> delete(String endpoint, {Duration? timeout}) async {
-    return _makeRequest(() async {
+    return _makeRequest('DELETE', () async {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final headers = await _getHeaders(endpoint);
       return await _httpClient.delete(
@@ -111,9 +113,9 @@ class ApiClient {
     });
   }
 
-  static Future<http.Response> _makeRequest(Future<http.Response> Function() requestFunction) async {
+  static Future<http.Response> _makeRequest(String method, Future<http.Response> Function() requestFunction) async {
     try {
-      final response = await requestFunction();
+      final response = await _sendWithRetries(method, requestFunction);
       
       // If we get a 401 Unauthorized, the token is expired - clear auth state
       if (response.statusCode == 401) {
@@ -121,8 +123,8 @@ class ApiClient {
         final authState = await _authLocalDataSource.getAuthState();
         final refreshed = authState.isAuthenticated ? await _tryRefreshToken(authState) : false;
         if (refreshed) {
-          // Retry once with new token
-          final retryResponse = await requestFunction();
+          // Retry once with new token (with transient retries again)
+          final retryResponse = await _sendWithRetries(method, requestFunction);
           if (retryResponse.statusCode != 401) {
             return retryResponse;
           }
@@ -132,11 +134,63 @@ class ApiClient {
       }
       
       return response;
+    } on RequestTimeoutException {
+      // Surface timeouts distinctly so UI can react (retry/CTA)
+      rethrow;
     } catch (e) {
       if (e is TokenExpiredException) {
         rethrow;
       }
       throw ApiException('Network error: $e');
+    }
+  }
+
+  static bool _isRetryableStatus(int code) {
+    return code == 429 || code == 502 || code == 503 || code == 504;
+  }
+
+  // Best-effort transient retry for GET/DELETE. POST/PUT are not retried by default to avoid side effects.
+  static Future<http.Response> _sendWithRetries(String method, Future<http.Response> Function() send) async {
+    final bool allowRetry = method == 'GET' || method == 'DELETE';
+    const int maxAttempts = 3;
+    Duration backoff = const Duration(milliseconds: 300);
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        final resp = await send();
+        if (allowRetry && _isRetryableStatus(resp.statusCode) && attempt < maxAttempts) {
+          final retryAfter = resp.headers['retry-after'];
+          if (retryAfter != null) {
+            final parsed = int.tryParse(retryAfter);
+            if (parsed != null && parsed > 0) {
+              await Future.delayed(Duration(seconds: parsed));
+            } else {
+              await Future.delayed(backoff);
+              backoff *= 2;
+            }
+          } else {
+            await Future.delayed(backoff);
+            backoff *= 2;
+          }
+          continue;
+        }
+        return resp;
+      } on TimeoutException {
+        if (allowRetry && attempt < maxAttempts) {
+          await Future.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+        throw const RequestTimeoutException('Request timed out');
+      } on http.ClientException catch (_) {
+        if (allowRetry && attempt < maxAttempts) {
+          await Future.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+        rethrow;
+      }
     }
   }
 
@@ -239,4 +293,8 @@ class ServerException extends ApiException {
 
 class TokenExpiredException extends ApiException {
   const TokenExpiredException(super.message);
-} 
+}
+
+class RequestTimeoutException extends ApiException {
+  const RequestTimeoutException(super.message);
+}

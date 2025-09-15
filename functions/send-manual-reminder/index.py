@@ -382,7 +382,7 @@ def get_installments_by_ids(installment_ids: List[str], user_id: str) -> List[Di
             installment_query = f"""
                 DECLARE $user_id AS Utf8;
                 {' '.join([f'DECLARE {param} AS Utf8;' for param in id_params.keys()])}
-                SELECT id, user_id, client_id, investor_id, product_name, cash_price, 
+                SELECT id, user_id, client_id, product_name, cash_price, 
                        installment_price, down_payment, term_months, down_payment_date, 
                        installment_start_date, installment_end_date, monthly_payment, 
                        created_at, updated_at

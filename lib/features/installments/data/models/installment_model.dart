@@ -3,7 +3,7 @@ import '../../domain/entities/installment.dart';
 class InstallmentModel extends Installment {
   // Optimized fields from database
   final String? clientName;
-  final String? investorName;
+  final String? walletName;
   final double? paidAmount;
   final double? remainingAmount;
   final DateTime? nextPaymentDate;
@@ -34,7 +34,7 @@ class InstallmentModel extends Installment {
     required super.updatedAt,
     // Optimized fields
     this.clientName,
-    this.investorName,
+    this.walletName,
     this.paidAmount,
     this.remainingAmount,
     this.nextPaymentDate,
@@ -94,7 +94,7 @@ class InstallmentModel extends Installment {
       updatedAt: _parseDateTime(map['updated_at']),
       // Optimized pre-calculated fields
       clientName: map['client_name'] as String?,
-      investorName: map['investor_name'] as String?,
+      walletName: map['wallet_name'] as String?,
       paidAmount: map['paid_amount'] != null ? (map['paid_amount'] as num).toDouble() : null,
       remainingAmount: map['remaining_amount'] != null ? (map['remaining_amount'] as num).toDouble() : null,
       nextPaymentDate: _parseDateNullable(map['next_payment_date']),
@@ -134,7 +134,6 @@ class InstallmentModel extends Installment {
       'id': id,
       'user_id': userId,
       'client_id': clientId,
-      'investor_id': investorId,
       'product_name': productName,
       'cash_price': cashPrice,
       'installment_price': installmentPrice,

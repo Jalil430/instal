@@ -26,15 +26,15 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4, // Increment version to trigger schema update for paid_amount
+      version: 5, // Bump: remove investors + investor_id
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 4) {
-      // Drop and recreate tables with updated schema
+    if (oldVersion < 5) {
+      // Drop and recreate tables with updated schema (no investors/investor_id)
       await db.execute('DROP TABLE IF EXISTS installment_payments');
       await db.execute('DROP TABLE IF EXISTS installments');
       await db.execute('DROP TABLE IF EXISTS investors');
@@ -62,27 +62,12 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create investors table
-    await db.execute('''
-      CREATE TABLE investors(
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        full_name TEXT NOT NULL,
-        investment_amount REAL NOT NULL,
-        investor_percentage REAL NOT NULL,
-        user_percentage REAL NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      )
-    ''');
-
     // Create installments table
     await db.execute('''
       CREATE TABLE installments(
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         client_id TEXT NOT NULL,
-        investor_id TEXT,
         product_name TEXT NOT NULL,
         cash_price REAL NOT NULL,
         installment_price REAL NOT NULL,
@@ -95,8 +80,7 @@ class DatabaseHelper {
         installment_number INTEGER,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
-        FOREIGN KEY (client_id) REFERENCES clients (id),
-        FOREIGN KEY (investor_id) REFERENCES investors (id)
+        FOREIGN KEY (client_id) REFERENCES clients (id)
       )
     ''');
 

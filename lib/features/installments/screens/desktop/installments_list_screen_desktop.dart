@@ -456,8 +456,8 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                         duration: Duration(
                                             milliseconds: 100 + (index * 50)),
                                         curve: Curves.easeOutCubic,
-                                        child: InstallmentListItem(
-                                          installment: installment,
+                                      child: InstallmentListItem(
+                                        installment: installment,
                                           clientName: clientName,
                                           productName: installment.productName,
                                           installmentNumber: installment.installmentNumber,
@@ -465,12 +465,13 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                           leftAmount: leftAmount,
                                           payments: payments,
                                           nextPayment: nextPayment,
-                                          isExpanded:
-                                              state.expandedStates[installment.id] ??
-                                                  false,
-                                          isLoadingPayments: state
-                                              .loadingPayments
-                                              .contains(installment.id),
+                                        isExpanded:
+                                            state.expandedStates[installment.id] ??
+                                                false,
+                                        isLoadingPayments: state
+                                            .loadingPayments
+                                            .contains(installment.id),
+                                        isBusy: state.loadingItemOperations.contains(installment.id),
                                           onTap: state.isSelectionMode
                                               ? () => state
                                                   .toggleSelection(installment.id)
@@ -494,34 +495,74 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                                   installment.id);
                                             }
                                           },
-                                          onDataChanged: () => state.loadData(),
-                                          onInstallmentUpdated:
-                                              (updatedInstallment) {
+                                        onDataChanged: () => state.loadData(),
+                                        onInstallmentUpdated:
+                                            (updatedInstallment) {
                                             state.setStateWrapper(() {
                                               // Find and update the specific installment in the list
                                               final index = state.installments
-                                                  .indexWhere((i) =>
-                                                      i.id ==
-                                                      updatedInstallment.id);
+                                                  .indexWhere((i) => i.id == updatedInstallment.id);
                                               if (index != -1) {
-                                                // Update the installment
-                                                state.installments[index] =
-                                                    updatedInstallment;
+                                                final prev = state.installments[index];
+                                                // Preserve installment number if backend didn't return it,
+                                                // while keeping the concrete type (InstallmentModel when applicable)
+                                                final merged = () {
+                                                  if (updatedInstallment.installmentNumber != null) {
+                                                    return updatedInstallment;
+                                                  }
+                                                  if (updatedInstallment is InstallmentModel) {
+                                                    final u = updatedInstallment;
+                                                    return InstallmentModel(
+                                                      id: u.id,
+                                                      userId: u.userId,
+                                                      clientId: u.clientId,
+                                                      investorId: u.investorId,
+                                                      walletId: u.walletId,
+                                                      productName: u.productName,
+                                                      cashPrice: u.cashPrice,
+                                                      installmentPrice: u.installmentPrice,
+                                                      termMonths: u.termMonths,
+                                                      downPayment: u.downPayment,
+                                                      monthlyPayment: u.monthlyPayment,
+                                                      downPaymentDate: u.downPaymentDate,
+                                                      installmentStartDate: u.installmentStartDate,
+                                                      installmentEndDate: u.installmentEndDate,
+                                                      installmentNumber: prev.installmentNumber,
+                                                      createdAt: u.createdAt,
+                                                      updatedAt: u.updatedAt,
+                                                      // optimized fields
+                                                      clientName: u.clientName,
+                                                      walletName: u.walletName,
+                                                      paidAmount: u.paidAmount,
+                                                      remainingAmount: u.remainingAmount,
+                                                      nextPaymentDate: u.nextPaymentDate,
+                                                      nextPaymentAmount: u.nextPaymentAmount,
+                                                      paymentStatus: u.paymentStatus,
+                                                      overdueCount: u.overdueCount,
+                                                      totalPayments: u.totalPayments,
+                                                      paidPayments: u.paidPayments,
+                                                      lastPaymentDate: u.lastPaymentDate,
+                                                    );
+                                                  }
+                                                  return updatedInstallment.copyWith(
+                                                    installmentNumber: prev.installmentNumber,
+                                                  );
+                                                }();
+
+                                                // Update the installment with preserved fields when necessary
+                                                state.installments[index] = merged;
 
                                                 // Set expansion state to collapsed since the widget will rebuild and collapse
-                                                state.expandedStates[
-                                                    updatedInstallment
-                                                        .id] = false;
+                                                state.expandedStates[merged.id] = false;
 
                                                 // Clear the payments since the installment collapsed
-                                                state.installmentPayments[
-                                                    updatedInstallment
-                                                        .id] = [];
+                                                state.installmentPayments[merged.id] = [];
                                               }
                                             });
                                           },
-                                          onDelete: () =>
-                                              state.deleteInstallment(installment),
+                                        onSubmitPaymentInBackground: state.submitPaymentInBackground,
+                                        onDelete: () =>
+                                            state.deleteInstallment(installment),
                                           onSelect: () =>
                                               state.toggleSelection(installment.id),
                                           isSelected: state

@@ -77,7 +77,7 @@ class WalletSelector extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  l10n?.loadingWallets ?? 'Loading wallets...',
+                  l10n?.loadingWallets ?? 'Загрузка кошельков...',
                   style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 14,

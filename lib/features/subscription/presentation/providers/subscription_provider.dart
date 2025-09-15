@@ -29,6 +29,10 @@ class SubscriptionProvider extends ChangeNotifier {
       _subscriptionState?.userStatus ?? UserSubscriptionStatus.newUser;
 
   /// Validates and activates a subscription code
+  ///
+  /// On success: optimistically marks subscription as active immediately
+  /// and triggers a silent background status refresh. Any transient
+  /// network error during the refresh no longer blocks app access.
   Future<bool> validateCode(String code, String userId) async {
     if (code.trim().isEmpty) {
       _setError('subscriptionCodeRequired');
@@ -39,12 +43,27 @@ class SubscriptionProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      await _validateSubscriptionCode(code.trim(), userId);
-      
-      // After successful validation, refresh the subscription status
-      await checkStatus(userId);
-      
+      final activated = await _validateSubscriptionCode(code.trim(), userId);
+
+      // Optimistic state: immediately mark as active so guards can proceed
+      _setSubscriptionState(
+        SubscriptionState(
+          hasActiveSubscription: true,
+          userSubscriptions: [activated],
+          currentType: activated.type,
+          currentEndDate: activated.endDate,
+          userStatus: UserSubscriptionStatus.hasActive,
+        ),
+      );
+
       _setValidatingCode(false);
+
+      // Fire-and-forget silent refresh to reconcile full state
+      // Do not block success or surface errors to UI here
+      // to avoid transient network failures preventing entry.
+      // ignore: unawaited_futures
+      checkStatus(userId, silent: true);
+
       return true;
     } on InvalidCodeException {
       _setError('subscriptionErrorInvalidCode');
@@ -53,6 +72,18 @@ class SubscriptionProvider extends ChangeNotifier {
     } on ExpiredCodeException {
       _setError('subscriptionErrorCodeExpired');
     } on NetworkException {
+      // Fallback: activation may have succeeded server-side but response failed.
+      // Try to fetch current status; if active, proceed as success.
+      try {
+        final state = await _checkSubscriptionStatus.call(userId);
+        if (state.hasActiveSubscription) {
+          _setSubscriptionState(state);
+          _setValidatingCode(false);
+          return true;
+        }
+      } catch (_) {
+        // Ignore and surface original network error below
+      }
       _setError('subscriptionErrorNetwork');
     } on ArgumentError {
       _setError('subscriptionCodeRequired');

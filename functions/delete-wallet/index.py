@@ -62,6 +62,9 @@ def handler(event, context):
         pool = ydb.SessionPool(driver)
 
         def delete_wallet(session):
+            # Wrap the whole operation in a single transaction for atomicity
+            tx = session.transaction(ydb.SerializableReadWrite())
+
             # Verify wallet exists and ownership
             vq = session.prepare(
                 """
@@ -69,72 +72,78 @@ def handler(event, context):
                 SELECT id, status FROM wallets WHERE id = $wallet_id AND user_id = $user_id;
                 """
             )
-            rs = session.transaction().execute(vq, {'$wallet_id': wallet_id, '$user_id': user_id}, commit_tx=True)
+            rs = tx.execute(vq, {'$wallet_id': wallet_id, '$user_id': user_id})
             if not rs[0].rows:
+                # Nothing to commit; rollback and return 404
+                try:
+                    tx.rollback()
+                except Exception:
+                    pass
                 return {'statusCode': 404, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Wallet not found'})}
+
             row = rs[0].rows[0]
             status = str(row['status'])
 
             # If not archived, archive first to preserve previous behavior but allow deletion in one call
             if status != 'archived':
-                session.transaction().execute(
+                tx.execute(
                     session.prepare(
                         """
                         DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $ts AS Timestamp;
                         UPDATE wallets SET status = 'archived', updated_at = $ts WHERE id = $wallet_id AND user_id = $user_id;
                         """
                     ),
-                    {'$wallet_id': wallet_id, '$user_id': user_id, '$ts': datetime.utcnow()},
-                    commit_tx=True
+                    {'$wallet_id': wallet_id, '$user_id': user_id, '$ts': datetime.utcnow()}
                 )
 
             # Do NOT delete installments or payments; they must remain in the system.
 
             # Delete wallet balance row if exists
-            session.transaction().execute(
+            tx.execute(
                 session.prepare(
                     """
                     DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
                     DELETE FROM wallet_balances WHERE wallet_id = $wallet_id AND user_id = $user_id;
                     """
                 ),
-                {'$wallet_id': wallet_id, '$user_id': user_id},
-                commit_tx=True
+                {'$wallet_id': wallet_id, '$user_id': user_id}
             )
 
-            # Optionally delete installment_allocations (should be none if no installments)
-            session.transaction().execute(
+            # Delete installment_allocations (in case any remain)
+            tx.execute(
                 session.prepare(
                     """
                     DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
                     DELETE FROM installment_allocations WHERE wallet_id = $wallet_id AND user_id = $user_id;
                     """
                 ),
-                {'$wallet_id': wallet_id, '$user_id': user_id},
-                commit_tx=True
+                {'$wallet_id': wallet_id, '$user_id': user_id}
             )
 
-            # Keep ledger_transactions for audit by default. If you want to purge, uncomment below.
-            # session.transaction().execute(
-            #     session.prepare("""
-            #     DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
-            #     DELETE FROM ledger_transactions WHERE wallet_id = $wallet_id AND user_id = $user_id;
-            #     """),
-            #     {'$wallet_id': wallet_id, '$user_id': user_id},
-            #     commit_tx=True
-            # )
+            # Delete ledger transactions related to this wallet
+            tx.execute(
+                session.prepare(
+                    """
+                    DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                    DELETE FROM ledger_transactions WHERE wallet_id = $wallet_id AND user_id = $user_id;
+                    """
+                ),
+                {'$wallet_id': wallet_id, '$user_id': user_id}
+            )
 
             # Finally, delete wallet
-            session.transaction().execute(
+            tx.execute(
                 session.prepare(
                     """
                     DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
                     DELETE FROM wallets WHERE id = $wallet_id AND user_id = $user_id;
                     """
                 ),
-                {'$wallet_id': wallet_id, '$user_id': user_id},
-                commit_tx=True
+                {'$wallet_id': wallet_id, '$user_id': user_id}
             )
+
+            # Commit atomic deletion
+            tx.commit()
 
             return {'statusCode': 204, 'headers': {'Content-Type': 'application/json'}, 'body': ''}
 
