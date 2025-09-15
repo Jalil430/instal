@@ -230,7 +230,7 @@ class InvestorDetailsScreenDesktop extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              l10n?.buyingDateHeader ?? 'ДАТА ПОКУПКИ',
+              l10n?.buyingDateHeader ?? 'ДАТА ОФОРМЛЕНИЯ',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w400,

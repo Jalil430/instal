@@ -94,9 +94,15 @@ class ClientDetailsScreenDesktop extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             _buildInfoRow(l10n?.fullName ?? 'Полное имя', client.fullName),
-                            _buildInfoRow(l10n?.contactNumber ?? 'Телефон', client.contactNumber),
-                            _buildInfoRow(l10n?.passportNumber ?? 'Номер паспорта', client.passportNumber),
-                            _buildInfoRow(l10n?.address ?? 'Адрес', client.address ?? (l10n?.unknown ?? 'Не указан')),
+                            _buildInfoRow(
+                              l10n?.contactNumber ?? 'Телефон',
+                              client.contactNumber.trim().isNotEmpty ? client.contactNumber : (l10n?.notSpecified ?? 'Не указан'),
+                            ),
+                            _buildInfoRow(
+                              l10n?.passportNumber ?? 'Номер паспорта',
+                              client.passportNumber.trim().isNotEmpty ? client.passportNumber : (l10n?.notSpecified ?? 'Не указан'),
+                            ),
+                            _buildInfoRow(l10n?.address ?? 'Адрес', client.address ?? (l10n?.notSpecified ?? 'Не указан')),
                           ],
                         ),
                       ),
@@ -115,10 +121,10 @@ class ClientDetailsScreenDesktop extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            _buildInfoRow(l10n?.guarantorFullName ?? 'ФИО поручителя', client.guarantorFullName ?? (l10n?.unknown ?? 'Не указано')),
-                            _buildInfoRow(l10n?.guarantorContactNumber ?? 'Контактный номер поручителя', client.guarantorContactNumber ?? (l10n?.unknown ?? 'Не указан')),
-                            _buildInfoRow(l10n?.guarantorPassportNumber ?? 'Паспорт поручителя', client.guarantorPassportNumber ?? (l10n?.unknown ?? 'Не указан')),
-                            _buildInfoRow(l10n?.guarantorAddress ?? 'Адрес поручителя', client.guarantorAddress ?? (l10n?.unknown ?? 'Не указан')),
+                            _buildInfoRow(l10n?.guarantorFullName ?? 'ФИО поручителя', client.guarantorFullName ?? (l10n?.notSpecified ?? 'Не указан')),
+                            _buildInfoRow(l10n?.guarantorContactNumber ?? 'Контактный номер поручителя', client.guarantorContactNumber ?? (l10n?.notSpecified ?? 'Не указан')),
+                            _buildInfoRow(l10n?.guarantorPassportNumber ?? 'Паспорт поручителя', client.guarantorPassportNumber ?? (l10n?.notSpecified ?? 'Не указан')),
+                            _buildInfoRow(l10n?.guarantorAddress ?? 'Адрес поручителя', client.guarantorAddress ?? (l10n?.notSpecified ?? 'Не указан')),
                           ],
                         ),
                       ),
@@ -269,7 +275,7 @@ class ClientDetailsScreenDesktop extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              l10n?.buyingDateHeader ?? 'ДАТА ПОКУПКИ',
+              l10n?.buyingDateHeader ?? 'ДАТА ОФОРМЛЕНИЯ',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w400,

@@ -40,6 +40,7 @@ class AppLocalizations {
   String get notFound =>
       locale.languageCode == 'ru' ? 'Ничего не найдено' : 'Nothing found';
   String get unknown => locale.languageCode == 'ru' ? 'Неизвестно' : 'Unknown';
+  String get notSpecified => locale.languageCode == 'ru' ? 'Не указан' : 'Not specified';
   String get empty => locale.languageCode == 'ru' ? 'Пусто' : 'Empty';
   String get leaveEmptyToAuto => locale.languageCode == 'ru'
       ? 'Оставьте пустым для авто-заполнения'
@@ -161,12 +162,12 @@ class AppLocalizations {
       ? 'Номер рассрочки'
       : 'Installment Number';
   String get buyingDate =>
-      locale.languageCode == 'ru' ? 'Дата покупки' : 'Buying Date';
+      locale.languageCode == 'ru' ? 'Дата оформления' : 'Buying Date';
   String get installmentStartDate => locale.languageCode == 'ru'
-      ? 'Дата начала рассрочки'
+      ? 'Дата начала выплат'
       : 'Installment Start Date';
   String get installmentEndDate => locale.languageCode == 'ru'
-      ? 'Дата окончания рассрочки'
+      ? 'Дата конца выплат'
       : 'Installment End Date';
   String get paidAmount => locale.languageCode == 'ru' ? 'Оплачено' : 'Paid Amount';
   String get leftAmount => locale.languageCode == 'ru' ? 'Остаток' : 'Remaining';
@@ -406,7 +407,7 @@ class AppLocalizations {
   String get amountHeader => locale.languageCode == 'ru' ? 'СУММА' : 'AMOUNT';
   String get termHeader => locale.languageCode == 'ru' ? 'СРОК' : 'TERM';
   String get buyingDateHeader =>
-      locale.languageCode == 'ru' ? 'ДАТА ПОКУПКИ' : 'BUYING DATE';
+      locale.languageCode == 'ru' ? 'ДАТА ОФОРМЛЕНИЯ' : 'BUYING DATE';
   String get dateHeader => locale.languageCode == 'ru' ? 'ДАТА' : 'DATE';
   String get scheduleHeader =>
       locale.languageCode == 'ru' ? 'График платежей' : 'Payment Schedule';

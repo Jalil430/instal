@@ -299,7 +299,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
           Expanded(flex: 3, child: Text(l10n?.productNameHeader ?? 'ТОВАР', style: headerStyle)),
           Expanded(flex: 2, child: Text(l10n?.amountHeader ?? 'СУММА', style: headerStyle)),
           Expanded(flex: 2, child: Text(l10n?.term ?? 'СРОК', style: headerStyle)),
-          Expanded(flex: 2, child: Text(l10n?.buyingDateHeader ?? 'ДАТА ПОКУПКИ', style: headerStyle)),
+          Expanded(flex: 2, child: Text(l10n?.buyingDateHeader ?? 'ДАТА ОФОРМЛЕНИЯ', style: headerStyle)),
         ],
       ),
     );

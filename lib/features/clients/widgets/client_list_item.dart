@@ -127,25 +127,39 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                     // Contact Number
                     Expanded(
                       flex: 2,
-                      child: Text(
-                        widget.client.contactNumber,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context);
+                          final contact = widget.client.contactNumber.trim();
+                          final display = contact.isNotEmpty ? contact : (l10n?.notSpecified ?? 'Не указан');
+                          return Text(
+                            display,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
                       ),
                     ),
                     // Passport Number
                     Expanded(
                       flex: 2,
-                      child: Text(
-                        widget.client.passportNumber,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context);
+                          final passport = widget.client.passportNumber.trim();
+                          final display = passport.isNotEmpty ? passport : (l10n?.notSpecified ?? 'Не указан');
+                          return Text(
+                            display,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
                       ),
                     ),
                     // Address with tooltip - always single line with ellipsis
@@ -155,7 +169,7 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                         onEnter: (_) => setState(() => _isAddressHovered = true),
                         onExit: (_) => setState(() => _isAddressHovered = false),
                         child: Tooltip(
-                          message: widget.client.address ?? 'Не указан',
+                          message: widget.client.address ?? (AppLocalizations.of(context)?.notSpecified ?? 'Не указан'),
                           waitDuration: const Duration(milliseconds: 500),
                           showDuration: const Duration(seconds: 3),
                           decoration: BoxDecoration(
@@ -168,7 +182,7 @@ class _ClientListItemState extends State<ClientListItem> with TickerProviderStat
                           ),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
-                              final address = widget.client.address ?? 'Не указан';
+                              final address = widget.client.address ?? (AppLocalizations.of(context)?.notSpecified ?? 'Не указан');
                               // Calculate how many characters can fit
                               final TextPainter textPainter = TextPainter(
                                 text: TextSpan(
