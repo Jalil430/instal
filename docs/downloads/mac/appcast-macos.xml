@@ -7,6 +7,24 @@
     <language>ru</language>
 
     <item>
+      <title>Version 1.0.3</title>
+      <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+      <pubDate>Mon, 15 Sep 2025 20:30:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.3/QistPay-MacOS-1.0.3.zip"
+        sparkle:edSignature="D5b2HBSrBH2DC7efzbiRT0uChFlk6qjDoqVcUqfEOpdQ4UCw1/4h2La5oUcFN4YbdI227Xz6xKJIldJRD7+VBw=="
+        length="25370538"
+        sparkle:version="6"
+        type="application/octet-stream" />
+      <description>
+      - Изменено имя приложения с Instal на QistPay
+      - Изменена иконка приложения
+      - Добавлена система кошельков вместо инвесторов
+      - Исправлены баги и сделаны мелкие изменения
+      </description>
+    </item>
+
+    <item>
       <title>Version 1.0.2</title>
       <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
       <pubDate>Tue, 12 Aug 2025 02:00:00 +0000</pubDate>
