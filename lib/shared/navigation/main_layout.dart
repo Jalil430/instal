@@ -44,37 +44,17 @@ class _MainLayoutState extends State<MainLayout> {
                 const SizedBox(height: AppTheme.spacingLg),
                 // App Logo
                 Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMd),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.primaryDark,
-                        ],
-                      ),
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingXs),
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'I',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Image.asset(
+                        'assets/icons/instal-app-logo.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
