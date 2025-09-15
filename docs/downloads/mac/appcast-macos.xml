@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>Instal App Updates (macOS)</title>
+    <title>QistPay Updates (macOS)</title>
     <link>https://jalil430.github.io/instal/downloads/mac/</link>
-    <description>Latest updates for Instal (macOS)</description>
+    <description>Latest updates for QistPay (macOS)</description>
     <language>ru</language>
 
     <item>
@@ -37,5 +37,4 @@
     </item>
   </channel>
 </rss>
-
 

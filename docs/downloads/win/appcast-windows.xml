@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>Instal App Updates (Windows)</title>
+    <title>QistPay Updates (Windows)</title>
     <link>https://jalil430.github.io/instal/downloads/win/</link>
-    <description>Latest updates for Instal (Windows)</description>
+    <description>Latest updates for QistPay (Windows)</description>
     <language>ru</language>
 
     <item>
@@ -36,5 +36,4 @@
     </item>
   </channel>
 </rss>
-
 

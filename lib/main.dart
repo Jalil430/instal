@@ -79,7 +79,7 @@ class _InstalAppState extends State<InstalApp> {
       child: SubscriptionServiceProvider(
         subscriptionProvider: widget.subscriptionProvider,
         child: MaterialApp.router(
-          title: 'Instal',
+          title: 'QistPay',
           theme: AppTheme.lightTheme,
           debugShowCheckedModeBanner: false,
           routerConfig: AppRouter.router,

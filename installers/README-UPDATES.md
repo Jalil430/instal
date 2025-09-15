@@ -16,8 +16,8 @@ flutter build macos --release
 flutter build windows --release
 
 # Sign update payloads and copy signature into appcast entries
-dart run auto_updater:sign_update installers/dist/Instal-1.0.0.zip
-dart run auto_updater:sign_update installers/dist/Instal-1.0.0-setup.exe
+dart run auto_updater:sign_update installers/dist/QistPay-1.0.0.zip
+dart run auto_updater:sign_update installers/dist/QistPay-1.0.0-setup.exe
 ```
 
 3) Publish appcasts and binaries
@@ -38,5 +38,4 @@ Notes
 - macOS builds should be code signed and notarized to avoid gatekeeper prompts.
 - Windows installers should be code signed for SmartScreen reputation.
 - Keep separate feeds per platform/channel (stable/beta) if desired.
-
 

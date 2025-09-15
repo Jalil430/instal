@@ -17,7 +17,7 @@ class AppLocalizations {
   ];
 
   // ===== General & Common =====
-  String get appTitle => 'Instal';
+  String get appTitle => 'QistPay';
   String get search => locale.languageCode == 'ru' ? 'Поиск' : 'Search';
   String get add => locale.languageCode == 'ru' ? 'Добавить' : 'Add';
   String get edit => locale.languageCode == 'ru' ? 'Редактировать' : 'Edit';
@@ -840,8 +840,8 @@ class AppLocalizations {
   String get cancelSelection => locale.languageCode == 'ru' ? 'Отменить выбор' : 'Cancel Selection';
   // ===== Subscription System =====
   String get subscriptionWelcomeTitle => locale.languageCode == 'ru'
-      ? 'Добро пожаловать в Instal!'
-      : 'Welcome to Instal!';
+      ? 'Добро пожаловать в QistPay!'
+      : 'Welcome to QistPay!';
   String get subscriptionWelcomeMessage => locale.languageCode == 'ru'
       ? 'Для использования приложения необходима активная подписка. Свяжитесь с нами для получения кода активации.'
       : 'An active subscription is required to use the app. Contact us to get an activation code.';

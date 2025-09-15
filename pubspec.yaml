@@ -139,12 +139,12 @@ flutter:
 
 # App icons generator configuration
 icons_launcher:
-  image_path: assets/icons/receipt-2.png
+  image_path: assets/icons/instal-app-logo.png
   platforms:
     android:
       enable: true
       adaptive_icon_background: "#2196F3"
-      adaptive_icon_foreground: assets/icons/receipt-2.png
+      adaptive_icon_foreground: assets/icons/instal-app-logo.png
     ios:
       enable: true
     macos:

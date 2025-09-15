@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Instal API
+  title: QistPay API
   version: 1.0.0
   description: Secure API for client management with authentication and rate limiting
 security:

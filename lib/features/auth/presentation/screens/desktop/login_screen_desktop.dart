@@ -57,7 +57,7 @@ class LoginScreenDesktop extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    l10n?.appTitle ?? 'Instal',
+                    l10n?.appTitle ?? 'QistPay',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,

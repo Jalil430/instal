@@ -1,9 +1,9 @@
-# Instal App - Distribution Summary
+# QistPay - Distribution Summary
 
 ## ✅ macOS Distribution Ready
 
 ### Files Created:
-1. **`Instal-macOS-Installer-v1.0.0.dmg`** (24MB)
+1. **`QistPay-macOS-Installer-v1.0.0.dmg`** (24MB)
    - Professional installer with Applications folder shortcut
    - Users can drag and drop to install
    - Ready for distribution to clients
@@ -43,7 +43,7 @@
 
 **The macOS version is complete and ready to send to your clients!**
 
-Use `Instal-macOS-Installer-v1.0.0.dmg` for the best user experience.
+Use `QistPay-macOS-Installer-v1.0.0.dmg` for the best user experience.
 
 ## 📱 App Details
 - **Version**: 1.0.0

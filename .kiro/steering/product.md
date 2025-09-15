@@ -1,6 +1,6 @@
 # Product Overview
 
-**Instal** is an Islamic installments tracking application designed for managing client installment plans, investors, and payment schedules with a modern, professional interface.
+**QistPay** is an Islamic installments tracking application designed for managing client installment plans, investors, and payment schedules with a modern, professional interface.
 
 ## Core Features
 

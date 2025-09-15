@@ -59,7 +59,7 @@ class RegisterScreenMobile extends StatelessWidget {
                 ],
               ),
               child: Text(
-                l10n?.appTitle ?? 'Instal',
+                l10n?.appTitle ?? 'QistPay',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,

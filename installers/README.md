@@ -1,14 +1,14 @@
-# Instal App - Installation Guide
+# QistPay - Installation Guide
 
 ## macOS Installation
 
 ### Available Files
-- `Instal-macOS-Installer-v1.0.0.dmg` - Professional installer with Applications folder shortcut
+- `QistPay-macOS-Installer-v1.0.0.dmg` - Professional installer with Applications folder shortcut
 
 ### Installation Steps
-1. Download the `Instal-macOS-Installer-v1.0.0.dmg` file
+1. Download the `QistPay-macOS-Installer-v1.0.0.dmg` file
 2. Double-click the DMG file to mount it
-3. Drag the "instal_app" application to the Applications folder
+3. Drag the "QistPay" application to the Applications folder
 4. Eject the DMG file
 5. Launch the app from Applications folder or Spotlight
 
@@ -48,10 +48,10 @@ After building on Windows, you can create an installer using:
 - Visual C++ Redistributable (usually included with Windows)
 
 ## App Information
-- **Name**: Instal App
+- **Name**: QistPay
 - **Version**: 1.0.0
 - **Description**: Islamic installments tracking application
-- **Bundle ID**: com.example.instal_app
+- **Bundle ID**: com.instal.qistpay
 
 ## Support
 For technical support or issues, please contact the development team.

@@ -31,7 +31,7 @@ jobs:
       - name: Upload built app (raw Release folder)
         uses: actions/upload-artifact@v4
         with:
-          name: windows-release-${{ github.event.inputs.version || 'latest' }}
+          name: windows-release-QistPay-${{ github.event.inputs.version || 'latest' }}
           path: build/windows/x64/runner/Release/
 
       - name: Install Inno Setup
@@ -49,8 +49,13 @@ jobs:
         run: |
           if (Test-Path "installers/windows-installer-script.iss") {
             # If a LICENSE.txt is required by the script and missing, create a placeholder to avoid failure
-            if (!(Test-Path "installers\\LICENSE.txt")) { "Instal License" | Out-File -Encoding utf8 "installers\\LICENSE.txt" }
-            & "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" "installers\\windows-installer-script.iss"
+            if (!(Test-Path "installers\\LICENSE.txt")) { "QistPay License" | Out-File -Encoding utf8 "installers\\LICENSE.txt" }
+            $version = "${{ github.event.inputs.version }}"
+            if ($version) {
+              & "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" "/DMyAppVersion=$version" "installers\\windows-installer-script.iss"
+            } else {
+              & "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" "installers\\windows-installer-script.iss"
+            }
           } else {
             echo "Inno Setup script not found; skipping installer step."
           }
@@ -58,8 +63,6 @@ jobs:
       - name: Upload installer (if produced)
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer-${{ github.event.inputs.version || 'latest' }}
-          path: installers/Instal-*.exe
+          name: windows-installer-QistPay-${{ github.event.inputs.version || 'latest' }}
+          path: installers/QistPay-*.exe
           if-no-files-found: ignore
-
-

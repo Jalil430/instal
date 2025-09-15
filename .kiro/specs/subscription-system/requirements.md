@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature implements a subscription system for the Instal app using manual activation codes. The system allows users to activate subscription codes sent via Telegram to gain access to the application. It supports different subscription types (trial, basic, pro) with varying durations and handles multiple subscription scenarios for users.
+This feature implements a subscription system for the QistPay app using manual activation codes. The system allows users to activate subscription codes sent via Telegram to gain access to the application. It supports different subscription types (trial, basic, pro) with varying durations and handles multiple subscription scenarios for users.
 
 ## Requirements
 

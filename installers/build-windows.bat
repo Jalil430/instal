@@ -1,5 +1,5 @@
 @echo off
-echo Building Instal App for Windows...
+echo Building QistPay for Windows...
 echo.
 
 REM Clean previous builds
@@ -15,10 +15,10 @@ echo Building Windows release...
 flutter build windows --release
 
 REM Check if build was successful
-if exist "build\windows\x64\runner\Release\instal_app.exe" (
+if exist "build\windows\x64\runner\Release\QistPay.exe" (
     echo.
     echo ✓ Build successful!
-    echo ✓ Executable created at: build\windows\x64\runner\Release\instal_app.exe
+    echo ✓ Executable created at: build\windows\x64\runner\Release\QistPay.exe
     echo.
     echo To create an installer:
     echo 1. Install Inno Setup from https://jrsoftware.org/isinfo.php
