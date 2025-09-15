@@ -1,7 +1,7 @@
 ; Inno Setup Script for QistPay
 ; Preprocessor defines for name and version (can be overridden via ISCC /D)
 #define MyAppName "QistPay"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.3"
 ; This script should be used on Windows after building the app with Flutter
 
 [Setup]
