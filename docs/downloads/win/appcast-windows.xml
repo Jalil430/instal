@@ -6,7 +6,23 @@
     <description>Latest updates for QistPay (Windows)</description>
     <language>ru</language>
 
-   
+    <item>
+      <title>Version 1.0.3</title>
+      <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+      <pubDate>Mon, 15 Sep 2025 20:30:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.3/QistPay-Windows-Installer-v1.0.3.exe"
+        sparkle:dsaSignature="MDwCHFAzOBBsoDLMMr4/14F+VabDTiL0OjakoMb5kYkCHC72oealxuWJcyN2fIoCanvEApDg7C28IxY9xeA="
+        length="36220081"
+        sparkle:version="6"
+        type="application/octet-stream" />
+      <description>
+      - Изменено имя приложения с Instal на QistPay
+      - Изменена иконка приложения
+      - Добавлена система кошельков вместо инвесторов
+      - Исправлены баги и сделаны мелкие изменения
+      </description>
+    </item>
 
     <item>
       <title>Version 1.0.2</title>
@@ -14,7 +30,7 @@
       <pubDate>Tue, 12 Aug 2025 02:00:00 +0000</pubDate>
       <enclosure
         url="https://github.com/Jalil430/instal/releases/download/v1.0.2/Instal-Windows-Installer-v1.0.2.exe"
-        sparkle:edSignature="+NoglyMnLDoqTUmyD8+auY8kJx7ad4Vi39PjVRoQqyHOO0KdWXiViavg7oPOfS/Tt6QPnXEXp+/4Ko2xeFo+BQ=="
+        sparkle:dsaSignature="MDwCHBWIKJS27WpqvV7Rawii6CFySgyEu3cZa13QaoICHAdqAHTV4QVIGvDkL7It9dVk4U9Vn476uEyAZSo="
         length="35752769"
         sparkle:version="5"
         type="application/octet-stream" />
@@ -30,7 +46,7 @@
       <pubDate>Fri, 08 Aug 2025 16:00:00 +0000</pubDate>
       <enclosure
         url="https://github.com/Jalil430/instal/releases/download/v1.0.1/Instal-Windows-Installer-v1.0.1.exe"
-        sparkle:edSignature="c9oDTrzwZDFC8CYOZK2zqLoOqAqcjaJrUzPi62SQBPpZphXDuVmUUiJ52oQV5RTUFsrnSgn7TSqR7yLisFssBg=="
+        sparkle:dsaSignature="MDwCHB+E3pa1UoaR7GBuhDhr6H8GcGpTlJz8n/omQRACHGdkMK7dC8eiT+Qh09oURSa0Bwmu/ei3FL+Qsh8="
         length="12402394"
         sparkle:version="4"
         type="application/octet-stream" />
