@@ -31,7 +31,8 @@ class InstallmentListItem extends StatefulWidget {
   final VoidCallback? onDataChanged;
   final Function(Installment)? onInstallmentUpdated;
   // Background submission handler for payment register/delete
-  final void Function(InstallmentPayment updatedPayment)? onSubmitPaymentInBackground;
+  final void Function(InstallmentPayment updatedPayment)?
+  onSubmitPaymentInBackground;
   final VoidCallback? onDelete;
   final VoidCallback? onSelect;
   final bool isSelected;
@@ -88,7 +89,7 @@ class InstallmentListItem extends StatefulWidget {
       return 'оплачено';
     }
 
-    // If we have unpaid payments but none are overdue or due today, 
+    // If we have unpaid payments but none are overdue or due today,
     // then they must be upcoming
     return 'предстоящий';
   }
@@ -97,12 +98,13 @@ class InstallmentListItem extends StatefulWidget {
   State<InstallmentListItem> createState() => _InstallmentListItemState();
 }
 
-class _InstallmentListItemState extends State<InstallmentListItem> with TickerProviderStateMixin {
+class _InstallmentListItemState extends State<InstallmentListItem>
+    with TickerProviderStateMixin {
   bool _isHovered = false;
   bool _isClientNameHovered = false;
   final bool _isArrowHovered = false;
   bool _isNextPaymentHovered = false;
-  
+
   late AnimationController _hoverController;
   late Animation<double> _hoverAnimation;
 
@@ -113,7 +115,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    
+
     _hoverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _hoverController, curve: Curves.easeInOut),
     );
@@ -125,9 +127,12 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
     super.dispose();
   }
 
-  Widget _buildDueDateDetails(BuildContext context, InstallmentPayment nextPayment) {
+  Widget _buildDueDateDetails(
+    BuildContext context,
+    InstallmentPayment nextPayment,
+  ) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     // Find the first overdue payment. If none, use the next upcoming payment.
     final relevantPayment = widget.payments.firstWhere(
       (p) => p.status == 'просрочено',
@@ -142,7 +147,7 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
 
     String? text;
     Color? color;
-    
+
     if (relevantPayment.status == 'просрочено' && daysDifference < 0) {
       text = l10n.daysShort(daysDifference);
       color = AppTheme.errorColor;
@@ -166,12 +171,14 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
 
   Widget _buildOverdueCount(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final overduePayments = widget.payments.where((p) => p.status == 'просрочено').toList();
-    final overallStatus = widget.payments.isEmpty 
-        ? (widget.installment is InstallmentModel 
-            ? (widget.installment as InstallmentModel).dynamicStatus
-            : 'предстоящий')
-        : InstallmentListItem.getOverallStatus(context, widget.payments);
+    final overduePayments =
+        widget.payments.where((p) => p.status == 'просрочено').toList();
+    final overallStatus =
+        widget.payments.isEmpty
+            ? (widget.installment is InstallmentModel
+                ? (widget.installment as InstallmentModel).dynamicStatus
+                : 'предстоящий')
+            : InstallmentListItem.getOverallStatus(context, widget.payments);
 
     if (overallStatus == 'просрочено' && overduePayments.length > 1) {
       return Padding(
@@ -227,7 +234,8 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
     final dateFormat = DateFormat('dd.MM.yyyy');
 
     // Get next payment due date
-    final nextDueDate = widget.nextPayment?.dueDate ?? widget.installment.installmentEndDate;
+    final nextDueDate =
+        widget.nextPayment?.dueDate ?? widget.installment.installmentEndDate;
 
     return Column(
       children: [
@@ -259,39 +267,75 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
               animation: _hoverAnimation,
               builder: (context, child) {
                 // Define selection color
-                final Color selectionColor = const Color(0xFFE3F2FD); // Light blue selection color
-                
+                final Color selectionColor = const Color(
+                  0xFFE3F2FD,
+                ); // Light blue selection color
+
                 return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 0,
+                    vertical: 0,
+                  ),
                   decoration: BoxDecoration(
-                    color: widget.isSelected
-                        ? selectionColor // Use selection color when selected
-                        : widget.isExpanded
+                    color:
+                        widget.isSelected
+                            ? selectionColor // Use selection color when selected
+                            : widget.isExpanded
                             ? Color.lerp(
-                                const Color(0xFFF8F9FA),
-                                const Color(0xFFF1F3F4),
-                                _hoverAnimation.value,
-                              )
+                              const Color(0xFFF8F9FA),
+                              const Color(0xFFF1F3F4),
+                              _hoverAnimation.value,
+                            )
                             : Color.lerp(
-                                AppTheme.surfaceColor,
-                                AppTheme.backgroundColor,
-                                _hoverAnimation.value * 0.6,
-                              ),
+                              AppTheme.surfaceColor,
+                              AppTheme.backgroundColor,
+                              _hoverAnimation.value * 0.6,
+                            ),
                     border: Border(
                       bottom: BorderSide(
                         color: AppTheme.borderColor.withOpacity(0.3),
                         width: 1,
                       ),
-                      left: widget.isSelected
-                          ? BorderSide(color: AppTheme.primaryColor, width: 3) // Left border for selected items
-                          : BorderSide.none,
+                      left:
+                          widget.isSelected
+                              ? BorderSide(
+                                color: AppTheme.primaryColor,
+                                width: 3,
+                              ) // Left border for selected items
+                              : BorderSide.none,
                     ),
                     // No shadow on hover
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
+                        // Installment number column moved to the start to match the header
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: SizedBox(
+                            width: 54,
+                            child: Text(
+                              (widget.installmentNumber ??
+                                          widget
+                                              .installment
+                                              .installmentNumber) !=
+                                      null
+                                  ? '${widget.installmentNumber ?? widget.installment.installmentNumber}'
+                                  : '-',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
                         // Removed checkbox column - now using background color for selection
                         // Client Name - Simple
                         Expanded(
@@ -303,24 +347,38 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: MouseRegion(
-                                  onEnter: (_) => setState(() => _isClientNameHovered = true),
-                                  onExit: (_) => setState(() => _isClientNameHovered = false),
+                                  onEnter:
+                                      (_) => setState(
+                                        () => _isClientNameHovered = true,
+                                      ),
+                                  onExit:
+                                      (_) => setState(
+                                        () => _isClientNameHovered = false,
+                                      ),
                                   child: IntrinsicWidth(
                                     child: Text(
                                       widget.clientName,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 14,
-                                            color: widget.onClientTap != null 
-                                                ? AppTheme.interactiveBrightColor
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14,
+                                        color:
+                                            widget.onClientTap != null
+                                                ? AppTheme
+                                                    .interactiveBrightColor
                                                 : AppTheme.textPrimary,
-                                            decoration: widget.onClientTap != null && _isClientNameHovered
+                                        decoration:
+                                            widget.onClientTap != null &&
+                                                    _isClientNameHovered
                                                 ? TextDecoration.underline
                                                 : TextDecoration.none,
-                                            decorationColor: widget.onClientTap != null 
-                                                ? AppTheme.interactiveBrightColor
+                                        decorationColor:
+                                            widget.onClientTap != null
+                                                ? AppTheme
+                                                    .interactiveBrightColor
                                                 : AppTheme.textPrimary,
-                                          ),
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -336,27 +394,12 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                             padding: const EdgeInsets.only(right: 16),
                             child: Text(
                               widget.productName,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                        // Installment number column (separate cell, align with header)
-                        Expanded(
-                          flex: 1,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Text(
-                              (widget.installmentNumber ?? widget.installment.installmentNumber) != null
-                                  ? '${widget.installmentNumber ?? widget.installment.installmentNumber}'
-                                  : '-',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -367,10 +410,12 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                             padding: const EdgeInsets.only(right: 16),
                             child: Text(
                               currencyFormat.format(widget.paidAmount),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 14,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 14,
+                              ),
                               textAlign: TextAlign.start,
                             ),
                           ),
@@ -381,10 +426,12 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                             padding: const EdgeInsets.only(right: 16),
                             child: Text(
                               currencyFormat.format(widget.leftAmount),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 14,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 14,
+                              ),
                               textAlign: TextAlign.start,
                             ),
                           ),
@@ -398,14 +445,19 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                               children: [
                                 Text(
                                   dateFormat.format(nextDueDate),
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 14,
-                                      ),
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 14,
+                                  ),
                                 ),
                                 const SizedBox(width: 3),
                                 if (widget.nextPayment != null)
-                                  _buildDueDateDetails(context, widget.nextPayment!),
+                                  _buildDueDateDetails(
+                                    context,
+                                    widget.nextPayment!,
+                                  ),
                               ],
                             ),
                           ),
@@ -418,14 +470,18 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 CustomStatusBadge(
-                                  status: widget.payments.isEmpty 
-                                      ? (widget.installment is InstallmentModel 
-                                          ? (widget.installment as InstallmentModel).dynamicStatus
-                                          : 'предстоящий')
-                                      : InstallmentListItem.getOverallStatus(
-                                          context,
-                                          widget.payments,
-                                        ),
+                                  status:
+                                      widget.payments.isEmpty
+                                          ? (widget.installment
+                                                  is InstallmentModel
+                                              ? (widget.installment
+                                                      as InstallmentModel)
+                                                  .dynamicStatus
+                                              : 'предстоящий')
+                                          : InstallmentListItem.getOverallStatus(
+                                            context,
+                                            widget.payments,
+                                          ),
                                   width: 110,
                                 ),
                                 _buildOverdueCount(context),
@@ -441,43 +497,76 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                             children: [
                               // Next payment button area (takes remaining space)
                               Expanded(
-                                child: widget.nextPayment != null 
-                                    ? MouseRegion(
-                                        onEnter: (_) => setState(() => _isNextPaymentHovered = true),
-                                        onExit: (_) => setState(() => _isNextPaymentHovered = false),
-                                        child: GestureDetector(
-                                          onTapDown: (details) => _handleNextPaymentRegistration(details.globalPosition),
-                                          child: Container(
-                                            height: 28,
-                                            decoration: BoxDecoration(
-                                              color: _isNextPaymentHovered 
-                                                  ? AppTheme.subtleHoverColor
-                                                  : AppTheme.subtleBackgroundColor,
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(
-                                                color: _isNextPaymentHovered 
-                                                    ? AppTheme.subtleAccentColor
-                                                    : AppTheme.subtleBorderColor,
-                                                width: 1,
+                                child:
+                                    widget.nextPayment != null
+                                        ? MouseRegion(
+                                          onEnter:
+                                              (_) => setState(
+                                                () =>
+                                                    _isNextPaymentHovered =
+                                                        true,
                                               ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                (widget.nextPayment!.paymentNumber == 0
-                                                    ? l10n?.downPaymentShort ?? 'Взнос'
-                                                    : '${l10n?.month ?? 'Месяц'} ${widget.nextPayment!.paymentNumber}'),
-                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  color: AppTheme.textPrimary,
-                                                  fontWeight: FontWeight.w400,
-                                                  fontSize: 12,
+                                          onExit:
+                                              (_) => setState(
+                                                () =>
+                                                    _isNextPaymentHovered =
+                                                        false,
+                                              ),
+                                          child: GestureDetector(
+                                            onTapDown:
+                                                (details) =>
+                                                    _handleNextPaymentRegistration(
+                                                      details.globalPosition,
+                                                    ),
+                                            child: Container(
+                                              height: 28,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    _isNextPaymentHovered
+                                                        ? AppTheme
+                                                            .subtleHoverColor
+                                                        : AppTheme
+                                                            .subtleBackgroundColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color:
+                                                      _isNextPaymentHovered
+                                                          ? AppTheme
+                                                              .subtleAccentColor
+                                                          : AppTheme
+                                                              .subtleBorderColor,
+                                                  width: 1,
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  (widget
+                                                              .nextPayment!
+                                                              .paymentNumber ==
+                                                          0
+                                                      ? l10n?.downPaymentShort ??
+                                                          'Взнос'
+                                                      : '${l10n?.month ?? 'Месяц'} ${widget.nextPayment!.paymentNumber}'),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            AppTheme
+                                                                .textPrimary,
+                                                        fontWeight:
+                                                            FontWeight.w400,
+                                                        fontSize: 12,
+                                                      ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                    : Container(), // Empty space when no next payment
+                                        )
+                                        : Container(), // Empty space when no next payment
                               ),
                               const SizedBox(width: 6),
                               // Arrow button with optional loading indicator
@@ -488,25 +577,37 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                                     size: 28,
                                     icon: Icons.keyboard_arrow_down_rounded,
                                     onPressed: () {
-                                      widget.onExpansionChanged(!widget.isExpanded);
+                                      widget.onExpansionChanged(
+                                        !widget.isExpanded,
+                                      );
                                     },
                                     backgroundColor: AppTheme.backgroundColor,
-                                    hoverBackgroundColor: AppTheme.subtleHoverColor,
+                                    hoverBackgroundColor:
+                                        AppTheme.subtleHoverColor,
                                     iconColor: AppTheme.textSecondary,
                                     hoverIconColor: AppTheme.primaryColor,
-                                    borderColor: AppTheme.borderColor.withOpacity(0.5),
-                                    hoverBorderColor: AppTheme.subtleAccentColor,
-                                    rotation: widget.isExpanded ? 0.5 : 0.0, // Use rotation property
+                                    borderColor: AppTheme.borderColor
+                                        .withOpacity(0.5),
+                                    hoverBorderColor:
+                                        AppTheme.subtleAccentColor,
+                                    rotation:
+                                        widget.isExpanded
+                                            ? 0.5
+                                            : 0.0, // Use rotation property
                                   ),
                                   // Loading indicator to the right of arrow
-                                  if (widget.isLoadingPayments || widget.isBusy) ...[
+                                  if (widget.isLoadingPayments ||
+                                      widget.isBusy) ...[
                                     const SizedBox(width: 8),
                                     const SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              AppTheme.primaryColor,
+                                            ),
                                       ),
                                     ),
                                   ],
@@ -545,13 +646,16 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                         nextUnpaid = p;
                       }
                       if (p.isPaid) {
-                        lastPaid = p; // will end as most recent paid if list is ordered
+                        lastPaid =
+                            p; // will end as most recent paid if list is ordered
                       }
                     }
 
                     return payments.map((payment) {
-                      final canRegister = (!payment.isPaid) && (payment.id == nextUnpaid?.id);
-                      final canDelete = (payment.isPaid) && (payment.id == lastPaid?.id);
+                      final canRegister =
+                          (!payment.isPaid) && (payment.id == nextUnpaid?.id);
+                      final canDelete =
+                          (payment.isPaid) && (payment.id == lastPaid?.id);
                       return InstallmentPaymentItem(
                         payment: payment,
                         onPaymentUpdated: (updatedInstallment) {
@@ -565,7 +669,8 @@ class _InstallmentListItemState extends State<InstallmentListItem> with TickerPr
                         isExpanded: true, // Expanded in list item
                         canRegister: canRegister,
                         canDelete: canDelete,
-                        onSubmitPaymentInBackground: widget.onSubmitPaymentInBackground,
+                        onSubmitPaymentInBackground:
+                            widget.onSubmitPaymentInBackground,
                       );
                     });
                   }(),
@@ -588,7 +693,7 @@ class _InstallmentContextMenu extends StatelessWidget {
   static const Color whatsAppColor = Color(0xFF25D366);
 
   const _InstallmentContextMenu({
-    this.onSelect, 
+    this.onSelect,
     this.onDelete,
     this.onSendWhatsAppReminder,
   });
@@ -664,7 +769,11 @@ class _ContextMenuTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: iconColor ?? Theme.of(context).iconTheme.color),
+            Icon(
+              icon,
+              size: 18,
+              color: iconColor ?? Theme.of(context).iconTheme.color,
+            ),
             const SizedBox(width: 12),
             Text(label, style: textStyle),
           ],

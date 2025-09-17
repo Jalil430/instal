@@ -75,9 +75,10 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: state.isSelectionMode
-                                ? AppTheme.primaryColor
-                                : AppTheme.textSecondary,
+                            color:
+                                state.isSelectionMode
+                                    ? AppTheme.primaryColor
+                                    : AppTheme.textSecondary,
                           ),
                         ),
                       ],
@@ -121,9 +122,10 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                       // Delete button - error color
                       CustomButton(
                         text: l10n?.deleteAction ?? 'Delete',
-                        onPressed: state.selectedInstallmentIds.isNotEmpty
-                            ? state.deleteBulkInstallments
-                            : null,
+                        onPressed:
+                            state.selectedInstallmentIds.isNotEmpty
+                                ? state.deleteBulkInstallments
+                                : null,
                         color: AppTheme.errorColor,
                         icon: Icons.delete_outline,
                         height: 36,
@@ -142,8 +144,10 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                       // Enhanced Search field
                       CustomSearchBar(
                         value: state.searchQuery,
-                        onChanged: (value) =>
-                            state.setStateWrapper(() => state.searchQuery = value),
+                        onChanged:
+                            (value) => state.setStateWrapper(
+                              () => state.searchQuery = value,
+                            ),
                         hintText:
                             '${l10n?.search ?? 'Поиск'} ${state.getItemsText(0)}...',
                         width: 320,
@@ -174,414 +178,497 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
           Expanded(
             child: Container(
               color: AppTheme.surfaceColor,
-              child: state.isLoading
-                  ? Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                              AppTheme.brightPrimaryColor),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            offset: const Offset(0, 1),
-                            blurRadius: 3,
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Table Header
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 32, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.subtleBackgroundColor,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                              ),
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppTheme.subtleBorderColor,
-                                  width: 1,
-                                ),
-                              ),
+              child:
+                  state.isLoading
+                      ? Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppTheme.brightPrimaryColor,
                             ),
-                            child: Row(
-                              children: [
-                                // No checkbox column - using background color for selection
-                                Expanded(
-                                  flex: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.client ?? 'Клиент')
-                                          .toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
+                          ),
+                        ),
+                      )
+                      : Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              offset: const Offset(0, 1),
+                              blurRadius: 3,
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Table Header
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.subtleBackgroundColor,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppTheme.subtleBorderColor,
+                                    width: 1,
                                   ),
                                 ),
-                                // Product header
-                                Expanded(
-                                  flex: 2,
-                                  child: Padding(
+                              ),
+                              child: Row(
+                                children: [
+                                  // Installment number column moved to the start
+                                  Padding(
                                     padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.productNameHeader ?? 'Название товара').toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                // Installment number header right after product
-                                Expanded(
-                                  flex: 1,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.number ?? 'Number').toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.paidAmount ?? 'Оплачено')
-                                          .toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.leftAmount ?? 'Осталось')
-                                          .toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.dueDate ?? 'Срок оплаты')
-                                          .toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Text(
-                                      (l10n?.statusHeader ?? 'Статус')
-                                          .toUpperCase(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: AppTheme.textSecondary,
-                                            fontWeight: FontWeight.w400,
-                                            fontSize: 12,
-                                            letterSpacing: 0.5,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  width: 160,
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Text(
-                                    l10n?.nextPaymentHeader ??
-                                        'СЛЕДУЮЩИЙ ПЛАТЕЖ',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(
+                                    child: SizedBox(
+                                      width: 64,
+                                      child: Text(
+                                        '№',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
                                           color: AppTheme.textSecondary,
                                           fontWeight: FontWeight.w400,
                                           fontSize: 12,
                                           letterSpacing: 0.5,
                                         ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Table Content
-                          Expanded(
-                            child: state.filteredAndSortedInstallments.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      l10n?.notFound ?? 'Ничего не найдено',
-                                      style: TextStyle(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
                                       ),
                                     ),
-                                  )
-                                : ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    itemCount: state
-                                        .filteredAndSortedInstallments.length,
-                                    itemBuilder: (context, index) {
-                                      final installment = state
-                                          .filteredAndSortedInstallments[index];
-                                      final payments = state.installmentPayments[
-                                              installment.id] ??
-                                          [];
-
-                                      // Use pre-calculated values from optimized response
-                                      final clientName = installment
-                                              is InstallmentModel
-                                          ? (installment.clientName ??
-                                              l10n?.unknown ??
-                                              'Unknown')
-                                          : (l10n?.unknown ?? 'Unknown');
-                                      final paidAmount =
-                                          installment is InstallmentModel
-                                              ? (installment.paidAmount ?? 0.0)
-                                              : 0.0;
-                                      final leftAmount =
-                                          installment is InstallmentModel
-                                              ? (installment.remainingAmount ??
-                                                  installment.installmentPrice)
-                                              : installment.installmentPrice;
-
-                                      // Create next payment from optimized data
-                                      InstallmentPayment? nextPayment;
-                                      if (installment is InstallmentModel &&
-                                          installment.nextPaymentDate != null) {
-                                        // Determine payment number: 0 for down payment, 1+ for monthly payments
-                                        int paymentNumber;
-                                        if (installment.downPayment > 0 &&
-                                            installment.nextPaymentDate ==
-                                                installment.downPaymentDate) {
-                                          paymentNumber = 0; // Down payment
-                                        } else {
-                                          // Calculate which monthly payment this is based on paid payments
-                                          // If down payment exists, subtract 1 from paid payments to get monthly payment number
-                                          int monthlyPaymentsPaid =
-                                              installment.paidPayments ?? 0;
-                                          if (installment.downPayment > 0) {
-                                            monthlyPaymentsPaid =
-                                                monthlyPaymentsPaid -
-                                                    1; // Subtract down payment
-                                          }
-                                          paymentNumber = monthlyPaymentsPaid +
-                                              1; // Next monthly payment number
-                                        }
-
-                                        nextPayment = InstallmentPayment(
-                                          id: '${installment.id}_next',
-                                          installmentId: installment.id,
-                                          paymentNumber: paymentNumber,
-                                          dueDate:
-                                              installment.nextPaymentDate!,
-                                          expectedAmount:
-                                              installment.nextPaymentAmount ??
-                                                  0.0,
-                                          paidAmount: 0.0,
-                                          isPaid: false,
-                                          paidDate: null,
-                                          createdAt: DateTime.now(),
-                                          updatedAt: DateTime.now(),
-                                        );
-                                      }
-                                      return AnimatedContainer(
-                                        duration: Duration(
-                                            milliseconds: 100 + (index * 50)),
-                                        curve: Curves.easeOutCubic,
-                                      child: InstallmentListItem(
-                                        installment: installment,
-                                          clientName: clientName,
-                                          productName: installment.productName,
-                                          installmentNumber: installment.installmentNumber,
-                                          paidAmount: paidAmount,
-                                          leftAmount: leftAmount,
-                                          payments: payments,
-                                          nextPayment: nextPayment,
-                                        isExpanded:
-                                            state.expandedStates[installment.id] ??
-                                                false,
-                                        isLoadingPayments: state
-                                            .loadingPayments
-                                            .contains(installment.id),
-                                        isBusy: state.loadingItemOperations.contains(installment.id),
-                                          onTap: state.isSelectionMode
-                                              ? () => state
-                                                  .toggleSelection(installment.id)
-                                              : () => context.go(
-                                                  '/installments/${installment.id}'),
-                                          onClientTap: () => context
-                                              .go('/clients/${installment.clientId}'),
-                                          onExpansionChanged: (expanded) {
-                                            state.setStateWrapper(() {
-                                              state.expandedStates[
-                                                  installment.id] = expanded;
-                                            });
-
-                                            // Load payments only when expanding and if not already loaded
-                                            if (expanded &&
-                                                (state.installmentPayments[
-                                                            installment.id]
-                                                        ?.isEmpty ??
-                                                    true)) {
-                                              state.loadPaymentsForInstallment(
-                                                  installment.id);
-                                            }
-                                          },
-                                        onDataChanged: () => state.loadData(),
-                                        onInstallmentUpdated:
-                                            (updatedInstallment) {
-                                            state.setStateWrapper(() {
-                                              // Find and update the specific installment in the list
-                                              final index = state.installments
-                                                  .indexWhere((i) => i.id == updatedInstallment.id);
-                                              if (index != -1) {
-                                                final prev = state.installments[index];
-                                                // Preserve installment number if backend didn't return it,
-                                                // while keeping the concrete type (InstallmentModel when applicable)
-                                                final merged = () {
-                                                  if (updatedInstallment.installmentNumber != null) {
-                                                    return updatedInstallment;
-                                                  }
-                                                  if (updatedInstallment is InstallmentModel) {
-                                                    final u = updatedInstallment;
-                                                    return InstallmentModel(
-                                                      id: u.id,
-                                                      userId: u.userId,
-                                                      clientId: u.clientId,
-                                                      investorId: u.investorId,
-                                                      walletId: u.walletId,
-                                                      productName: u.productName,
-                                                      cashPrice: u.cashPrice,
-                                                      installmentPrice: u.installmentPrice,
-                                                      termMonths: u.termMonths,
-                                                      downPayment: u.downPayment,
-                                                      monthlyPayment: u.monthlyPayment,
-                                                      downPaymentDate: u.downPaymentDate,
-                                                      installmentStartDate: u.installmentStartDate,
-                                                      installmentEndDate: u.installmentEndDate,
-                                                      installmentNumber: prev.installmentNumber,
-                                                      createdAt: u.createdAt,
-                                                      updatedAt: u.updatedAt,
-                                                      // optimized fields
-                                                      clientName: u.clientName,
-                                                      walletName: u.walletName,
-                                                      paidAmount: u.paidAmount,
-                                                      remainingAmount: u.remainingAmount,
-                                                      nextPaymentDate: u.nextPaymentDate,
-                                                      nextPaymentAmount: u.nextPaymentAmount,
-                                                      paymentStatus: u.paymentStatus,
-                                                      overdueCount: u.overdueCount,
-                                                      totalPayments: u.totalPayments,
-                                                      paidPayments: u.paidPayments,
-                                                      lastPaymentDate: u.lastPaymentDate,
-                                                    );
-                                                  }
-                                                  return updatedInstallment.copyWith(
-                                                    installmentNumber: prev.installmentNumber,
-                                                  );
-                                                }();
-
-                                                // Update the installment with preserved fields when necessary
-                                                state.installments[index] = merged;
-
-                                                // Set expansion state to collapsed since the widget will rebuild and collapse
-                                                state.expandedStates[merged.id] = false;
-
-                                                // Clear the payments since the installment collapsed
-                                                state.installmentPayments[merged.id] = [];
-                                              }
-                                            });
-                                          },
-                                        onSubmitPaymentInBackground: state.submitPaymentInBackground,
-                                        onDelete: () =>
-                                            state.deleteInstallment(installment),
-                                          onSelect: () =>
-                                              state.toggleSelection(installment.id),
-                                          isSelected: state
-                                              .selectedInstallmentIds
-                                              .contains(installment.id),
-                                          onSelectionToggle: () =>
-                                              state.toggleSelection(installment.id),
-                                        ),
-                                      );
-                                    },
                                   ),
-                          ),
-                        ],
+                                  // No checkbox column - using background color for selection
+                                  Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Text(
+                                        (l10n?.client ?? 'Клиент')
+                                            .toUpperCase(),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Product header
+                                  Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Text(
+                                        (l10n?.productNameHeader ??
+                                                'Название товара')
+                                            .toUpperCase(),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Text(
+                                        (l10n?.paidAmount ?? 'Оплачено')
+                                            .toUpperCase(),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Text(
+                                        (l10n?.leftAmount ?? 'Осталось')
+                                            .toUpperCase(),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Text(
+                                        (l10n?.dueDate ?? 'Срок оплаты')
+                                            .toUpperCase(),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Text(
+                                        (l10n?.statusHeader ?? 'Статус')
+                                            .toUpperCase(),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 12,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 160,
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Text(
+                                      l10n?.nextPaymentHeader ??
+                                          'СЛЕДУЮЩИЙ ПЛАТЕЖ',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.labelMedium?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 12,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Table Content
+                            Expanded(
+                              child:
+                                  state.filteredAndSortedInstallments.isEmpty
+                                      ? Center(
+                                        child: Text(
+                                          l10n?.notFound ?? 'Ничего не найдено',
+                                          style: TextStyle(
+                                            color: AppTheme.textSecondary,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      )
+                                      : ListView.builder(
+                                        padding: EdgeInsets.zero,
+                                        itemCount:
+                                            state
+                                                .filteredAndSortedInstallments
+                                                .length,
+                                        itemBuilder: (context, index) {
+                                          final installment =
+                                              state
+                                                  .filteredAndSortedInstallments[index];
+                                          final payments =
+                                              state
+                                                  .installmentPayments[installment
+                                                  .id] ??
+                                              [];
+
+                                          // Use pre-calculated values from optimized response
+                                          final clientName =
+                                              installment is InstallmentModel
+                                                  ? (installment.clientName ??
+                                                      l10n?.unknown ??
+                                                      'Unknown')
+                                                  : (l10n?.unknown ??
+                                                      'Unknown');
+                                          final paidAmount =
+                                              installment is InstallmentModel
+                                                  ? (installment.paidAmount ??
+                                                      0.0)
+                                                  : 0.0;
+                                          final leftAmount =
+                                              installment is InstallmentModel
+                                                  ? (installment
+                                                          .remainingAmount ??
+                                                      installment
+                                                          .installmentPrice)
+                                                  : installment
+                                                      .installmentPrice;
+
+                                          // Create next payment from optimized data
+                                          InstallmentPayment? nextPayment;
+                                          if (installment is InstallmentModel &&
+                                              installment.nextPaymentDate !=
+                                                  null) {
+                                            // Determine payment number: 0 for down payment, 1+ for monthly payments
+                                            int paymentNumber;
+                                            if (installment.downPayment > 0 &&
+                                                installment.nextPaymentDate ==
+                                                    installment
+                                                        .downPaymentDate) {
+                                              paymentNumber = 0; // Down payment
+                                            } else {
+                                              // Calculate which monthly payment this is based on paid payments
+                                              // If down payment exists, subtract 1 from paid payments to get monthly payment number
+                                              int monthlyPaymentsPaid =
+                                                  installment.paidPayments ?? 0;
+                                              if (installment.downPayment > 0) {
+                                                monthlyPaymentsPaid =
+                                                    monthlyPaymentsPaid -
+                                                    1; // Subtract down payment
+                                              }
+                                              paymentNumber =
+                                                  monthlyPaymentsPaid +
+                                                  1; // Next monthly payment number
+                                            }
+
+                                            nextPayment = InstallmentPayment(
+                                              id: '${installment.id}_next',
+                                              installmentId: installment.id,
+                                              paymentNumber: paymentNumber,
+                                              dueDate:
+                                                  installment.nextPaymentDate!,
+                                              expectedAmount:
+                                                  installment
+                                                      .nextPaymentAmount ??
+                                                  0.0,
+                                              paidAmount: 0.0,
+                                              isPaid: false,
+                                              paidDate: null,
+                                              createdAt: DateTime.now(),
+                                              updatedAt: DateTime.now(),
+                                            );
+                                          }
+                                          return AnimatedContainer(
+                                            duration: Duration(
+                                              milliseconds: 100 + (index * 50),
+                                            ),
+                                            curve: Curves.easeOutCubic,
+                                            child: InstallmentListItem(
+                                              installment: installment,
+                                              clientName: clientName,
+                                              productName:
+                                                  installment.productName,
+                                              installmentNumber:
+                                                  installment.installmentNumber,
+                                              paidAmount: paidAmount,
+                                              leftAmount: leftAmount,
+                                              payments: payments,
+                                              nextPayment: nextPayment,
+                                              isExpanded:
+                                                  state
+                                                      .expandedStates[installment
+                                                      .id] ??
+                                                  false,
+                                              isLoadingPayments: state
+                                                  .loadingPayments
+                                                  .contains(installment.id),
+                                              isBusy: state
+                                                  .loadingItemOperations
+                                                  .contains(installment.id),
+                                              onTap:
+                                                  state.isSelectionMode
+                                                      ? () =>
+                                                          state.toggleSelection(
+                                                            installment.id,
+                                                          )
+                                                      : () => context.go(
+                                                        '/installments/${installment.id}',
+                                                      ),
+                                              onClientTap:
+                                                  () => context.go(
+                                                    '/clients/${installment.clientId}',
+                                                  ),
+                                              onExpansionChanged: (expanded) {
+                                                state.setStateWrapper(() {
+                                                  state.expandedStates[installment
+                                                          .id] =
+                                                      expanded;
+                                                });
+
+                                                // Load payments only when expanding and if not already loaded
+                                                if (expanded &&
+                                                    (state
+                                                            .installmentPayments[installment
+                                                                .id]
+                                                            ?.isEmpty ??
+                                                        true)) {
+                                                  state
+                                                      .loadPaymentsForInstallment(
+                                                        installment.id,
+                                                      );
+                                                }
+                                              },
+                                              onDataChanged:
+                                                  () => state.loadData(),
+                                              onInstallmentUpdated: (
+                                                updatedInstallment,
+                                              ) {
+                                                state.setStateWrapper(() {
+                                                  // Find and update the specific installment in the list
+                                                  final index = state
+                                                      .installments
+                                                      .indexWhere(
+                                                        (i) =>
+                                                            i.id ==
+                                                            updatedInstallment
+                                                                .id,
+                                                      );
+                                                  if (index != -1) {
+                                                    final prev =
+                                                        state
+                                                            .installments[index];
+                                                    // Preserve installment number if backend didn't return it,
+                                                    // while keeping the concrete type (InstallmentModel when applicable)
+                                                    final merged = () {
+                                                      if (updatedInstallment
+                                                              .installmentNumber !=
+                                                          null) {
+                                                        return updatedInstallment;
+                                                      }
+                                                      if (updatedInstallment
+                                                          is InstallmentModel) {
+                                                        final u =
+                                                            updatedInstallment;
+                                                        return InstallmentModel(
+                                                          id: u.id,
+                                                          userId: u.userId,
+                                                          clientId: u.clientId,
+                                                          investorId:
+                                                              u.investorId,
+                                                          walletId: u.walletId,
+                                                          productName:
+                                                              u.productName,
+                                                          cashPrice:
+                                                              u.cashPrice,
+                                                          installmentPrice:
+                                                              u.installmentPrice,
+                                                          termMonths:
+                                                              u.termMonths,
+                                                          downPayment:
+                                                              u.downPayment,
+                                                          monthlyPayment:
+                                                              u.monthlyPayment,
+                                                          downPaymentDate:
+                                                              u.downPaymentDate,
+                                                          installmentStartDate:
+                                                              u.installmentStartDate,
+                                                          installmentEndDate:
+                                                              u.installmentEndDate,
+                                                          installmentNumber:
+                                                              prev.installmentNumber,
+                                                          createdAt:
+                                                              u.createdAt,
+                                                          updatedAt:
+                                                              u.updatedAt,
+                                                          // optimized fields
+                                                          clientName:
+                                                              u.clientName,
+                                                          walletName:
+                                                              u.walletName,
+                                                          paidAmount:
+                                                              u.paidAmount,
+                                                          remainingAmount:
+                                                              u.remainingAmount,
+                                                          nextPaymentDate:
+                                                              u.nextPaymentDate,
+                                                          nextPaymentAmount:
+                                                              u.nextPaymentAmount,
+                                                          paymentStatus:
+                                                              u.paymentStatus,
+                                                          overdueCount:
+                                                              u.overdueCount,
+                                                          totalPayments:
+                                                              u.totalPayments,
+                                                          paidPayments:
+                                                              u.paidPayments,
+                                                          lastPaymentDate:
+                                                              u.lastPaymentDate,
+                                                        );
+                                                      }
+                                                      return updatedInstallment
+                                                          .copyWith(
+                                                            installmentNumber:
+                                                                prev.installmentNumber,
+                                                          );
+                                                    }();
+
+                                                    // Update the installment with preserved fields when necessary
+                                                    state.installments[index] =
+                                                        merged;
+
+                                                    // Set expansion state to collapsed since the widget will rebuild and collapse
+                                                    state.expandedStates[merged
+                                                            .id] =
+                                                        false;
+
+                                                    // Clear the payments since the installment collapsed
+                                                    state.installmentPayments[merged
+                                                            .id] =
+                                                        [];
+                                                  }
+                                                });
+                                              },
+                                              onSubmitPaymentInBackground:
+                                                  state
+                                                      .submitPaymentInBackground,
+                                              onDelete:
+                                                  () => state.deleteInstallment(
+                                                    installment,
+                                                  ),
+                                              onSelect:
+                                                  () => state.toggleSelection(
+                                                    installment.id,
+                                                  ),
+                                              isSelected: state
+                                                  .selectedInstallmentIds
+                                                  .contains(installment.id),
+                                              onSelectionToggle:
+                                                  () => state.toggleSelection(
+                                                    installment.id,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
             ),
           ),
         ],
       ),
     );
   }
-} 
+}
