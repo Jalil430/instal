@@ -7,6 +7,20 @@
     <language>ru</language>
 
     <item>
+      <title>Version 1.0.4</title>
+      <sparkle:version>1.0.4+7</sparkle:version>
+      <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
+      <pubDate>Fri, 26 Sep 2025 18:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.4/QistPay-Windows-Installer-v1.0.4.exe"
+        sparkle:dsaSignature="MDwCHAPJHRcKGKbL4JVwHpwT3eyGvtqssl2T614qD4ICHHU9l5cYy4F6885ZCEaqKQICCL0NQMV99vTK/mU="
+        length="36676461"
+        type="application/octet-stream" />
+      <description>
+      </description>
+    </item>
+
+    <item>
       <title>Version 1.0.3</title>
       <sparkle:version>1.0.3+6</sparkle:version>
       <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
