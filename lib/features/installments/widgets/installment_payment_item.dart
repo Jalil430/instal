@@ -212,149 +212,145 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    // Payment name - matches first column (client name)
+                    // Skip installment number column to align with client name
+                    SizedBox(width: 54),
+                    const SizedBox(width: 16),
+                    
+                    // Payment name - matches client name column
                     Expanded(
-                      flex: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Text(
-                          widget.payment.paymentNumber == 0
-                              ? l10n?.downPayment ?? 'Первоначальный взнос'
-                              : '${l10n?.month ?? 'Месяц'} ${widget.payment.paymentNumber}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      flex: 5,
+                      child: Text(
+                        widget.payment.paymentNumber == 0
+                            ? l10n?.downPayment ?? 'Первоначальный взнос'
+                            : '${l10n?.month ?? 'Месяц'} ${widget.payment.paymentNumber}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 16),
                     
-                    // Dates - matches second column (product name)
+                    // Dates - matches product name column
                     Expanded(
-                      flex: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Row(
-                          children: [
-                            // Due date
+                      flex: 3,
+                      child: Row(
+                        children: [
+                          // Due date
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                dateFormat.format(widget.payment.dueDate),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                              ),
+                              Text(
+                                l10n?.dueDate ?? 'Срок оплаты',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 10,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          
+                          // Show paid date if available
+                          if (widget.payment.isPaid && widget.payment.paidDate != null) ...[
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              width: 1,
+                              height: 30,
+                              color: AppTheme.borderColor.withOpacity(0.3),
+                            ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  dateFormat.format(widget.payment.dueDate),
+                                  dateFormat.format(widget.payment.paidDate!),
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.textPrimary,
+                                        color: AppTheme.successColor,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w400,
                                       ),
                                 ),
                                 Text(
-                                  l10n?.dueDate ?? 'Срок оплаты',
+                                  l10n?.paid ?? 'Оплачено',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.textSecondary,
+                                        color: AppTheme.successColor.withOpacity(0.7),
                                         fontSize: 10,
                                       ),
                                 ),
                               ],
                             ),
-                            
-                            // Show paid date if available
-                            if (widget.payment.isPaid && widget.payment.paidDate != null) ...[
-                              Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 12),
-                                width: 1,
-                                height: 30,
-                                color: AppTheme.borderColor.withOpacity(0.3),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    dateFormat.format(widget.payment.paidDate!),
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: AppTheme.successColor,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                  ),
-                                  Text(
-                                    l10n?.paid ?? 'Оплачено',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: AppTheme.successColor.withOpacity(0.7),
-                                          fontSize: 10,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ],
-                        ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 16),
+                    
+                    // Empty space - matches total price column
+                    Expanded(
+                      flex: 2,
+                      child: Container(),
+                    ),
+                    const SizedBox(width: 16),
                     
                     // Empty space - matches paid amount column
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Container(),
-                      ),
+                      flex: 2,
+                      child: Container(),
                     ),
+                    const SizedBox(width: 16),
                     
                     // Empty space - matches left amount column
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Container(),
+                      flex: 2,
+                      child: Container(),
+                    ),
+                    const SizedBox(width: 16),
+                    
+                    // Amount - shows expected if not paid, paid if paid (matches due date column)
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        currencyFormat.format(
+                          widget.payment.isPaid 
+                              ? widget.payment.paidAmount 
+                              : widget.payment.expectedAmount
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                            ),
+                        textAlign: TextAlign.start,
                       ),
                     ),
+                    const SizedBox(width: 16),
                     
-                    // Empty space - matches due date column
+                    // Status badge - matches status column (at the right)
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Container(),
-                      ),
-                    ),
-                    
-                    // Status badge - matches status column with fixed width
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Container(
-                          width: 150, // Fixed width for consistency
-                          alignment: Alignment.centerLeft,
-                          child: CustomStatusBadge(
-                            status: widget.payment.status,
-                            width: 110,
-                          ),
+                      flex: 2,
+                      child: Container(
+                        alignment: Alignment.centerLeft,
+                        child: CustomStatusBadge(
+                          status: widget.payment.status,
                         ),
                       ),
                     ),
                     
-                    // Amount and action - matches next payment column
+                    // Amount and action - matches expand arrow column
                     Container(
-                      width: 160,
-                      padding: const EdgeInsets.only(left: 8),
+                      width: 44,
                       child: Row(
                         children: [
-                          // Payment Amount (show paid for paid items, expected otherwise)
-                          Text(
-                            currencyFormat.format(
-                              widget.payment.isPaid
-                                  ? widget.payment.paidAmount
-                                  : widget.payment.expectedAmount,
-                            ),
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: 14,
-                                  color: AppTheme.textPrimary,
-                                ),
-                          ),
-                          
                           const Spacer(),
                           
                           // Action indicator using CustomIconButton
@@ -363,13 +359,16 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                             icon: widget.payment.isPaid ? Icons.close_rounded : Icons.add_rounded,
                             interactive: false, // Make it non-tappable
                             forceHover: _isHovered, // Control hover from parent
+                            backgroundColor: AppTheme.backgroundColor,
                             // Colors for hover state are still needed
                             hoverBackgroundColor: widget.payment.isPaid 
                                 ? AppTheme.errorColor.withOpacity(0.1)
                                 : AppTheme.primaryColor.withOpacity(0.1),
+                            iconColor: AppTheme.textSecondary,
                             hoverIconColor: widget.payment.isPaid 
                                 ? AppTheme.errorColor
                                 : AppTheme.primaryColor,
+                            borderColor: AppTheme.borderColor.withOpacity(0.5),
                             hoverBorderColor: widget.payment.isPaid 
                                 ? AppTheme.errorColor.withOpacity(0.3)
                                 : AppTheme.primaryColor.withOpacity(0.3),

@@ -143,8 +143,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     const double maxVisibleItems = 5.0; // Maximum number of visible items
     const double maxDropdownHeight = itemHeight * maxVisibleItems;
 
-    // Calculate total height based on number of items
-    final int itemCount = _filteredItems.length + (widget.hint != null ? 1 : 0);
+    // Calculate total height based on number of items (no hint item in dropdown)
+    final int itemCount = _filteredItems.length;
     final double contentHeight = itemHeight * itemCount;
     final double dropdownHeight = contentHeight.clamp(0.0, maxDropdownHeight);
     
@@ -217,22 +217,12 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                               ),
                             ),
                         ],
-                        Flexible(
-                          child: ListView(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            children: [
-                              if (widget.hint != null)
-                                _CustomDropdownItem<T?>(
-                                  value: null,
-                                  label: widget.hint!,
-                                  isSelected: widget.value == null,
-                                  onTap: () {
-                                    widget.onChanged(null);
-                                    _closeDropdown();
-                                  },
-                                ),
-                              ..._filteredItems.entries.map((entry) {
+                        if (_filteredItems.isNotEmpty)
+                          Flexible(
+                            child: ListView(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              children: _filteredItems.entries.map((entry) {
                                 final isSelected = entry.key == widget.value;
                                 return _CustomDropdownItem<T?>(
                                   value: entry.key,
@@ -243,10 +233,9 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                                     _closeDropdown();
                                   },
                                 );
-                              }),
-                            ],
+                              }).toList(),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),

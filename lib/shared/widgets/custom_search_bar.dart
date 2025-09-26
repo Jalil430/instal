@@ -32,7 +32,19 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
   @override
   void initState() {
     super.initState();
-    _controller = widget.controller ?? TextEditingController(text: widget.value);
+    _controller =
+        widget.controller ?? TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomSearchBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller == null && widget.value != oldWidget.value) {
+      _controller.value = TextEditingValue(
+        text: widget.value,
+        selection: TextSelection.collapsed(offset: widget.value.length),
+      );
+    }
   }
 
   @override
@@ -57,10 +69,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
           onChanged: widget.onChanged,
           decoration: InputDecoration(
             hintText: widget.hintText,
-            hintStyle: TextStyle(
-              color: AppTheme.textHint,
-              fontSize: 14,
-            ),
+            hintStyle: TextStyle(color: AppTheme.textHint, fontSize: 14),
             prefixIcon: Container(
               padding: const EdgeInsets.all(12),
               child: Icon(
@@ -70,39 +79,42 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
               ),
             ),
             filled: true,
-            fillColor: _isHovered 
-                ? AppTheme.subtleHoverColor
-                : AppTheme.subtleBackgroundColor,
+            fillColor:
+                _isHovered
+                    ? AppTheme.subtleHoverColor
+                    : AppTheme.subtleBackgroundColor,
             hoverColor: Colors.transparent, // Disable built-in hover
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: _isHovered 
-                    ? AppTheme.subtleAccentColor
-                    : AppTheme.subtleBorderColor,
+                color:
+                    _isHovered
+                        ? AppTheme.subtleAccentColor
+                        : AppTheme.subtleBorderColor,
                 width: 1,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: _isHovered 
-                    ? AppTheme.subtleAccentColor
-                    : AppTheme.subtleBorderColor,
+                color:
+                    _isHovered
+                        ? AppTheme.subtleAccentColor
+                        : AppTheme.subtleBorderColor,
                 width: 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: AppTheme.primaryColor,
-                width: 2,
-              ),
+              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
         ),
       ),
     );
   }
-} 
+}

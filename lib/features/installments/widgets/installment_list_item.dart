@@ -37,6 +37,7 @@ class InstallmentListItem extends StatefulWidget {
   final VoidCallback? onSelect;
   final bool isSelected;
   final VoidCallback? onSelectionToggle;
+  final bool showTrailingControls;
 
   const InstallmentListItem({
     super.key,
@@ -61,6 +62,7 @@ class InstallmentListItem extends StatefulWidget {
     this.onSelect,
     this.isSelected = false,
     this.onSelectionToggle,
+    this.showTrailingControls = true,
   });
 
   static String getOverallStatus(
@@ -102,8 +104,6 @@ class _InstallmentListItemState extends State<InstallmentListItem>
     with TickerProviderStateMixin {
   bool _isHovered = false;
   bool _isClientNameHovered = false;
-  final bool _isArrowHovered = false;
-  bool _isNextPaymentHovered = false;
 
   late AnimationController _hoverController;
   late Animation<double> _hoverAnimation;
@@ -232,6 +232,10 @@ class _InstallmentListItemState extends State<InstallmentListItem>
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('dd.MM.yyyy');
+    final EdgeInsetsGeometry contentPadding =
+        widget.showTrailingControls
+            ? const EdgeInsets.symmetric(horizontal: 32, vertical: 12)
+            : const EdgeInsets.symmetric(horizontal: 24, vertical: 12);
 
     // Get next payment due date
     final nextDueDate =
@@ -307,315 +311,245 @@ class _InstallmentListItemState extends State<InstallmentListItem>
                     // No shadow on hover
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(
                       children: [
                         // Installment number column moved to the start to match the header
-                        Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: SizedBox(
-                            width: 54,
-                            child: Text(
-                              (widget.installmentNumber ??
-                                          widget
-                                              .installment
-                                              .installmentNumber) !=
-                                      null
-                                  ? '${widget.installmentNumber ?? widget.installment.installmentNumber}'
-                                  : '-',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                        SizedBox(
+                          width: 54,
+                          child: Text(
+                            (widget.installmentNumber ??
+                                        widget
+                                            .installment
+                                            .installmentNumber) !=
+                                    null
+                                ? '${widget.installmentNumber ?? widget.installment.installmentNumber}'
+                                : '-',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Client Name - More space for client names
+                        Expanded(
+                          flex: 5,
+                          child: GestureDetector(
+                            onTap: widget.onClientTap,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: MouseRegion(
+                                onEnter:
+                                    (_) => setState(
+                                      () => _isClientNameHovered = true,
+                                    ),
+                                onExit:
+                                    (_) => setState(
+                                      () => _isClientNameHovered = false,
+                                    ),
+                                child: IntrinsicWidth(
+                                  child: Text(
+                                    widget.clientName,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                      color:
+                                          widget.onClientTap != null
+                                              ? AppTheme
+                                                  .interactiveBrightColor
+                                              : AppTheme.textPrimary,
+                                      decoration:
+                                          widget.onClientTap != null &&
+                                                  _isClientNameHovered
+                                              ? TextDecoration.underline
+                                              : TextDecoration.none,
+                                      decorationColor:
+                                          widget.onClientTap != null
+                                              ? AppTheme
+                                                  .interactiveBrightColor
+                                              : AppTheme.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
-                        // Removed checkbox column - now using background color for selection
-                        // Client Name - Simple
+                        const SizedBox(width: 16),
+                        // Product Name column - Reduced space for product names
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            widget.productName,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Total price column
                         Expanded(
                           flex: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: GestureDetector(
-                              onTap: widget.onClientTap,
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: MouseRegion(
-                                  onEnter:
-                                      (_) => setState(
-                                        () => _isClientNameHovered = true,
-                                      ),
-                                  onExit:
-                                      (_) => setState(
-                                        () => _isClientNameHovered = false,
-                                      ),
-                                  child: IntrinsicWidth(
+                          child: Text(
+                            currencyFormat
+                                .format(widget.installment.installmentPrice),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.start,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Paid Amount - Plain text
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            currencyFormat.format(widget.paidAmount),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.start,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Left Amount - Plain text
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            currencyFormat.format(widget.leftAmount),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.start,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Next Due Date - moved to left of status
+                        Expanded(
+                          flex: 2,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Flexible(
                                     child: Text(
-                                      widget.clientName,
+                                      dateFormat.format(nextDueDate),
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w500,
+                                        fontWeight: FontWeight.w400,
                                         fontSize: 14,
-                                        color:
-                                            widget.onClientTap != null
-                                                ? AppTheme
-                                                    .interactiveBrightColor
-                                                : AppTheme.textPrimary,
-                                        decoration:
-                                            widget.onClientTap != null &&
-                                                    _isClientNameHovered
-                                                ? TextDecoration.underline
-                                                : TextDecoration.none,
-                                        decorationColor:
-                                            widget.onClientTap != null
-                                                ? AppTheme
-                                                    .interactiveBrightColor
-                                                : AppTheme.textPrimary,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
+                                  // Only show days calculation if there's enough space (>80px)
+                                  if (constraints.maxWidth > 80 && widget.nextPayment != null) ...[
+                                    const SizedBox(width: 3),
+                                    _buildDueDateDetails(
+                                      context,
+                                      widget.nextPayment!,
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
                           ),
                         ),
-                        // Product Name column (reduced flex)
+                        const SizedBox(width: 16),
+                        // Status - at the very right before expand arrow
                         Expanded(
                           flex: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Text(
-                              widget.productName,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                        // Paid Amount - Plain text
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Text(
-                              currencyFormat.format(widget.paidAmount),
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w400,
-                                fontSize: 14,
-                              ),
-                              textAlign: TextAlign.start,
-                            ),
-                          ),
-                        ),
-                        // Left Amount - Plain text
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Text(
-                              currencyFormat.format(widget.leftAmount),
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w400,
-                                fontSize: 14,
-                              ),
-                              textAlign: TextAlign.start,
-                            ),
-                          ),
-                        ),
-                        // Next Due Date - Plain text
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  dateFormat.format(nextDueDate),
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                if (widget.nextPayment != null)
-                                  _buildDueDateDetails(
-                                    context,
-                                    widget.nextPayment!,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Status
-                        Expanded(
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CustomStatusBadge(
-                                  status:
-                                      widget.payments.isEmpty
-                                          ? (widget.installment
-                                                  is InstallmentModel
-                                              ? (widget.installment
-                                                      as InstallmentModel)
-                                                  .dynamicStatus
-                                              : 'предстоящий')
-                                          : InstallmentListItem.getOverallStatus(
-                                            context,
-                                            widget.payments,
-                                          ),
-                                  width: 110,
+                                Flexible(
+                                  child: CustomStatusBadge(
+                                    status:
+                                        widget.payments.isEmpty
+                                            ? (widget.installment
+                                                    is InstallmentModel
+                                                ? (widget.installment
+                                                        as InstallmentModel)
+                                                    .dynamicStatus
+                                                : 'предстоящий')
+                                            : InstallmentListItem.getOverallStatus(
+                                              context,
+                                              widget.payments,
+                                            ),
+                                  ),
                                 ),
                                 _buildOverdueCount(context),
                               ],
                             ),
                           ),
                         ),
-                        // Next Payment Section
-                        Container(
-                          width: 160,
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Row(
-                            children: [
-                              // Next payment button area (takes remaining space)
-                              Expanded(
-                                child:
-                                    widget.nextPayment != null
-                                        ? MouseRegion(
-                                          onEnter:
-                                              (_) => setState(
-                                                () =>
-                                                    _isNextPaymentHovered =
-                                                        true,
-                                              ),
-                                          onExit:
-                                              (_) => setState(
-                                                () =>
-                                                    _isNextPaymentHovered =
-                                                        false,
-                                              ),
-                                          child: GestureDetector(
-                                            onTapDown:
-                                                (details) =>
-                                                    _handleNextPaymentRegistration(
-                                                      details.globalPosition,
-                                                    ),
-                                            child: Container(
-                                              height: 28,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    _isNextPaymentHovered
-                                                        ? AppTheme
-                                                            .subtleHoverColor
-                                                        : AppTheme
-                                                            .subtleBackgroundColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                border: Border.all(
-                                                  color:
-                                                      _isNextPaymentHovered
-                                                          ? AppTheme
-                                                              .subtleAccentColor
-                                                          : AppTheme
-                                                              .subtleBorderColor,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  (widget
-                                                              .nextPayment!
-                                                              .paymentNumber ==
-                                                          0
-                                                      ? l10n?.downPaymentShort ??
-                                                          'Взнос'
-                                                      : '${l10n?.month ?? 'Месяц'} ${widget.nextPayment!.paymentNumber}'),
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        color:
-                                                            AppTheme
-                                                                .textPrimary,
-                                                        fontWeight:
-                                                            FontWeight.w400,
-                                                        fontSize: 12,
-                                                      ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
+                        if (widget.showTrailingControls)
+                          Container(
+                            width: 44,
+                            child: Row(
+                              children: [
+                                const Spacer(),
+                                widget.isLoadingPayments || widget.isBusy
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            AppTheme.primaryColor,
                                           ),
-                                        )
-                                        : Container(), // Empty space when no next payment
-                              ),
-                              const SizedBox(width: 6),
-                              // Arrow button with optional loading indicator
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CustomIconButton(
-                                    size: 28,
-                                    icon: Icons.keyboard_arrow_down_rounded,
-                                    onPressed: () {
-                                      widget.onExpansionChanged(
-                                        !widget.isExpanded,
-                                      );
-                                    },
-                                    backgroundColor: AppTheme.backgroundColor,
-                                    hoverBackgroundColor:
-                                        AppTheme.subtleHoverColor,
-                                    iconColor: AppTheme.textSecondary,
-                                    hoverIconColor: AppTheme.primaryColor,
-                                    borderColor: AppTheme.borderColor
-                                        .withOpacity(0.5),
-                                    hoverBorderColor:
-                                        AppTheme.subtleAccentColor,
-                                    rotation:
-                                        widget.isExpanded
-                                            ? 0.5
-                                            : 0.0, // Use rotation property
-                                  ),
-                                  // Loading indicator to the right of arrow
-                                  if (widget.isLoadingPayments ||
-                                      widget.isBusy) ...[
-                                    const SizedBox(width: 8),
-                                    const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              AppTheme.primaryColor,
-                                            ),
+                                        ),
+                                      )
+                                    : CustomIconButton(
+                                        size: 28,
+                                        icon: Icons.keyboard_arrow_down_rounded,
+                                        onPressed: () {
+                                          widget.onExpansionChanged(
+                                            !widget.isExpanded,
+                                          );
+                                        },
+                                        backgroundColor: AppTheme.backgroundColor,
+                                        hoverBackgroundColor:
+                                            AppTheme.subtleHoverColor,
+                                        iconColor: AppTheme.textSecondary,
+                                        hoverIconColor: AppTheme.primaryColor,
+                                        borderColor: AppTheme.borderColor
+                                            .withOpacity(0.5),
+                                        hoverBorderColor:
+                                            AppTheme.subtleAccentColor,
+                                        rotation:
+                                            widget.isExpanded
+                                                ? 0.5
+                                                : 0.0,
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),

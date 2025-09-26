@@ -469,9 +469,8 @@ def handler(event, context):
                     from decimal import ROUND_HALF_UP as RHU
                     cash_price_mu = int((Decimal(str(body['cash_price'])) * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
                     logger.info(f"CREATE-INSTALLMENT TX: allocation preparing, cash_price_mu={cash_price_mu}")
-                    if current_balance < cash_price_mu:
-                        tx.rollback()
-                        return {'statusCode': 400, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Insufficient wallet balance for cash price'})}
+                    # Allow creating installments even with insufficient wallet balance
+                    # This will result in negative wallet balance if needed
 
                     import uuid as _uuid
                     # Allocation record (active)

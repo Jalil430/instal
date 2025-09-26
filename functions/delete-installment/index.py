@@ -283,16 +283,16 @@ def handler(event, context):
                     WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $curr_version;
                     """
                 )
-                # Spent on products = sum of cash_price
+                # Spent on products = sum of cash_price (excluding the installment being deleted)
                 spent_rs = tx.execute(
                     session.prepare(
                         """
-                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
+                        DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $exclude_id AS Utf8;
                         SELECT COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum
-                        FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
+                        FROM installments i WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id AND i.id != $exclude_id;
                         """
                     ),
-                    {'$wallet_id': wallet_id, '$user_id': user_id}
+                    {'$wallet_id': wallet_id, '$user_id': user_id, '$exclude_id': installment_id}
                 )
                 from decimal import Decimal as _D, ROUND_HALF_UP as RHU
                 spent_sum_dec = _D(str(spent_rs[0].rows[0].spent_sum or 0)) if spent_rs[0].rows else _D('0')

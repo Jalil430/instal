@@ -27,10 +27,15 @@ class WalletsListScreen extends StatefulWidget {
   State<WalletsListScreen> createState() => WalletsListScreenState();
 }
 
-class WalletsListScreenState extends State<WalletsListScreen> with TickerProviderStateMixin {
+class WalletsListScreenState extends State<WalletsListScreen>
+    with TickerProviderStateMixin {
   final searchController = TextEditingController();
   String searchQuery = '';
-  String? sortBy = 'creationDate';
+  String sortBy = 'creationDate';
+  bool sortAscending = false;
+  String statusFilter = 'active';
+  String typeFilter = 'all';
+  String balanceFilter = 'any';
   late WalletRepository walletRepository;
   List<Wallet> wallets = [];
   Map<String, WalletBalance> walletBalances = {};
@@ -38,8 +43,8 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
   bool isInitialized = false;
   bool isSelectionMode = false;
   final Set<String> selectedWalletIds = {};
-  bool showArchived = false;
-  final Set<String> loadingItemOperations = {}; // Track per-item background operations (delete)
+  final Set<String> loadingItemOperations =
+      {}; // Track per-item background operations (delete)
 
   late AnimationController fadeController;
   late Animation<double> fadeAnimation;
@@ -51,9 +56,10 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: fadeController, curve: Curves.easeInOut),
-    );
+    fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: fadeController, curve: Curves.easeInOut));
 
     initializeRepository();
   }
@@ -70,7 +76,8 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     try {
       final GoRouterState goState = GoRouterState.of(context);
       if (goState.extra != null && goState.extra is Map<String, dynamic>) {
-        final Map<String, dynamic> extra = goState.extra as Map<String, dynamic>;
+        final Map<String, dynamic> extra =
+            goState.extra as Map<String, dynamic>;
         if (extra['refresh'] == true) {
           Future.delayed(Duration.zero, () {
             if (mounted) {
@@ -86,14 +93,13 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
   @override
   void dispose() {
+    searchController.dispose();
     fadeController.dispose();
     super.dispose();
   }
 
   void initializeRepository() {
-    walletRepository = WalletRepositoryImpl(
-      WalletRemoteDataSourceImpl(),
-    );
+    walletRepository = WalletRepositoryImpl(WalletRemoteDataSourceImpl());
   }
 
   Future<void> loadData() async {
@@ -129,7 +135,9 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       print('👤 loadData: Loading wallets for user: ${currentUser.id}');
 
       // Load wallets from repository (includes balances in the response)
-      final loadedWallets = await walletRepository.getAllWallets(currentUser.id);
+      final loadedWallets = await walletRepository.getAllWallets(
+        currentUser.id,
+      );
 
       if (!mounted) {
         print('❌ loadData: Widget unmounted after loading wallets');
@@ -142,7 +150,9 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       print('💰 loadData: Loading wallet balances for user: ${currentUser.id}');
       Map<String, WalletBalance> balanceMap = {};
       try {
-        final loadedBalances = await walletRepository.getAllWalletBalances(currentUser.id);
+        final loadedBalances = await walletRepository.getAllWalletBalances(
+          currentUser.id,
+        );
 
         if (!mounted) {
           print('❌ loadData: Widget unmounted after loading balances');
@@ -151,7 +161,9 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
         print('💰 loadData: Loaded ${loadedBalances.length} wallet balances');
         // Create a map of wallet ID to balance for easy lookup
-        balanceMap = {for (var balance in loadedBalances) balance.walletId: balance};
+        balanceMap = {
+          for (var balance in loadedBalances) balance.walletId: balance,
+        };
       } catch (balanceError) {
         print('⚠️ loadData: Error loading wallet balances: $balanceError');
         // Continue with empty balance map - wallets will still be displayed without balances
@@ -176,7 +188,9 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e'),
+            content: Text(
+              '${AppLocalizations.of(context)?.errorLoadingData ?? 'Error loading data'}: $e',
+            ),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -184,44 +198,202 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     }
   }
 
-  List<Wallet> get filteredAndSortedWallets {
-    var filtered = wallets.where((wallet) {
-      if (searchQuery.isEmpty) return true;
+  Map<String, String> getSortOptions() {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'creationDate': l10n?.creationDate ?? 'Дата создания',
+      'updatedAt': l10n?.recentlyUpdated ?? 'Недавно обновлен',
+      'name': l10n?.sortByName ?? 'Имени',
+      'balance': l10n?.walletBalance ?? 'Баланс кошелька',
+      'type': l10n?.walletType ?? 'Тип',
+    };
+  }
 
-      final name = wallet.name.toLowerCase();
-      final query = searchQuery.toLowerCase();
+  Map<String, String> getStatusFilterOptions() {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'active': l10n?.active ?? 'Активные',
+      'archived': l10n?.archived ?? 'Архив',
+      'all': l10n?.all ?? 'Все',
+    };
+  }
 
-      return name.contains(query);
-    }).toList();
+  Map<String, String> getTypeFilterOptions() {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'all': l10n?.all ?? 'Все',
+      'personal': l10n?.personalWallet ?? 'Личный кошелек',
+      'investor': l10n?.investorWallet ?? 'Инвестиционный кошелек',
+    };
+  }
 
-    // Filter by status (active vs archived)
-    filtered = filtered.where((w) =>
-        showArchived ? w.status == WalletStatus.archived : w.status == WalletStatus.active).toList();
+  Map<String, String> getBalanceFilterOptions() {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'any': l10n?.all ?? 'Все',
+      'positive': l10n?.positiveBalance ?? 'Положительный баланс',
+      'zero': l10n?.zeroBalance ?? 'Нулевой баланс',
+      'negative': l10n?.negativeBalance ?? 'Отрицательный баланс',
+    };
+  }
 
-    // Sort
-    if (sortBy != null) {
-      switch (sortBy) {
-        case 'name':
-          filtered.sort((a, b) => a.name.compareTo(b.name));
-          break;
-        case 'balance':
-          filtered.sort((a, b) {
-            final balanceA = walletBalances[a.id]?.balance ?? 0;
-            final balanceB = walletBalances[b.id]?.balance ?? 0;
-            return balanceB.compareTo(balanceA);
-          });
-          break;
-        case 'type':
-          filtered.sort((a, b) => a.type.name.compareTo(b.type.name));
-          break;
-        case 'creationDate':
-        default:
-          filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  bool get hasActiveFilters =>
+      searchQuery.isNotEmpty ||
+      statusFilter != 'active' ||
+      typeFilter != 'all' ||
+      balanceFilter != 'any';
+
+  void resetFilters() {
+    setState(() {
+      searchQuery = '';
+      sortBy = 'creationDate';
+      sortAscending = false;
+      statusFilter = 'active';
+      typeFilter = 'all';
+      balanceFilter = 'any';
+    });
+    searchController.text = '';
+  }
+
+  void setSearchQuery(String value) {
+    if (searchQuery == value) {
+      if (searchController.text != value) {
+        searchController.text = value;
+        searchController.selection = TextSelection.fromPosition(
+          TextPosition(offset: value.length),
+        );
       }
+      return;
     }
+
+    setState(() {
+      searchQuery = value;
+      if (searchController.text != value) {
+        searchController.text = value;
+        searchController.selection = TextSelection.fromPosition(
+          TextPosition(offset: value.length),
+        );
+      }
+    });
+  }
+
+  void setStatusFilter(String value) {
+    setState(() {
+      statusFilter = value;
+    });
+  }
+
+  void setTypeFilter(String value) {
+    setState(() {
+      typeFilter = value;
+    });
+  }
+
+  void setBalanceFilter(String value) {
+    setState(() {
+      balanceFilter = value;
+    });
+  }
+
+  void setSortBy(String value) {
+    setState(() {
+      if (sortBy == value) {
+        sortAscending = !sortAscending;
+      } else {
+        sortBy = value;
+        sortAscending = value == 'name' || value == 'balance';
+      }
+    });
+  }
+
+  void setSortAscending(bool value) {
+    if (sortAscending == value) return;
+    setState(() {
+      sortAscending = value;
+    });
+  }
+
+  List<Wallet> get filteredAndSortedWallets {
+    final query = searchQuery.trim().toLowerCase();
+
+    var filtered =
+        wallets.where((wallet) {
+          if (query.isEmpty) return true;
+
+          final name = wallet.name.toLowerCase();
+          return name.contains(query);
+        }).toList();
+
+    filtered =
+        filtered.where((wallet) {
+          switch (statusFilter) {
+            case 'archived':
+              return wallet.status == WalletStatus.archived;
+            case 'all':
+              return true;
+            case 'active':
+            default:
+              return wallet.status == WalletStatus.active;
+          }
+        }).toList();
+
+    if (typeFilter != 'all') {
+      filtered =
+          filtered
+              .where(
+                (wallet) =>
+                    typeFilter == 'personal'
+                        ? wallet.isPersonalWallet
+                        : wallet.isInvestorWallet,
+              )
+              .toList();
+    }
+
+    if (balanceFilter != 'any') {
+      filtered =
+          filtered.where((wallet) {
+            final balance = walletBalances[wallet.id]?.balance ?? 0;
+            switch (balanceFilter) {
+              case 'positive':
+                return balance > 0.0;
+              case 'negative':
+                return balance < 0.0;
+              case 'zero':
+                return balance == 0.0;
+              default:
+                return true;
+            }
+          }).toList();
+    }
+
+    filtered.sort((a, b) {
+      final comparison = _compareWallets(a, b);
+      return sortAscending ? comparison : -comparison;
+    });
 
     return filtered;
   }
+
+  int _compareWallets(Wallet a, Wallet b) {
+    switch (sortBy) {
+      case 'name':
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      case 'type':
+        return a.type.name.compareTo(b.type.name);
+      case 'balance':
+        final balanceA = walletBalances[a.id]?.balance ?? 0;
+        final balanceB = walletBalances[b.id]?.balance ?? 0;
+        return balanceA.compareTo(balanceB);
+      case 'updatedAt':
+        return a.updatedAt.compareTo(b.updatedAt);
+      case 'creationDate':
+      default:
+        return a.createdAt.compareTo(b.createdAt);
+    }
+  }
+
+  WalletsListMetrics get metrics =>
+      WalletsListMetrics.fromWallets(filteredAndSortedWallets, walletBalances);
 
   // Selection methods
   void toggleSelection(String walletId) {
@@ -262,9 +434,10 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     final confirmed = await showCustomConfirmationDialog(
       context: context,
       title: l10n?.deleteInvestorTitle ?? 'Delete Wallet',
-      content: selectedWalletIds.length == 1
-          ? '${l10n?.deleteInvestorConfirmation ?? 'Are you sure you want to delete this wallet?'}'
-          : '${l10n?.deleteInvestorsConfirmation ?? 'Are you sure you want to delete these wallets?'} (${selectedWalletIds.length})',
+      content:
+          selectedWalletIds.length == 1
+              ? '${l10n?.deleteInvestorConfirmation ?? 'Are you sure you want to delete this wallet?'}'
+              : '${l10n?.deleteInvestorsConfirmation ?? 'Are you sure you want to delete these wallets?'} (${selectedWalletIds.length})',
     );
 
     if (confirmed != true) return;
@@ -366,29 +539,28 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
   void showCreateWalletDialog() {
     showDialog(
       context: context,
-      builder: (context) => CreateEditWalletDialog(
-        onSuccess: () async {
-          // Clear cache to ensure fresh data after wallet creation
-          final cache = CacheService();
-          final authService = AuthServiceProvider.of(context);
-          final currentUser = await authService.getCurrentUser();
+      builder:
+          (context) => CreateEditWalletDialog(
+            onSuccess: () async {
+              // Clear cache to ensure fresh data after wallet creation
+              final cache = CacheService();
+              final authService = AuthServiceProvider.of(context);
+              final currentUser = await authService.getCurrentUser();
 
-          if (currentUser != null) {
-            cache.remove(CacheService.walletsKey(currentUser.id));
-            cache.remove(CacheService.walletBalancesKey(currentUser.id));
-          }
+              if (currentUser != null) {
+                cache.remove(CacheService.walletsKey(currentUser.id));
+                cache.remove(CacheService.walletBalancesKey(currentUser.id));
+              }
 
-          // Clear repository cache as well
-          walletRepository.clearCache();
+              // Clear repository cache as well
+              walletRepository.clearCache();
 
-          // Reload data immediately after wallet creation
-          await loadData();
-        },
-      ),
+              // Reload data immediately after wallet creation
+              await loadData();
+            },
+          ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -406,7 +578,8 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     try {
       if (count % 10 == 1 && count % 100 != 11) {
         return l10n.wallet_one; // Using investor localization as fallback
-      } else if ([2, 3, 4].contains(count % 10) && ![12, 13, 14].contains(count % 100)) {
+      } else if ([2, 3, 4].contains(count % 10) &&
+          ![12, 13, 14].contains(count % 100)) {
         return l10n.wallet_few;
       } else {
         return l10n.wallet_many;
@@ -461,7 +634,9 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
     final confirmed = await showCustomConfirmationDialog(
       context: context,
       title: AppLocalizations.of(context)!.deleteInvestorTitle,
-      content: AppLocalizations.of(context)!.deleteInvestorConfirmation(wallet.name),
+      content: AppLocalizations.of(
+        context,
+      )!.deleteInvestorConfirmation(wallet.name),
     );
 
     if (confirmed == true) {
@@ -505,7 +680,9 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.investorDeleteError(e)),
+              content: Text(
+                AppLocalizations.of(context)!.investorDeleteError(e),
+              ),
               backgroundColor: AppTheme.errorColor,
             ),
           );
@@ -523,5 +700,58 @@ class WalletsListScreenState extends State<WalletsListScreen> with TickerProvide
 
   void setStateWrapper(VoidCallback fn) {
     setState(fn);
+  }
+}
+
+class WalletsListMetrics {
+  final int total;
+  final int activeCount;
+  final int archivedCount;
+  final double totalBalance;
+  final double totalAllocated;
+  final double totalDue;
+
+  const WalletsListMetrics({
+    required this.total,
+    required this.activeCount,
+    required this.archivedCount,
+    required this.totalBalance,
+    required this.totalAllocated,
+    required this.totalDue,
+  });
+
+  factory WalletsListMetrics.fromWallets(
+    List<Wallet> wallets,
+    Map<String, WalletBalance> balances,
+  ) {
+    var activeCount = 0;
+    var archivedCount = 0;
+    var totalBalance = 0.0;
+    var totalAllocated = 0.0;
+    var totalDue = 0.0;
+
+    for (final wallet in wallets) {
+      if (wallet.status == WalletStatus.archived) {
+        archivedCount++;
+      } else if (wallet.status == WalletStatus.active) {
+        activeCount++;
+      }
+
+      final balance = balances[wallet.id];
+      if (balance != null) {
+        totalBalance += balance.balance;
+        totalAllocated += balance.totalAllocated;
+        totalDue += balance.dueToGet;
+      }
+    }
+
+    return WalletsListMetrics(
+      total: wallets.length,
+      activeCount: activeCount,
+      archivedCount: archivedCount,
+      totalBalance: totalBalance,
+      totalAllocated: totalAllocated,
+      totalDue: totalDue,
+    );
   }
 }

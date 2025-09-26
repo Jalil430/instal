@@ -5,7 +5,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../domain/entities/client.dart';
 import '../clients_list_screen.dart';
-import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 
 class ClientsListScreenMobile extends StatelessWidget {
@@ -22,34 +21,36 @@ class ClientsListScreenMobile extends StatelessWidget {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         titleSpacing: 16,
-        title: state.isSelectionMode
-          ? Text(
-              l10n?.clients ?? 'Клиенты',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            )
-          : Row(
-              children: [
-                Text(
+        title:
+            state.isSelectionMode
+                ? Text(
                   l10n?.clients ?? 'Клиенты',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
+                )
+                : Row(
+                  children: [
+                    Text(
+                      l10n?.clients ?? 'Клиенты',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: CustomSearchBar(
+                        value: state.searchQuery,
+                        onChanged: state.setSearchQuery,
+                        hintText:
+                            '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
+                        height: 36,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: CustomSearchBar(
-                    value: state.searchQuery,
-                    onChanged: (value) => state.setStateWrapper(() => state.searchQuery = value),
-                    hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
-                    height: 36,
-                  ),
-                ),
-              ],
-            ),
         backgroundColor: AppTheme.surfaceColor,
         elevation: 1,
         actions: [
@@ -59,81 +60,269 @@ class ClientsListScreenMobile extends StatelessWidget {
               onPressed: state.clearSelection,
               tooltip: l10n?.cancelSelection ?? 'Cancel Selection',
             )
+          else ...[
+            if (state.hasActiveFilters)
+              IconButton(
+                icon: const Icon(Icons.filter_alt_off),
+                tooltip: l10n?.resetFilters ?? 'Reset filters',
+                onPressed: state.resetFilters,
+              ),
+            IconButton(
+              icon: const Icon(Icons.tune),
+              tooltip: l10n?.filters ?? 'Filters',
+              onPressed: () => _showFiltersSheet(context),
+            ),
+          ],
         ],
-        bottom: state.isSelectionMode
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(48),
-                child: Container(
-                  color: AppTheme.subtleBackgroundColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      Text(
-                        '${state.selectedClientIds.length} ${l10n?.selectedItems ?? 'selected'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.primaryColor,
+        bottom:
+            state.isSelectionMode
+                ? PreferredSize(
+                  preferredSize: const Size.fromHeight(48),
+                  child: Container(
+                    color: AppTheme.subtleBackgroundColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${state.selectedClientIds.length} ${l10n?.selectedItems ?? 'selected'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.primaryColor,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      _buildPopupMenu(context),
-                    ],
-                  ),
-                ),
-              )
-            : null,
-      ),
-      body: state.isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : state.filteredAndSortedClients.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.search_off,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n?.notFound ?? 'Ничего не найдено',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                        const Spacer(),
+                        _buildPopupMenu(context),
+                      ],
+                    ),
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    state.forceRefresh();
-                    // Need to return a future to satisfy RefreshIndicator
-                    return Future.value();
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(top: 8, bottom: 80),
-                    itemCount: state.filteredAndSortedClients.length,
-                    itemBuilder: (context, index) {
-                      final client = state.filteredAndSortedClients[index];
-                      return _buildClientCard(context, client, dateFormat);
-                    },
-                  ),
+                : null,
+      ),
+      body:
+          state.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : state.filteredAndSortedClients.isEmpty
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n?.notFound ?? 'Ничего не найдено',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
-      floatingActionButton: state.isSelectionMode
-          ? null
-          : FloatingActionButton(
-              onPressed: state.showCreateClientDialog,
-              backgroundColor: AppTheme.primaryColor,
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
+              )
+              : RefreshIndicator(
+                onRefresh: () async {
+                  state.forceRefresh();
+                  // Need to return a future to satisfy RefreshIndicator
+                  return Future.value();
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(top: 8, bottom: 80),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: state.filteredAndSortedClients.length,
+                  itemBuilder: (context, index) {
+                    final client = state.filteredAndSortedClients[index];
+                    return _buildClientCard(context, client, dateFormat);
+                  },
+                ),
+              ),
+      floatingActionButton:
+          state.isSelectionMode
+              ? null
+              : FloatingActionButton(
+                onPressed: state.showCreateClientDialog,
+                backgroundColor: AppTheme.primaryColor,
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
     );
   }
 
-  Widget _buildClientCard(BuildContext context, Client client, DateFormat dateFormat) {
+  void _showFiltersSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppTheme.surfaceColor,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final guarantorOptions = state.getGuarantorFilterOptions();
+            final creationOptions = state.getCreationFilterOptions();
+            final sortOptions = state.getSortOptions();
+
+            DropdownButtonFormField<String> buildDropdown({
+              required String label,
+              required String value,
+              required Map<String, String> options,
+              required ValueChanged<String> onChanged,
+            }) {
+              return DropdownButtonFormField<String>(
+                value: options.containsKey(value) ? value : options.keys.first,
+                decoration: InputDecoration(
+                  labelText: label,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+                items:
+                    options.entries
+                        .map(
+                          (entry) => DropdownMenuItem<String>(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ),
+                        )
+                        .toList(),
+                onChanged: (selected) {
+                  if (selected != null) {
+                    onChanged(selected);
+                    setModalState(() {});
+                  }
+                },
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          l10n?.filters ?? 'Filters',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            state.resetFilters();
+                            setModalState(() {});
+                          },
+                          child: Text(l10n?.resetFilters ?? 'Reset filters'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n?.withGuarantor ?? 'С поручителем',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children:
+                          guarantorOptions.entries.map((entry) {
+                            final isSelected =
+                                state.guarantorFilter == entry.key;
+                            return ChoiceChip(
+                              label: Text(entry.value),
+                              selected: isSelected,
+                              onSelected: (_) {
+                                state.setGuarantorFilter(entry.key);
+                                setModalState(() {});
+                              },
+                            );
+                          }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    buildDropdown(
+                      label: l10n?.creationDate ?? 'Дата создания',
+                      value: state.creationFilter,
+                      options: creationOptions,
+                      onChanged: state.setCreationFilter,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: buildDropdown(
+                            label: l10n?.sortBy ?? 'Sort by',
+                            value: state.sortBy,
+                            options: sortOptions,
+                            onChanged: state.setSortBy,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Tooltip(
+                          message:
+                              state.sortAscending
+                                  ? l10n?.ascending ?? 'Ascending'
+                                  : l10n?.descending ?? 'Descending',
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                state.setSortBy(state.sortBy);
+                                setModalState(() {});
+                              },
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppTheme.subtleBackgroundColor,
+                                ),
+                                child: Icon(
+                                  state.sortAscending
+                                      ? Icons.arrow_upward
+                                      : Icons.arrow_downward,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n?.close ?? 'Close'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildClientCard(
+    BuildContext context,
+    Client client,
+    DateFormat dateFormat,
+  ) {
     final l10n = AppLocalizations.of(context);
 
     return Card(
@@ -142,16 +331,19 @@ class ClientsListScreenMobile extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: state.selectedClientIds.contains(client.id)
-              ? AppTheme.primaryColor
-              : Colors.transparent,
+          color:
+              state.selectedClientIds.contains(client.id)
+                  ? AppTheme.primaryColor
+                  : Colors.transparent,
           width: 2,
         ),
       ),
       child: InkWell(
-        onTap: () => state.isSelectionMode
-            ? state.toggleSelection(client.id)
-            : context.go('/clients/${client.id}'),
+        onTap:
+            () =>
+                state.isSelectionMode
+                    ? state.toggleSelection(client.id)
+                    : context.go('/clients/${client.id}'),
         onLongPress: () => state.toggleSelection(client.id),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -170,7 +362,7 @@ class ClientsListScreenMobile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 16),
-              
+
               // Contact number - larger with more padding
               Row(
                 children: [
@@ -191,7 +383,7 @@ class ClientsListScreenMobile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Passport if available - larger with more padding
               if (client.passportNumber?.isNotEmpty == true) ...[
                 Row(
@@ -213,7 +405,7 @@ class ClientsListScreenMobile extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              
+
               // Address at the bottom with "See more" option
               if (client.address?.isNotEmpty == true) ...[
                 Row(
@@ -226,7 +418,10 @@ class ClientsListScreenMobile extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildTruncatedAddress(context, client.address ?? ''),
+                      child: _buildTruncatedAddress(
+                        context,
+                        client.address ?? '',
+                      ),
                     ),
                   ],
                 ),
@@ -237,48 +432,41 @@ class ClientsListScreenMobile extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildTruncatedAddress(BuildContext context, String address) {
     return GestureDetector(
       onTap: () => _showAddressDialog(context, address),
       child: Text(
         address,
-        style: const TextStyle(
-          color: AppTheme.primaryColor,
-          fontSize: 16,
-        ),
+        style: const TextStyle(color: AppTheme.primaryColor, fontSize: 16),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
     );
   }
-  
+
   void _showAddressDialog(BuildContext context, String address) {
     final l10n = AppLocalizations.of(context);
-    
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n?.address ?? 'Адрес'),
-        content: Text(
-          address,
-          style: const TextStyle(
-            fontSize: 16,
+      builder:
+          (context) => AlertDialog(
+            title: Text(l10n?.address ?? 'Адрес'),
+            content: Text(address, style: const TextStyle(fontSize: 16)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l10n?.close ?? 'Закрыть'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n?.close ?? 'Закрыть'),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildPopupMenu(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert),
       onSelected: (value) {
@@ -291,36 +479,37 @@ class ClientsListScreenMobile extends StatelessWidget {
             break;
         }
       },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          value: 'select_all',
-          child: Row(
-            children: [
-              const Icon(Icons.select_all, size: 18),
-              const SizedBox(width: 12),
-              Text(l10n?.selectAll ?? 'Select All'),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: Row(
-            children: [
-              const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: AppTheme.errorColor,
+      itemBuilder:
+          (context) => [
+            PopupMenuItem<String>(
+              value: 'select_all',
+              child: Row(
+                children: [
+                  const Icon(Icons.select_all, size: 18),
+                  const SizedBox(width: 12),
+                  Text(l10n?.selectAll ?? 'Select All'),
+                ],
               ),
-              const SizedBox(width: 12),
-              Text(
-                l10n?.deleteAction ?? 'Delete',
-                style: const TextStyle(color: AppTheme.errorColor),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem<String>(
+              value: 'delete',
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: AppTheme.errorColor,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    l10n?.deleteAction ?? 'Delete',
+                    style: const TextStyle(color: AppTheme.errorColor),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
     );
   }
-} 
+}
