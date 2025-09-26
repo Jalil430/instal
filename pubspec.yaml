@@ -151,6 +151,7 @@ icons_launcher:
       enable: true
     windows:
       enable: true
+      image_path: assets/icons/instal-app-logo-rounded.png
     linux:
       enable: true
     web:

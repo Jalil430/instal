@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
+import '../../../../../shared/widgets/app_logo.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 class RegisterScreenDesktop extends StatelessWidget {
@@ -51,18 +52,9 @@ class RegisterScreenDesktop extends StatelessWidget {
                 // App Logo and Title
                 Column(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(
-                        Icons.account_balance_wallet_rounded,
-                        color: Colors.white,
-                        size: 40,
-                      ),
+                    const AppLogo(
+                      size: 80,
+                      borderRadius: 20,
                     ),
                     const SizedBox(height: 24),
                     Text(
