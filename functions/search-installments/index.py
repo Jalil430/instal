@@ -94,7 +94,7 @@ def handler(event, context):
         
         # Get search parameters from query string - enforce user_id from JWT
         query_params = event.get('queryStringParameters') or {}
-        client_id = query_params.get('client_id')
+        client_name = query_params.get('client_name')
         product_name = query_params.get('product_name')
         installment_number = query_params.get('installment_number')
         
@@ -118,9 +118,9 @@ def handler(event, context):
             where_conditions = ["user_id = $user_id"]
             params = {'$user_id': user_id}
             
-            if client_id:
-                where_conditions.append("client_id = $client_id")
-                params['$client_id'] = client_id
+            if client_name:
+                where_conditions.append("client_name LIKE $client_name")
+                params['$client_name'] = f"%{client_name}%"
                 
             if product_name:
                 where_conditions.append("product_name LIKE $product_name")
@@ -135,8 +135,8 @@ def handler(event, context):
             
             # Declare parameters - always include user_id
             declare_statements = ["DECLARE $user_id AS Utf8;"]
-            if client_id:
-                declare_statements.append("DECLARE $client_id AS Utf8;")
+            if client_name:
+                declare_statements.append("DECLARE $client_name AS Utf8;")
             if product_name:
                 declare_statements.append("DECLARE $product_name AS Utf8;")
             if installment_number:
@@ -149,6 +149,7 @@ def handler(event, context):
                 id,
                 user_id,
                 client_id,
+                client_name,
                 product_name,
                 cash_price,
                 installment_price,
@@ -193,6 +194,7 @@ def handler(event, context):
                 'id': row.id,
                 'user_id': row.user_id,
                 'client_id': row.client_id,
+                'client_name': row.client_name,
                 'product_name': row.product_name,
                 'cash_price': float(row.cash_price),
                 'installment_price': float(row.installment_price),
