@@ -5,6 +5,11 @@ info:
   description: Secure API for client management with authentication and rate limiting
 security:
   - bearerAuth: []
+x-yc-apigateway-cors:
+  allowOrigin: "*"
+  allowMethods: "GET,POST,PUT,DELETE,OPTIONS"
+  allowHeaders: "Content-Type,Authorization,X-API-Key"
+  maxAge: "600"
 paths:
   /clients:
     post:
@@ -312,6 +317,28 @@ paths:
     get:
       summary: Search for installments
       operationId: search-installments
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4edfrgpjcc1ohgj6efo
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 30
+        payload_format_version: '1.0'
+    options:
+      summary: CORS preflight for installments search
+      operationId: search-installments-options
+      responses:
+        '200':
+          description: CORS preflight response
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4edfrgpjcc1ohgj6efo

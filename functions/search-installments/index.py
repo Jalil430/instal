@@ -118,6 +118,9 @@ def handler(event, context):
         client_short_id = query_params.get('client_id')  # First 8 characters of client ID
         client_name = query_params.get('client_name')    # Client full name
         
+        logger.info(f"Search parameters: client_id='{client_short_id}', client_name='{client_name}'")
+        logger.info(f"User ID from JWT: {user_id}")
+        
         # Database connection
         endpoint = os.environ['YDB_ENDPOINT']
         database = os.environ['YDB_DATABASE']
@@ -150,7 +153,7 @@ def handler(event, context):
             SELECT id, full_name
             FROM clients
             WHERE user_id = $user_id 
-              AND SUBSTRING(id, 0, 8) = $client_short_id
+              AND String::Substring(id, 0, 8) = $client_short_id
               AND full_name LIKE $client_name
             LIMIT 1;
             """
@@ -297,24 +300,31 @@ def handler(event, context):
             
             # Process payments and group by installment_id
             payments_by_installment = {}
+            logger.info(f"Processing {len(list(payments_result_set.rows))} payment rows")
+            
             for payment_row in payments_result_set.rows:
-                installment_id = payment_row.installment_id
-                if installment_id not in payments_by_installment:
-                    payments_by_installment[installment_id] = []
-                
-                payment = {
-                    'id': payment_row.id,
-                    'installment_id': payment_row.installment_id,
-                    'payment_number': payment_row.payment_number,
-                    'due_date': convert_date(payment_row.due_date),
-                    'expected_amount': float(payment_row.expected_amount),
-                    'is_paid': payment_row.is_paid,
-                    'paid_date': convert_date(payment_row.paid_date),
-                    'paid_amount': float(payment_row.paid_amount) if payment_row.paid_amount else 0.0,
-                    'created_at': convert_timestamp(payment_row.created_at),
-                    'updated_at': convert_timestamp(payment_row.updated_at)
-                }
-                payments_by_installment[installment_id].append(payment)
+                try:
+                    installment_id = payment_row.installment_id
+                    if installment_id not in payments_by_installment:
+                        payments_by_installment[installment_id] = []
+                    
+                    payment = {
+                        'id': payment_row.id,
+                        'installment_id': payment_row.installment_id,
+                        'payment_number': payment_row.payment_number,
+                        'due_date': convert_date(payment_row.due_date),
+                        'expected_amount': float(payment_row.expected_amount),
+                        'is_paid': payment_row.is_paid,
+                        'paid_date': convert_date(payment_row.paid_date),
+                        'paid_amount': float(payment_row.paid_amount) if payment_row.paid_amount else 0.0,
+                        'created_at': convert_timestamp(payment_row.created_at),
+                        'updated_at': convert_timestamp(payment_row.updated_at)
+                    }
+                    payments_by_installment[installment_id].append(payment)
+                except Exception as e:
+                    logger.error(f"Error processing payment row: {e}")
+                    logger.error(f"Payment row attributes: {dir(payment_row)}")
+                    continue
             
             # Process installments and attach payments - ALL FIELDS
             installments = []
