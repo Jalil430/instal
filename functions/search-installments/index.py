@@ -84,13 +84,34 @@ class JWTAuth:
 
 def handler(event, context):
     try:
+        # Handle CORS preflight requests
+        if event.get('httpMethod') == 'OPTIONS':
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                },
+                'body': ''
+            }
+        
         logger.info(f"Received search request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         
         # Authentication
         user_id, auth_error = JWTAuth.authenticate_request(event)
         if not user_id:
             logger.warning(f"Authentication failed: {auth_error}")
-            return {'statusCode': 401, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': f'Unauthorized: {auth_error}'})}
+            return {
+                'statusCode': 401, 
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                }, 
+                'body': json.dumps({'error': f'Unauthorized: {auth_error}'})
+            }
         
         # Get search parameters from query string - enforce user_id from JWT
         query_params = event.get('queryStringParameters') or {}
