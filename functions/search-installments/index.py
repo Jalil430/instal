@@ -115,9 +115,8 @@ def handler(event, context):
         
         # Get search parameters from query string - enforce user_id from JWT
         query_params = event.get('queryStringParameters') or {}
-        client_name = query_params.get('client_name')
-        product_name = query_params.get('product_name')
-        installment_number = query_params.get('installment_number')
+        client_short_id = query_params.get('client_id')  # First 8 characters of client ID
+        client_name = query_params.get('client_name')    # Client full name
         
         # Database connection
         endpoint = os.environ['YDB_ENDPOINT']
@@ -135,114 +134,290 @@ def handler(event, context):
         pool = ydb.SessionPool(driver)
         
         def execute_query(session):
-            # Build dynamic WHERE clause - always include user_id for security
-            where_conditions = ["user_id = $user_id"]
-            params = {'$user_id': user_id}
+            # Validate input parameters
+            if not client_short_id or not client_name:
+                raise ValueError("Both client_id (8 characters) and client_name are required")
             
-            if client_name:
-                where_conditions.append("client_name LIKE $client_name")
-                params['$client_name'] = f"%{client_name}%"
-                
-            if product_name:
-                where_conditions.append("product_name LIKE $product_name")
-                params['$product_name'] = f"%{product_name}%"
-            if installment_number:
-                where_conditions.append("installment_number = $installment_number")
-                params['$installment_number'] = int(installment_number)
+            if len(client_short_id) != 8:
+                raise ValueError("client_id must be exactly 8 characters")
             
-            where_clause = ""
-            if where_conditions:
-                where_clause = "WHERE " + " AND ".join(where_conditions)
+            # Step 1: Find client by short ID and name
+            client_query = """
+            DECLARE $user_id AS Utf8;
+            DECLARE $client_short_id AS Utf8;
+            DECLARE $client_name AS Utf8;
             
-            # Declare parameters - always include user_id
-            declare_statements = ["DECLARE $user_id AS Utf8;"]
-            if client_name:
-                declare_statements.append("DECLARE $client_name AS Utf8;")
-            if product_name:
-                declare_statements.append("DECLARE $product_name AS Utf8;")
-            if installment_number:
-                declare_statements.append("DECLARE $installment_number AS Int32;")
+            SELECT id, full_name
+            FROM clients
+            WHERE user_id = $user_id 
+              AND SUBSTRING(id, 0, 8) = $client_short_id
+              AND full_name LIKE $client_name
+            LIMIT 1;
+            """
             
-            query = f"""
-            {' '.join(declare_statements)}
+            client_params = {
+                '$user_id': user_id,
+                '$client_short_id': client_short_id,
+                '$client_name': f"%{client_name}%"
+            }
+            
+            prepared_client_query = session.prepare(client_query)
+            client_result_sets = session.transaction().execute(
+                prepared_client_query,
+                client_params,
+                commit_tx=True
+            )
+            
+            # Check if client found
+            client_rows = list(client_result_sets[0].rows)
+            if not client_rows:
+                return []  # No client found, return empty list
+            
+            client_row = client_rows[0]
+            full_client_id = client_row.id
+            
+            logger.info(f"Found client: {client_row.full_name} with ID: {full_client_id}")
+            
+            # Step 2: Get all installments for this client - ALL COLUMNS
+            installments_query = """
+            DECLARE $user_id AS Utf8;
+            DECLARE $client_id AS Utf8;
             
             SELECT 
                 id,
                 user_id,
                 client_id,
-                client_name,
                 product_name,
                 cash_price,
                 installment_price,
-                down_payment,
                 term_months,
+                down_payment,
+                monthly_payment,
                 down_payment_date,
                 installment_start_date,
                 installment_end_date,
-                monthly_payment,
-                installment_number,
                 created_at,
-                updated_at
+                updated_at,
+                paid_amount,
+                remaining_amount,
+                next_payment_date,
+                next_payment_amount,
+                payment_status,
+                overdue_count,
+                total_payments,
+                paid_payments,
+                last_payment_date,
+                client_name,
+                installment_number,
+                wallet_id
             FROM installments
-            {where_clause}
+            WHERE user_id = $user_id AND client_id = $client_id
             ORDER BY created_at DESC;
             """
             
-            prepared_query = session.prepare(query)
-            result_sets = session.transaction().execute(
-                prepared_query,
-                params,
+            installments_params = {
+                '$user_id': user_id,
+                '$client_id': full_client_id
+            }
+            
+            prepared_installments_query = session.prepare(installments_query)
+            installments_result_sets = session.transaction().execute(
+                prepared_installments_query,
+                installments_params,
                 commit_tx=True
             )
             
-            return result_sets[0]
-        
-        result_set = pool.retry_operation_sync(execute_query)
-        
-        def convert_timestamp(ts):
-            if ts is None: return None
-            return datetime.fromtimestamp(ts / 1000000).isoformat() if isinstance(ts, int) else ts.isoformat()
-
-        def convert_date(d):
-            if d is None: return None
-            if isinstance(d, date): return d.strftime('%Y-%m-%d')
-            if isinstance(d, int): return date.fromordinal(d + date(1970, 1, 1).toordinal()).strftime('%Y-%m-%d')
-            return str(d)
-        
-        installments = []
-        for row in result_set.rows:
-            installment = {
-                'id': row.id,
-                'user_id': row.user_id,
-                'client_id': row.client_id,
-                'client_name': row.client_name,
-                'product_name': row.product_name,
-                'cash_price': float(row.cash_price),
-                'installment_price': float(row.installment_price),
-                'down_payment': float(row.down_payment),
-                'term_months': row.term_months,
-                'down_payment_date': convert_date(row.down_payment_date),
-                'installment_start_date': convert_date(row.installment_start_date),
-                'installment_end_date': convert_date(row.installment_end_date),
-                'monthly_payment': float(row.monthly_payment),
-                'created_at': convert_timestamp(row.created_at),
-                'updated_at': convert_timestamp(row.updated_at)
+            # Step 3: Get all payments for all installments of this client
+            payments_query = """
+            DECLARE $user_id AS Utf8;
+            DECLARE $client_id AS Utf8;
+            
+            SELECT 
+                p.id,
+                p.installment_id,
+                p.payment_number,
+                p.due_date,
+                p.expected_amount,
+                p.is_paid,
+                p.paid_date,
+                p.created_at,
+                p.updated_at,
+                p.paid_amount
+            FROM installment_payments AS p
+            INNER JOIN installments AS i ON p.installment_id = i.id
+            WHERE i.user_id = $user_id AND i.client_id = $client_id
+            ORDER BY p.installment_id, p.payment_number;
+            """
+            
+            payments_params = {
+                '$user_id': user_id,
+                '$client_id': full_client_id
             }
-            installments.append(installment)
+            
+            prepared_payments_query = session.prepare(payments_query)
+            payments_result_sets = session.transaction().execute(
+                prepared_payments_query,
+                payments_params,
+                commit_tx=True
+            )
+            
+            return installments_result_sets[0], payments_result_sets[0], client_row
         
-        driver.stop()
-        
-        logger.info(f"Found {len(installments)} installments matching search criteria")
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            },
-            'body': json.dumps(installments)
-        }
+        try:
+            query_result = pool.retry_operation_sync(execute_query)
+            
+            # Handle case where no client found
+            if not query_result:
+                driver.stop()
+                return {
+                    'statusCode': 404,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                    },
+                    'body': json.dumps({
+                        'error': 'Client not found',
+                        'message': f'No client found with ID starting with "{client_short_id}" and name containing "{client_name}"'
+                    })
+                }
+            
+            installments_result_set, payments_result_set, client_info = query_result
+            
+            def convert_timestamp(ts):
+                if ts is None: return None
+                return datetime.fromtimestamp(ts / 1000000).isoformat() if isinstance(ts, int) else ts.isoformat()
+
+            def convert_date(d):
+                if d is None: return None
+                if isinstance(d, date): return d.strftime('%Y-%m-%d')
+                if isinstance(d, int): return date.fromordinal(d + date(1970, 1, 1).toordinal()).strftime('%Y-%m-%d')
+                return str(d)
+            
+            # Process payments and group by installment_id
+            payments_by_installment = {}
+            for payment_row in payments_result_set.rows:
+                installment_id = payment_row.installment_id
+                if installment_id not in payments_by_installment:
+                    payments_by_installment[installment_id] = []
+                
+                payment = {
+                    'id': payment_row.id,
+                    'installment_id': payment_row.installment_id,
+                    'payment_number': payment_row.payment_number,
+                    'due_date': convert_date(payment_row.due_date),
+                    'expected_amount': float(payment_row.expected_amount),
+                    'is_paid': payment_row.is_paid,
+                    'paid_date': convert_date(payment_row.paid_date),
+                    'paid_amount': float(payment_row.paid_amount) if payment_row.paid_amount else 0.0,
+                    'created_at': convert_timestamp(payment_row.created_at),
+                    'updated_at': convert_timestamp(payment_row.updated_at)
+                }
+                payments_by_installment[installment_id].append(payment)
+            
+            # Process installments and attach payments - ALL FIELDS
+            installments = []
+            for row in installments_result_set.rows:
+                installment = {
+                    # Basic identifiers
+                    'id': row.id,
+                    'user_id': row.user_id,
+                    'client_id': row.client_id,
+                    'client_name': row.client_name,
+                    'wallet_id': row.wallet_id,
+                    
+                    # Product information
+                    'product_name': row.product_name,
+                    'installment_number': row.installment_number,
+                    
+                    # Financial details
+                    'cash_price': float(row.cash_price) if row.cash_price else 0.0,
+                    'installment_price': float(row.installment_price) if row.installment_price else 0.0,
+                    'down_payment': float(row.down_payment) if row.down_payment else 0.0,
+                    'monthly_payment': float(row.monthly_payment) if row.monthly_payment else 0.0,
+                    
+                    # Payment tracking
+                    'paid_amount': float(row.paid_amount) if row.paid_amount else 0.0,
+                    'remaining_amount': float(row.remaining_amount) if row.remaining_amount else 0.0,
+                    'next_payment_amount': float(row.next_payment_amount) if row.next_payment_amount else 0.0,
+                    
+                    # Terms and schedule
+                    'term_months': row.term_months if row.term_months else 0,
+                    'total_payments': row.total_payments if row.total_payments else 0,
+                    'paid_payments': row.paid_payments if row.paid_payments else 0,
+                    
+                    # Dates
+                    'down_payment_date': convert_date(row.down_payment_date),
+                    'installment_start_date': convert_date(row.installment_start_date),
+                    'installment_end_date': convert_date(row.installment_end_date),
+                    'next_payment_date': convert_date(row.next_payment_date),
+                    'last_payment_date': convert_date(row.last_payment_date),
+                    'created_at': convert_timestamp(row.created_at),
+                    'updated_at': convert_timestamp(row.updated_at),
+                    
+                    # Status information
+                    'payment_status': row.payment_status,
+                    'overdue_count': row.overdue_count if row.overdue_count else 0,
+                    
+                    # Calculated fields for UI convenience
+                    'progress_percentage': round((float(row.paid_amount) / float(row.installment_price) * 100) if row.installment_price and row.paid_amount else 0.0, 2),
+                    'is_overdue': (row.overdue_count if row.overdue_count else 0) > 0,
+                    'is_completed': row.payment_status == 'paid' if row.payment_status else False,
+                    
+                    # Payment schedule
+                    'payments': payments_by_installment.get(row.id, [])
+                }
+                installments.append(installment)
+            
+            driver.stop()
+            
+            # Calculate summary statistics
+            total_amount = sum(inst['installment_price'] for inst in installments)
+            total_paid = sum(inst['paid_amount'] for inst in installments)
+            total_remaining = sum(inst['remaining_amount'] for inst in installments)
+            overdue_count = sum(1 for inst in installments if inst['overdue_count'] > 0)
+            
+            response_data = {
+                'client': {
+                    'id': client_info.id,
+                    'name': client_info.full_name,
+                    'short_id': client_short_id
+                },
+                'summary': {
+                    'total_installments': len(installments),
+                    'total_amount': total_amount,
+                    'total_paid': total_paid,
+                    'total_remaining': total_remaining,
+                    'overdue_count': overdue_count
+                },
+                'installments': installments
+            }
+            
+            logger.info(f"Found {len(installments)} installments for client {client_info.full_name}")
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                },
+                'body': json.dumps(response_data)
+            }
+            
+        except ValueError as ve:
+            driver.stop()
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                },
+                'body': json.dumps({'error': str(ve)})
+            }
         
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
