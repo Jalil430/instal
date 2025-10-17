@@ -304,26 +304,28 @@ def handler(event, context):
             
             for payment_row in payments_result_set.rows:
                 try:
-                    installment_id = payment_row.installment_id
+                    # Use dictionary access with table alias prefix
+                    installment_id = payment_row['p.installment_id']
                     if installment_id not in payments_by_installment:
                         payments_by_installment[installment_id] = []
                     
                     payment = {
-                        'id': payment_row.id,
-                        'installment_id': payment_row.installment_id,
-                        'payment_number': payment_row.payment_number,
-                        'due_date': convert_date(payment_row.due_date),
-                        'expected_amount': float(payment_row.expected_amount),
-                        'is_paid': payment_row.is_paid,
-                        'paid_date': convert_date(payment_row.paid_date),
-                        'paid_amount': float(payment_row.paid_amount) if payment_row.paid_amount else 0.0,
-                        'created_at': convert_timestamp(payment_row.created_at),
-                        'updated_at': convert_timestamp(payment_row.updated_at)
+                        'id': payment_row['p.id'],
+                        'installment_id': payment_row['p.installment_id'],
+                        'payment_number': payment_row['p.payment_number'] or 0,
+                        'due_date': convert_date(payment_row['p.due_date']),
+                        'expected_amount': float(payment_row['p.expected_amount']) if payment_row['p.expected_amount'] is not None else 0.0,
+                        'is_paid': payment_row['p.is_paid'] or False,
+                        'paid_date': convert_date(payment_row.get('p.paid_date')),
+                        'paid_amount': float(payment_row.get('p.paid_amount')) if payment_row.get('p.paid_amount') is not None else 0.0,
+                        'created_at': convert_timestamp(payment_row['p.created_at']),
+                        'updated_at': convert_timestamp(payment_row['p.updated_at'])
                     }
                     payments_by_installment[installment_id].append(payment)
+                    logger.info(f"Successfully processed payment {payment_row['p.payment_number']} for installment {installment_id}")
                 except Exception as e:
                     logger.error(f"Error processing payment row: {e}")
-                    logger.error(f"Payment row attributes: {dir(payment_row)}")
+                    logger.error(f"Payment row keys: {list(payment_row.keys()) if hasattr(payment_row, 'keys') else 'No keys method'}")
                     continue
             
             # Process installments and attach payments - ALL FIELDS
