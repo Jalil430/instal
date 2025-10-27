@@ -31,8 +31,13 @@ class InstallmentDetailsSection extends StatelessWidget {
                 isCompact: isSmallScreen,
               ),
               DetailRow(
-                label: l10n.totalPortfolio, 
-                value: currencyFormatter.format(data.totalPortfolio),
+                label: l10n.totalInstallmentValue, 
+                value: currencyFormatter.format(data.totalInstallmentValue),
+                isCompact: isSmallScreen,
+              ),
+              DetailRow(
+                label: l10n.totalCashPrice, 
+                value: currencyFormatter.format(data.totalCashPrice),
                 isCompact: isSmallScreen,
               ),
               DetailRow(
@@ -48,11 +53,6 @@ class InstallmentDetailsSection extends StatelessWidget {
               DetailRow(
                 label: l10n.averageTerm, 
                 value: '${data.averageTerm.toStringAsFixed(1)} ${l10n.months}',
-                isCompact: isSmallScreen,
-              ),
-              DetailRow(
-                label: l10n.totalInstallmentValue, 
-                value: currencyFormatter.format(data.totalInstallmentValue),
                 isCompact: isSmallScreen,
               ),
               DetailRow(

@@ -172,6 +172,7 @@ def handler(event, context):
                 
                 SELECT 
                     installment_price,
+                    COALESCE(cash_price, CAST(0 AS Decimal(22,9))) as cash_price,
                     COALESCE(paid_amount, CAST(0 AS Decimal(22,9))) as paid_amount,
                     COALESCE(remaining_amount, installment_price) as remaining_amount,
                     COALESCE(payment_status, 'предстоящий') as payment_status,
@@ -209,6 +210,7 @@ def handler(event, context):
 
                     installment = {
                         'installment_price': float(row.installment_price),
+                        'cash_price': float(row.cash_price),
                         'paid_amount': float(row.paid_amount),
                         'remaining_amount': float(row.remaining_amount),
                         'payment_status': row.payment_status,
@@ -231,7 +233,7 @@ def handler(event, context):
                         'key_metrics': {'total_revenue': 0, 'new_installments': 0, 'collection_rate': 0, 'portfolio_growth': 0},
                         'total_sales': {'weekly_sales': [0, 0, 0, 0, 0, 0, 0], 'average_sales': 0},
                         'installment_status': {'overdue_count': 0, 'due_to_pay_count': 0, 'upcoming_count': 0, 'paid_count': 0},
-                        'installment_details': {'active_installments': 0, 'total_portfolio': 0, 'total_overdue': 0, 'average_installment_value': 0}
+                        'installment_details': {'active_installments': 0, 'total_portfolio': 0, 'total_cash_price': 0, 'total_overdue': 0, 'average_installment_value': 0}
                     })}
                 
                 # Get ALL payments data for this user's installments (no date filtering yet)
@@ -339,6 +341,7 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
     # Initialize counters
     total_revenue = 0.0
     total_portfolio = 0.0
+    total_cash_price = 0.0
     total_overdue = 0.0
     upcoming_revenue_30_days = 0.0
     
@@ -408,6 +411,7 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
     # Process installments for portfolio metrics
     for installment in installments:
         installment_price = installment['installment_price']
+        cash_price = installment['cash_price']
         paid_amount = installment['paid_amount']
         remaining_amount = installment['remaining_amount']
         payment_status = installment['payment_status']
@@ -420,6 +424,9 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
         
         # Total portfolio is sum of all installment prices
         total_portfolio += installment_price
+        
+        # Total cash price is sum of all cash prices
+        total_cash_price += cash_price
         
         # Count by status
         if payment_status == 'просрочено':
@@ -509,6 +516,7 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
         'installment_details': {
             'active_installments': active_installments,
             'total_portfolio': total_portfolio,
+            'total_cash_price': total_cash_price,
             'total_overdue': total_overdue,
             'average_installment_value': average_installment_value,
             'average_term': average_term,

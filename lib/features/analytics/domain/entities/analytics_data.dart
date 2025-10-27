@@ -73,6 +73,7 @@ class InstallmentStatusData {
 class InstallmentDetailsData {
   final int activeInstallments;
   final double totalPortfolio;
+  final double totalCashPrice;
   final double totalOverdue;
   final double averageInstallmentValue;
   final double averageTerm;
@@ -82,6 +83,7 @@ class InstallmentDetailsData {
   InstallmentDetailsData({
     required this.activeInstallments,
     required this.totalPortfolio,
+    required this.totalCashPrice,
     required this.totalOverdue,
     required this.averageInstallmentValue,
     required this.averageTerm,

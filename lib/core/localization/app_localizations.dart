@@ -170,6 +170,8 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Название товара' : 'Product Name';
   String get cashPrice =>
       locale.languageCode == 'ru' ? 'Цена за наличные' : 'Cash Price';
+  String get totalCashPrice =>
+      locale.languageCode == 'ru' ? 'Общая цена за наличные' : 'Total Cash Price';
   String get installmentPrice =>
       locale.languageCode == 'ru' ? 'Цена в рассрочку' : 'Installment Price';
   String get cost =>

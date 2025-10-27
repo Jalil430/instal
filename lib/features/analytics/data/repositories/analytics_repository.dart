@@ -40,9 +40,16 @@ class AnalyticsRepository {
       
       print('--- ANALYTICS DEBUG: Final URI: $uri ---');
       final response = await ApiClient.get(uri, timeout: const Duration(seconds: 30));
+      print('--- ANALYTICS DEBUG: Response status: ${response.statusCode} ---');
+      print('--- ANALYTICS DEBUG: Response body: ${response.body} ---');
       ApiClient.handleResponse(response);
       
       final Map<String, dynamic> data = json.decode(response.body);
+      print('--- ANALYTICS DEBUG: Parsed data keys: ${data.keys.toList()} ---');
+      if (data['installment_details'] != null) {
+        print('--- ANALYTICS DEBUG: Installment details keys: ${data['installment_details'].keys.toList()} ---');
+        print('--- ANALYTICS DEBUG: Total cash price value: ${data['installment_details']['total_cash_price']} ---');
+      }
       
       final analyticsData = AnalyticsData(
         keyMetrics: _parseKeyMetrics(data['key_metrics']),
@@ -57,6 +64,10 @@ class AnalyticsRepository {
       return analyticsData;
     } catch (e) {
       print('Error calculating analytics data: $e');
+      print('Error type: ${e.runtimeType}');
+      if (e is ApiException) {
+        print('API Exception message: ${e.message}');
+      }
       
       // Return default analytics data instead of throwing an error
       final defaultAnalytics = AnalyticsData(
@@ -88,6 +99,7 @@ class AnalyticsRepository {
         installmentDetails: InstallmentDetailsData(
           activeInstallments: 0,
           totalPortfolio: 0.0,
+          totalCashPrice: 0.0,
           totalOverdue: 0.0,
           averageInstallmentValue: 0.0,
           averageTerm: 0.0,
@@ -144,6 +156,7 @@ class AnalyticsRepository {
     return InstallmentDetailsData(
       activeInstallments: data['active_installments'] ?? 0,
       totalPortfolio: (data['total_portfolio'] ?? 0.0).toDouble(),
+      totalCashPrice: (data['total_cash_price'] ?? 0.0).toDouble(),
       totalOverdue: (data['total_overdue'] ?? 0.0).toDouble(),
       averageInstallmentValue: (data['average_installment_value'] ?? 0.0).toDouble(),
       averageTerm: (data['average_term'] ?? 0.0).toDouble(),
@@ -205,6 +218,7 @@ class AnalyticsRepository {
     return InstallmentDetailsData(
       activeInstallments: 0,
       totalPortfolio: 0.0,
+      totalCashPrice: 0.0,
       totalOverdue: 0.0,
       averageInstallmentValue: 0.0,
       averageTerm: 0.0,
