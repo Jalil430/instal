@@ -251,6 +251,14 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 2,
     );
+    
+    // Determine if this is an investor wallet
+    final bool isInvestor = _wallet!.type == WalletType.investor ||
+        _wallet!.investmentAmount != null ||
+        _wallet!.investorPercentage != null ||
+        _wallet!.userPercentage != null ||
+        _wallet!.investmentReturnDate != null;
+    
     await AddMoneyDialog.show(
       context: context,
       wallet: wallet,
@@ -258,7 +266,8 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       onConfirm: (amount) async {
         try {
           final mu = (amount * 100).round();
-          await _walletRepository.topUpWallet(wallet.id, mu, 'Manual top-up');
+          final description = isInvestor ? 'Investor capital injection' : 'Manual top-up';
+          await _walletRepository.topUpWallet(wallet.id, mu, description);
           await _loadData();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n?.walletUpdatedSuccess ?? 'Wallet updated successfully')));
@@ -282,6 +291,14 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 2,
     );
+    
+    // Determine if this is an investor wallet
+    final bool isInvestor = _wallet!.type == WalletType.investor ||
+        _wallet!.investmentAmount != null ||
+        _wallet!.investorPercentage != null ||
+        _wallet!.userPercentage != null ||
+        _wallet!.investmentReturnDate != null;
+    
     await WithdrawMoneyDialog.show(
       context: context,
       wallet: wallet,
@@ -290,7 +307,8 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       onConfirm: (amount) async {
         try {
           final mu = (amount * 100).round();
-          await _walletRepository.withdrawWallet(wallet.id, mu, 'Manual withdraw');
+          final description = isInvestor ? 'Investor withdrawal' : 'Manual withdraw';
+          await _walletRepository.withdrawWallet(wallet.id, mu, description);
           await _loadData();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n?.walletUpdatedSuccess ?? 'Wallet updated successfully')));
@@ -386,11 +404,10 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       decimalDigits: 2,
     );
 
-    // For investor wallets, don't provide add/withdraw handlers
-    final isPersonal = !isInvestor;
+    // Enable add/withdraw for both personal and investor wallets when active
     final isActive = _wallet!.status == WalletStatus.active;
-    final onAddMoney = (isPersonal && isActive) ? _handleAddMoney : null;
-    final onWithdrawMoney = (isPersonal && isActive) ? _handleWithdrawMoney : null;
+    final onAddMoney = isActive ? _handleAddMoney : null;
+    final onWithdrawMoney = isActive ? _handleWithdrawMoney : null;
 
     return ResponsiveLayout(
       mobile: WalletDetailsScreenMobile(

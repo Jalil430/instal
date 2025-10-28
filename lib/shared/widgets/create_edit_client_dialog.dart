@@ -185,9 +185,19 @@ class _CreateEditClientDialogState extends State<CreateEditClientDialog> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage;
+        
+        // Handle specific error types
+        if (e.toString().contains('Client with this passport number already exists')) {
+          errorMessage = AppLocalizations.of(context)?.clientPassportAlreadyExists ?? 
+              'Client with this passport number already exists in your client list';
+        } else {
+          errorMessage = '${AppLocalizations.of(context)?.errorSaving ?? 'Error saving'}: $e';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)?.errorSaving ?? 'Error saving'}: $e'),
+            content: Text(errorMessage),
             backgroundColor: AppTheme.errorColor,
           ),
         );

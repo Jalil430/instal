@@ -350,6 +350,9 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Введите номер паспорта' : 'Enter passport number';
   String get enterAddress =>
       locale.languageCode == 'ru' ? 'Введите адрес' : 'Enter address';
+  String get clientPassportAlreadyExists => locale.languageCode == 'ru'
+      ? 'Клиент с таким номером паспорта уже существует в вашей базе'
+      : 'Client with this passport number already exists in your client list';
   String get enterProductName =>
       locale.languageCode == 'ru' ? 'Введите название товара' : 'Enter product name';
   String get enterValidPrice =>

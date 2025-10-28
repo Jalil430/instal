@@ -128,7 +128,24 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                     ] else ...[
-                      // Investor wallet: NO ADD/WITHDRAW buttons, only archive
+                      // Investor wallet: Show ADD/WITHDRAW buttons
+                      CustomButton(
+                        text: l10n?.addMoney ?? 'Add Money',
+                        onPressed: onAddMoney,
+                        color: AppTheme.successColor,
+                        textColor: Colors.white,
+                        icon: Icons.add_rounded,
+                      ),
+                      const SizedBox(width: 8),
+                      CustomButton(
+                        text: l10n?.withdraw ?? 'Withdraw',
+                        onPressed: onWithdrawMoney,
+                        color: AppTheme.warningColor,
+                        textColor: Colors.white,
+                        icon: Icons.remove_rounded,
+                      ),
+                      const SizedBox(width: 8),
+                      // Investor wallet badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(

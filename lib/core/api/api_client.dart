@@ -245,6 +245,8 @@ class ApiClient {
         throw ForbiddenException(errorMessage);
       case 404:
         throw NotFoundException(errorMessage);
+      case 409:
+        throw ConflictException(errorMessage);
       case 429:
         throw RateLimitException(errorMessage);
       case 500:
@@ -281,6 +283,10 @@ class ForbiddenException extends ApiException {
 
 class NotFoundException extends ApiException {
   const NotFoundException(super.message);
+}
+
+class ConflictException extends ApiException {
+  const ConflictException(super.message);
 }
 
 class RateLimitException extends ApiException {

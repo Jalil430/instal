@@ -257,27 +257,31 @@ def handler(event, context):
             pool = ydb.SessionPool(driver)
             
             def check_and_create_client(session):
-                # Check if client with passport number already exists
+                # Check if client with passport number already exists in user's client list
                 # Skip duplicate check if passport_number is not provided
                 if sanitized_data['passport_number'] is not None:
                     query = """
                     DECLARE $passport_number AS Utf8?;
-                    SELECT id FROM clients WHERE passport_number = $passport_number;
+                    DECLARE $user_id AS Utf8;
+                    SELECT id FROM clients WHERE passport_number = $passport_number AND user_id = $user_id;
                     """
                     prepared_query = session.prepare(query)
                     result_sets = session.transaction().execute(
                         prepared_query,
-                        {'$passport_number': sanitized_data['passport_number']},
+                        {
+                            '$passport_number': sanitized_data['passport_number'],
+                            '$user_id': user_id
+                        },
                         commit_tx=True
                     )
                     
                     if result_sets[0].rows:
                         safe_passport = sanitized_data['passport_number']
-                        logger.info(f"Duplicate passport number attempt: {safe_passport[:4]}****")
+                        logger.info(f"Duplicate passport number attempt for user {user_id}: {safe_passport[:4]}****")
                         return {
                             'statusCode': 409,
                             'headers': {'Content-Type': 'application/json'},
-                            'body': json.dumps({'error': 'Client with this passport number already exists'})
+                            'body': json.dumps({'error': 'Client with this passport number already exists in your client list'})
                         }
 
                 # Create new client

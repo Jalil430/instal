@@ -101,8 +101,8 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
 
 
                 // Action buttons
-                if (isPersonal) ...[
-                  // Personal Wallet: Add Money + Withdraw + Archive + Delete
+                if (onAddMoney != null || onWithdrawMoney != null) ...[
+                  // Active Wallet: Add Money + Withdraw + Archive + Delete
                   Row(
                     children: [
                       if (onAddMoney != null) ...[

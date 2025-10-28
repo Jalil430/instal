@@ -303,6 +303,37 @@ def handler(event, context):
                     )
                 
                 if 'passport_number' in sanitized_data:
+                    # Check if passport number already exists for another client in user's list
+                    if sanitized_data['passport_number'] is not None:
+                        check_passport_query = """
+                        DECLARE $passport_number AS Utf8?;
+                        DECLARE $user_id AS Utf8;
+                        DECLARE $client_id AS Utf8;
+                        SELECT id FROM clients 
+                        WHERE passport_number = $passport_number 
+                        AND user_id = $user_id 
+                        AND id != $client_id;
+                        """
+                        prepared_check = session.prepare(check_passport_query)
+                        check_result = session.transaction().execute(
+                            prepared_check,
+                            {
+                                '$passport_number': sanitized_data['passport_number'],
+                                '$user_id': user_id,
+                                '$client_id': sanitized_id
+                            },
+                            commit_tx=True
+                        )
+                        
+                        if check_result[0].rows:
+                            safe_passport = sanitized_data['passport_number']
+                            logger.info(f"Duplicate passport number update attempt for user {user_id}: {safe_passport[:4]}****")
+                            return {
+                                'statusCode': 409,
+                                'headers': {'Content-Type': 'application/json'},
+                                'body': json.dumps({'error': 'Client with this passport number already exists in your client list'})
+                            }
+                    
                     update_query = """
                     DECLARE $client_id AS Utf8;
                     DECLARE $passport_number AS Utf8?;
