@@ -6,6 +6,7 @@ abstract class InstallmentRepository {
   Future<Installment?> getInstallmentById(String id);
   Future<String> createInstallment(Installment installment);
   Future<void> updateInstallment(Installment installment);
+  Future<void> updateInstallmentPartial(String id, Map<String, dynamic> updates);
   Future<void> deleteInstallment(String id);
   Future<List<Installment>> searchInstallments(String userId, String query);
   Future<List<Installment>> getInstallmentsByClientId(String clientId);

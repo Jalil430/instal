@@ -36,6 +36,11 @@ class InstallmentRepositoryImpl implements InstallmentRepository {
   }
 
   @override
+  Future<void> updateInstallmentPartial(String id, Map<String, dynamic> updates) async {
+    await _remoteDataSource.updateInstallmentPartial(id, updates);
+  }
+
+  @override
   Future<void> deleteInstallment(String id) async {
     await _remoteDataSource.deleteInstallment(id);
   }

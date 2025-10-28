@@ -47,7 +47,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
   final Function(DateTime) onInstallmentStartDateChanged;
   final GlobalKey<KeyboardNavigableDropdownState<Client>> clientDropdownKey;
   final GlobalKey<KeyboardNavigableDropdownState<Wallet?>> walletDropdownKey;
-  
+  final bool isEditMode;
   const CreateInstallmentDialogMobile({
     Key? key,
     required this.formKey,
@@ -87,6 +87,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
     required this.onInstallmentStartDateChanged,
     required this.clientDropdownKey,
     required this.walletDropdownKey,
+    required this.isEditMode,
   }) : super(key: key);
 
   @override
@@ -115,7 +116,9 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n?.addInstallment ?? 'Add Installment',
+                      isEditMode 
+                          ? (l10n?.editInstallment ?? 'Edit Installment')
+                          : (l10n?.addInstallment ?? 'Add Installment'),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -146,7 +149,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                       _buildWalletSelector(context),
                       const SizedBox(height: 16),
                       
-                      // Installment number (optional, auto when empty)
+                      // Installment number (optional, auto when empty) - EDITABLE in edit mode
                       _buildTextField(
                         context: context,
                         controller: installmentNumberController ?? TextEditingController(),
@@ -154,10 +157,11 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         nextFocusNode: productNameFocus,
                         label: '${l10n?.installmentNumber ?? 'Installment Number'} (${l10n?.empty ?? 'Empty'} = auto)',
                         keyboardType: TextInputType.number,
+                        readOnly: false, // Always editable
                       ),
                       const SizedBox(height: 16),
 
-                      // Product Name
+                      // Product Name - EDITABLE in edit mode
                       _buildTextField(
                         context: context,
                         controller: productNameController,
@@ -165,10 +169,11 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         nextFocusNode: cashPriceFocus,
                         label: l10n?.productName ?? 'Product Name',
                         validator: (value) => value?.isEmpty == true ? l10n?.enterProductName ?? 'Enter product name' : null,
+                        readOnly: false, // Always editable
                       ),
                       const SizedBox(height: 16),
                       
-                      // Prices - stacked vertically on mobile
+                      // Prices - stacked vertically on mobile - RESTRICTED in edit mode
                       _buildTextField(
                         context: context,
                         controller: cashPriceController,
@@ -178,6 +183,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         keyboardType: TextInputType.number,
                         suffix: '₽',
                         validator: (value) => _validateNumber(context, value, l10n?.enterValidPrice ?? 'Enter valid price'),
+                        readOnly: isEditMode, // RESTRICTED - financial field
                       ),
                       const SizedBox(height: 16),
                       
@@ -190,10 +196,11 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         keyboardType: TextInputType.number,
                         suffix: '₽',
                         validator: (value) => _validateNumber(context, value, l10n?.enterValidPrice ?? 'Enter valid price'),
+                        readOnly: isEditMode, // RESTRICTED - financial field
                       ),
                       const SizedBox(height: 16),
                       
-                      // Term and Down Payment - stacked vertically on mobile
+                      // Term and Down Payment - stacked vertically on mobile - RESTRICTED in edit mode
                       _buildTextField(
                         context: context,
                         controller: termController,
@@ -203,6 +210,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         keyboardType: TextInputType.number,
                         suffix: l10n?.monthShort ?? 'mo.',
                         validator: (value) => _validateNumber(context, value, l10n?.enterValidTerm ?? 'Enter valid term'),
+                        readOnly: isEditMode, // RESTRICTED - financial field
                       ),
                       const SizedBox(height: 16),
                       
@@ -216,6 +224,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         validator: (value) => _validateNumber(context, value, l10n?.enterValidDownPayment ?? 'Enter valid down payment', allowZero: true),
                         isLast: true,
                         onSubmit: onSave,
+                        readOnly: isEditMode, // RESTRICTED - financial field
                       ),
                       const SizedBox(height: 16),
                       
@@ -232,12 +241,13 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Dates - stacked vertically on mobile
+                      // Dates - stacked vertically on mobile - RESTRICTED in edit mode
                       _buildDateField(
                         context: context,
                         label: l10n?.buyingDate ?? 'Buying Date',
                         value: buyingDate,
                         onChanged: onBuyingDateChanged,
+                        readOnly: isEditMode, // RESTRICTED - date field
                       ),
                       const SizedBox(height: 16),
                       
@@ -246,6 +256,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         label: l10n?.installmentStartDate ?? 'Installment Start Date',
                         value: installmentStartDate,
                         onChanged: onInstallmentStartDateChanged,
+                        readOnly: isEditMode, // RESTRICTED - date field
                       ),
                       // removed old placement of installment number
                     ],
@@ -439,6 +450,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
     required String label,
     required DateTime? value,
     required Function(DateTime) onChanged,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,7 +465,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         InkWell(
-          onTap: () async {
+          onTap: readOnly ? null : () async {
             final date = await showDatePicker(
               context: context,
               initialDate: value ?? DateTime.now(),
@@ -469,7 +481,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: readOnly ? AppTheme.subtleBackgroundColor : Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppTheme.borderColor),
             ),

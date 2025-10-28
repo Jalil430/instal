@@ -9,6 +9,7 @@ abstract class InstallmentRemoteDataSource {
   Future<InstallmentModel?> getInstallmentById(String id);
   Future<String> createInstallment(InstallmentModel installment);
   Future<void> updateInstallment(InstallmentModel installment);
+  Future<void> updateInstallmentPartial(String id, Map<String, dynamic> updates);
   Future<void> deleteInstallment(String id);
   Future<List<InstallmentModel>> searchInstallments(String userId, String query);
   Future<List<InstallmentModel>> getInstallmentsByClientId(String clientId);
@@ -113,6 +114,27 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     _cache.remove(CacheService.installmentsKey(installment.userId));
     _cache.remove(CacheService.paymentsKey(installment.id));
     _cache.remove(CacheService.analyticsKey(installment.userId)); // Analytics might be affected
+  }
+
+  @override
+  Future<void> updateInstallmentPartial(String id, Map<String, dynamic> updates) async {
+    final response = await ApiClient.put('/installments/$id', updates);
+    ApiClient.handleResponse(response);
+    
+    // Invalidate cache after updating
+    _cache.remove(CacheService.installmentKey(id));
+    
+    // Since we don't have userId here, we need to clear all installments caches
+    // This is less efficient but ensures consistency
+    final installmentKeys = _cache.getKeysWithPrefix('installments_');
+    for (final key in installmentKeys) {
+      _cache.remove(key);
+    }
+    
+    final analyticsKeys = _cache.getKeysWithPrefix('analytics_');
+    for (final key in analyticsKeys) {
+      _cache.remove(key);
+    }
   }
 
   @override

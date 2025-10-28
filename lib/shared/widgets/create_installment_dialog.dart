@@ -29,10 +29,12 @@ import 'create_edit_client_dialog.dart';
 
 class CreateInstallmentDialog extends StatefulWidget {
   final VoidCallback? onSuccess;
+  final Installment? installment; // null for create, installment for edit
 
   const CreateInstallmentDialog({
     super.key,
     this.onSuccess,
+    this.installment, // Add installment parameter for edit mode
   });
 
   @override
@@ -78,6 +80,9 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   
   // Navigation state
   int _currentStep = 0; // 0: client, 1: wallet, 2: product name, etc.
+  
+  // Edit mode state
+  bool get isEditMode => widget.installment != null;
 
   // Keys for keyboard navigation
   final GlobalKey<KeyboardNavigableDropdownState<Client>> _clientDropdownKey = GlobalKey();
@@ -90,10 +95,17 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     _initializeRepositories();
     _initializeDates();
     
-    // Add listeners for automatic calculations
-    _installmentPriceController.addListener(_calculateMonthlyPayment);
-    _termController.addListener(_calculateMonthlyPayment);
-    _downPaymentController.addListener(_calculateMonthlyPayment);
+    // Populate form fields if in edit mode
+    if (isEditMode) {
+      _populateFormFromInstallment();
+    }
+    
+    // Add listeners for automatic calculations (only in create mode)
+    if (!isEditMode) {
+      _installmentPriceController.addListener(_calculateMonthlyPayment);
+      _termController.addListener(_calculateMonthlyPayment);
+      _downPaymentController.addListener(_calculateMonthlyPayment);
+    }
   }
 
   @override
@@ -118,12 +130,31 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   }
 
   void _initializeDates() {
-    // Set buying date to today
-    _buyingDate = DateTime.now();
+    if (isEditMode) {
+      // Use dates from existing installment
+      _buyingDate = widget.installment!.downPaymentDate;
+      _installmentStartDate = widget.installment!.installmentStartDate;
+    } else {
+      // Set buying date to today
+      _buyingDate = DateTime.now();
+      
+      // Set installment start date to one month from today
+      final now = DateTime.now();
+      _installmentStartDate = DateTime(now.year, now.month + 1, now.day);
+    }
+  }
+
+  void _populateFormFromInstallment() {
+    final installment = widget.installment!;
     
-    // Set installment start date to one month from today
-    final now = DateTime.now();
-    _installmentStartDate = DateTime(now.year, now.month + 1, now.day);
+    // Populate all form fields with current values
+    _productNameController.text = installment.productName;
+    _cashPriceController.text = installment.cashPrice.toString();
+    _installmentPriceController.text = installment.installmentPrice.toString();
+    _termController.text = installment.termMonths.toString();
+    _downPaymentController.text = installment.downPayment.toString();
+    _monthlyPaymentController.text = installment.monthlyPayment.toString();
+    _installmentNumberController.text = installment.installmentNumber?.toString() ?? '';
   }
 
   Future<void> _loadData() async {
@@ -167,6 +198,25 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         _clients = clients;
         _wallets = wallets;
         _walletBalances = balancesMap;
+        
+        // Set selected client and wallet if in edit mode
+        if (isEditMode) {
+          _selectedClient = clients.firstWhere(
+            (client) => client.id == widget.installment!.clientId,
+            orElse: () => clients.first,
+          );
+          
+          if (widget.installment!.walletId != null) {
+            try {
+              _selectedWallet = wallets.firstWhere(
+                (wallet) => wallet.id == widget.installment!.walletId,
+              );
+            } catch (e) {
+              _selectedWallet = null; // Wallet might have been deleted
+            }
+          }
+        }
+        
         _isLoadingData = false;
       });
       
@@ -177,12 +227,14 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       
 
       
-      // Auto-focus client dropdown after loading
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _focusClientDropdown();
-        }
-      });
+      // Auto-focus client dropdown after loading (only in create mode)
+      if (!isEditMode) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _focusClientDropdown();
+          }
+        });
+      }
     } catch (e) {
       print('❌ Error loading data: $e');
       setState(() => _isLoadingData = false);
@@ -276,15 +328,40 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   }
 
   Future<void> _saveInstallment() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedClient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)?.selectClient ?? 'Select client'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
+    if (isEditMode) {
+      // In edit mode, validate allowed fields
+      if (_selectedClient == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)?.selectClient ?? 'Select client'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+      
+      // Validate product name is not empty
+      if (_productNameController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)?.enterProductName ?? 'Enter product name'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+    } else {
+      // In create mode, validate full form
+      if (!_formKey.currentState!.validate()) return;
+      if (_selectedClient == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)?.selectClient ?? 'Select client'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
@@ -297,45 +374,93 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         throw Exception('User not authenticated');
       }
       
-      // Calculate installment end date
-      final startDate = _installmentStartDate!;
-      final term = int.parse(_termController.text);
-      final downPayment = double.parse(_downPaymentController.text);
-      
-      final monthlyPaymentsCount = downPayment > 0 ? term - 1 : term;
-      final monthsToAdd = monthlyPaymentsCount - 1;
-      final endDate = DateTime(startDate.year, startDate.month + monthsToAdd, startDate.day);
-      
-      final newInstallment = Installment(
-        id: const Uuid().v4(),
-        userId: currentUser.id,
-        clientId: _selectedClient!.id,
-        // Do not populate investorId anymore; use walletId only
-        investorId: '',
-        walletId: _selectedWallet?.id,
-        productName: _productNameController.text,
-        cashPrice: double.parse(_cashPriceController.text),
-        installmentPrice: double.parse(_installmentPriceController.text),
-        termMonths: term,
-        downPayment: double.parse(_downPaymentController.text),
-        monthlyPayment: double.parse(_monthlyPaymentController.text),
-        downPaymentDate: _buyingDate!,
-        installmentStartDate: startDate,
-        installmentEndDate: endDate,
-        installmentNumber: _installmentNumberController.text.trim().isEmpty ? null : int.parse(_installmentNumberController.text.trim()),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      
-      await _installmentRepository.createInstallment(newInstallment);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)?.installmentCreatedSuccess ?? 'Installment created successfully'),
-            backgroundColor: AppTheme.successColor,
-          ),
+      if (isEditMode) {
+        // Update mode - update allowed fields only
+        final Map<String, dynamic> updates = {};
+        
+        // Check if client changed
+        if (_selectedClient?.id != widget.installment!.clientId) {
+          updates['client_id'] = _selectedClient?.id ?? '';
+        }
+        
+        // Check if wallet changed
+        if (_selectedWallet?.id != widget.installment!.walletId) {
+          updates['wallet_id'] = _selectedWallet?.id ?? '';
+        }
+        
+        // Check if installment number changed
+        final newInstallmentNumber = int.tryParse(_installmentNumberController.text.trim());
+        if (newInstallmentNumber != widget.installment!.installmentNumber) {
+          updates['installment_number'] = newInstallmentNumber;
+        }
+        
+        // Check if product name changed
+        final newProductName = _productNameController.text.trim();
+        if (newProductName != widget.installment!.productName) {
+          updates['product_name'] = newProductName;
+        }
+        
+        // If no changes, just close dialog
+        if (updates.isEmpty) {
+          Navigator.of(context).pop();
+          return;
+        }
+        
+        await _installmentRepository.updateInstallmentPartial(
+          widget.installment!.id,
+          updates,
         );
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)?.installmentCreatedSuccess ?? 'Installment updated successfully'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
+      } else {
+        // Create mode - create new installment
+        // Calculate installment end date
+        final startDate = _installmentStartDate!;
+        final term = int.parse(_termController.text);
+        final downPayment = double.parse(_downPaymentController.text);
+        
+        final monthlyPaymentsCount = downPayment > 0 ? term - 1 : term;
+        final monthsToAdd = monthlyPaymentsCount - 1;
+        final endDate = DateTime(startDate.year, startDate.month + monthsToAdd, startDate.day);
+        
+        final newInstallment = Installment(
+          id: const Uuid().v4(),
+          userId: currentUser.id,
+          clientId: _selectedClient!.id,
+          // Do not populate investorId anymore; use walletId only
+          investorId: '',
+          walletId: _selectedWallet?.id,
+          productName: _productNameController.text,
+          cashPrice: double.parse(_cashPriceController.text),
+          installmentPrice: double.parse(_installmentPriceController.text),
+          termMonths: term,
+          downPayment: double.parse(_downPaymentController.text),
+          monthlyPayment: double.parse(_monthlyPaymentController.text),
+          downPaymentDate: _buyingDate!,
+          installmentStartDate: startDate,
+          installmentEndDate: endDate,
+          installmentNumber: _installmentNumberController.text.trim().isEmpty ? null : int.parse(_installmentNumberController.text.trim()),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        
+        await _installmentRepository.createInstallment(newInstallment);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)?.installmentCreatedSuccess ?? 'Installment created successfully'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
       }
       
       if (mounted) {
@@ -415,6 +540,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
         clientDropdownKey: _clientDropdownKey,
         walletDropdownKey: _walletDropdownKey,
+        isEditMode: isEditMode,
       ),
       desktop: CreateInstallmentDialogDesktop(
         formKey: _formKey,
@@ -462,6 +588,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
         clientDropdownKey: _clientDropdownKey,
         walletDropdownKey: _walletDropdownKey,
+        isEditMode: isEditMode,
       ),
     );
   }

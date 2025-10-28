@@ -361,7 +361,15 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         timeout: 30
         payload_format_version: '1.0'
-
+    put:
+      summary: Update an installment (wallet only)
+      operationId: update-installment
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e52hagb48ge8e07901
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 45
+        payload_format_version: '1.0'
     delete:
       summary: Delete an installment
       operationId: delete-installment

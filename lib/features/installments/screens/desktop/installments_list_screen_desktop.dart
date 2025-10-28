@@ -672,6 +672,10 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                                                   () => state.deleteInstallment(
                                                     installment,
                                                   ),
+                                              onEdit:
+                                                  () => state.editInstallment(
+                                                    installment,
+                                                  ),
                                               onSelect:
                                                   () => state.toggleSelection(
                                                     installment.id,

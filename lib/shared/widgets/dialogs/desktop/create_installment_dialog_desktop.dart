@@ -47,7 +47,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
   final Function(DateTime) onInstallmentStartDateChanged;
   final GlobalKey<KeyboardNavigableDropdownState<Client>> clientDropdownKey;
   final GlobalKey<KeyboardNavigableDropdownState<Wallet?>> walletDropdownKey;
-  
+  final bool isEditMode;
   const CreateInstallmentDialogDesktop({
     Key? key,
     required this.formKey,
@@ -87,6 +87,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
     required this.onInstallmentStartDateChanged,
     required this.clientDropdownKey,
     required this.walletDropdownKey,
+    required this.isEditMode,
   }) : super(key: key);
 
   @override
@@ -112,7 +113,9 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    l10n?.addInstallment ?? 'Add Installment',
+                    isEditMode 
+                        ? (l10n?.editInstallment ?? 'Edit Installment')
+                        : (l10n?.addInstallment ?? 'Add Installment'),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -147,7 +150,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Installment number (optional, auto when empty)
+                      // Installment number (optional, auto when empty) - EDITABLE in edit mode
                       _buildTextField(
                         context: context,
                         controller: installmentNumberController ?? TextEditingController(),
@@ -155,10 +158,11 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                         nextFocusNode: productNameFocus,
                         label: '${l10n?.installmentNumber ?? 'Installment Number'} (${l10n?.leaveEmptyToAuto ?? 'Пусто'})',
                         keyboardType: TextInputType.number,
+                        readOnly: false, // Always editable
                       ),
                       const SizedBox(height: 16),
 
-                      // Product Name
+                      // Product Name - EDITABLE in edit mode
                       _buildTextField(
                         context: context,
                         controller: productNameController,
@@ -166,10 +170,11 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                         nextFocusNode: cashPriceFocus,
                         label: l10n?.productName ?? 'Product Name',
                         validator: (value) => value?.isEmpty == true ? l10n?.enterProductName ?? 'Enter product name' : null,
+                        readOnly: false, // Always editable
                       ),
                       const SizedBox(height: 16),
                       
-                      // Prices - side by side on desktop
+                      // Prices - side by side on desktop - RESTRICTED in edit mode
                       Row(
                         children: [
                           Expanded(
@@ -182,6 +187,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                               keyboardType: TextInputType.number,
                               suffix: '₽',
                               validator: (value) => _validateNumber(context, value, l10n?.enterValidPrice ?? 'Enter valid price'),
+                              readOnly: isEditMode, // RESTRICTED - financial field
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -195,13 +201,14 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                               keyboardType: TextInputType.number,
                               suffix: '₽',
                               validator: (value) => _validateNumber(context, value, l10n?.enterValidPrice ?? 'Enter valid price'),
+                              readOnly: isEditMode, // RESTRICTED - financial field
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       
-                      // Term and Down Payment - side by side on desktop
+                      // Term and Down Payment - side by side on desktop - RESTRICTED in edit mode
                       Row(
                         children: [
                           Expanded(
@@ -214,6 +221,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                               keyboardType: TextInputType.number,
                               suffix: l10n?.monthShort ?? 'mo.',
                               validator: (value) => _validateNumber(context, value, l10n?.enterValidTerm ?? 'Enter valid term'),
+                              readOnly: isEditMode, // RESTRICTED - financial field
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -228,6 +236,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                               validator: (value) => _validateNumber(context, value, l10n?.enterValidDownPayment ?? 'Enter valid down payment', allowZero: true),
                               isLast: true,
                               onSubmit: onSave,
+                              readOnly: isEditMode, // RESTRICTED - financial field
                             ),
                           ),
                         ],
@@ -247,7 +256,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Dates - side by side on desktop
+                      // Dates - side by side on desktop - RESTRICTED in edit mode
                       Row(
                         children: [
                           Expanded(
@@ -256,6 +265,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                               label: l10n?.buyingDate ?? 'Buying Date',
                               value: buyingDate,
                               onChanged: onBuyingDateChanged,
+                              readOnly: isEditMode, // RESTRICTED - date field
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -265,6 +275,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                               label: l10n?.installmentStartDate ?? 'Installment Start Date',
                               value: installmentStartDate,
                               onChanged: onInstallmentStartDateChanged,
+                              readOnly: isEditMode, // RESTRICTED - date field
                             ),
                           ),
                         ],
@@ -462,6 +473,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
     required String label,
     required DateTime? value,
     required Function(DateTime) onChanged,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,7 +488,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         InkWell(
-          onTap: () async {
+          onTap: readOnly ? null : () async {
             final date = await showDatePicker(
               context: context,
               initialDate: value ?? DateTime.now(),
@@ -492,7 +504,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: readOnly ? AppTheme.subtleBackgroundColor : Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppTheme.borderColor),
             ),

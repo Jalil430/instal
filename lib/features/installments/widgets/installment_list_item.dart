@@ -34,6 +34,7 @@ class InstallmentListItem extends StatefulWidget {
   final void Function(InstallmentPayment updatedPayment)?
   onSubmitPaymentInBackground;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
   final VoidCallback? onSelect;
   final bool isSelected;
   final VoidCallback? onSelectionToggle;
@@ -58,6 +59,7 @@ class InstallmentListItem extends StatefulWidget {
     this.onDataChanged,
     this.onInstallmentUpdated,
     this.onDelete,
+    this.onEdit,
     this.onSubmitPaymentInBackground,
     this.onSelect,
     this.isSelected = false,
@@ -260,6 +262,7 @@ class _InstallmentListItemState extends State<InstallmentListItem>
                 position: details.globalPosition,
                 child: _InstallmentContextMenu(
                   onSelect: widget.onSelect,
+                  onEdit: widget.onEdit,
                   onDelete: widget.onDelete,
                   onSendWhatsAppReminder: () => _sendWhatsAppReminder(),
                 ),
@@ -620,6 +623,7 @@ class _InstallmentListItemState extends State<InstallmentListItem>
 
 class _InstallmentContextMenu extends StatelessWidget {
   final VoidCallback? onSelect;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onSendWhatsAppReminder;
 
@@ -628,6 +632,7 @@ class _InstallmentContextMenu extends StatelessWidget {
 
   const _InstallmentContextMenu({
     this.onSelect,
+    this.onEdit,
     this.onDelete,
     this.onSendWhatsAppReminder,
   });
@@ -650,6 +655,13 @@ class _InstallmentContextMenu extends StatelessWidget {
             icon: Icons.check,
             label: l10n?.select ?? 'Выбрать',
             onTap: onSelect,
+            textStyle: textStyle,
+          ),
+          const Divider(height: 1),
+          _ContextMenuTile(
+            icon: Icons.edit_outlined,
+            label: l10n?.edit ?? 'Редактировать',
+            onTap: onEdit,
             textStyle: textStyle,
           ),
           if (onSendWhatsAppReminder != null) ...[

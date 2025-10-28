@@ -1092,6 +1092,16 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
     );
   }
 
+  void editInstallment(Installment installment) {
+    showDialog(
+      context: context,
+      builder: (context) => CreateInstallmentDialog(
+        installment: installment,
+        onSuccess: loadData,
+      ),
+    );
+  }
+
   // Force a complete refresh by reinitializing all data
   void forceRefresh() {
     if (!mounted) return;
