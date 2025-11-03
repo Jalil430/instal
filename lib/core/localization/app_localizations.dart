@@ -996,6 +996,8 @@ class AppLocalizations {
   // Wallet transaction history
   String get transactionHistory => locale.languageCode == 'ru' ? 'История операций' : 'Transaction History';
   String get noOperations => locale.languageCode == 'ru' ? 'Нет операций' : 'No operations';
+  String get transactions => locale.languageCode == 'ru' ? 'операций' : 'transactions';
+  String get noTransactions => locale.languageCode == 'ru' ? 'Операции не найдены' : 'No transactions found';
 
   // Wallet empty states
   String get noWallets => locale.languageCode == 'ru' ? 'Нет кошельков' : 'No wallets';

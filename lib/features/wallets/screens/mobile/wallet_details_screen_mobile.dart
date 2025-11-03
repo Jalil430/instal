@@ -117,8 +117,16 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   ),
                 ),
 
-                    // Show archive/unarchive in header
+                    // Show history and archive/unarchive in header
                     if (true) ...[
+                      CustomIconButton(
+                        icon: Icons.history,
+                        onPressed: () => _showLedgerHistoryDialog(context),
+                        hoverBackgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        hoverIconColor: AppTheme.primaryColor,
+                        hoverBorderColor: AppTheme.primaryColor.withOpacity(0.3),
+                      ),
+                      const SizedBox(width: 8),
                       CustomIconButton(
                         icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
@@ -160,6 +168,14 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                             color: AppTheme.primaryColor,
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      CustomIconButton(
+                        icon: Icons.history,
+                        onPressed: () => _showLedgerHistoryDialog(context),
+                        hoverBackgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        hoverIconColor: AppTheme.primaryColor,
+                        hoverBorderColor: AppTheme.primaryColor.withOpacity(0.3),
                       ),
                       const SizedBox(width: 8),
                       CustomIconButton(
@@ -355,14 +371,15 @@ class WalletDetailsScreenMobile extends StatelessWidget {
     // Calculate key metrics (rubles)
     final currentBalance = balance?.balance ?? 0;
     final paidAmount = balance?.paidAmount ?? 0;
-    // totalAllocated acts as "К получению" (all remaining)
-    final toReceiveAll = balance?.totalAllocated ?? 0;
+    // totalAllocated is the total amount allocated to installments
+    final totalAllocated = balance?.totalAllocated ?? 0;
+    final toReceive = totalAllocated - paidAmount; // К получению = Total allocated - Paid amount
     // dueToGet acts as "Скоро к получению" (next payments)
     final toReceiveSoon = balance?.dueToGet ?? 0;
     final expectedProfit = balance?.expectedRevenue ?? 0;
 
-    // Объём рассрочек = Оплачено + К получению = Σ installment_price
-    final totalInstallmentsAmount = paidAmount + toReceiveAll;
+    // Объём рассрочек = Total allocated to installments (FIXED: should be just totalAllocated, not paidAmount + totalAllocated)
+    final totalInstallmentsAmount = totalAllocated;
     // Сумма закупок — используем поле из баланса, если доступно; иначе производное
     final spentOnProducts = (balance?.spentOnProducts ?? (totalInstallmentsAmount - expectedProfit))
         .clamp(0, double.infinity);
@@ -424,7 +441,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                   Expanded(
                     child: _buildMobileSummaryCell(
                       'К получению',
-                      stripTrailingZeroMoney(currencyFormat.format(toReceiveAll)),
+                      stripTrailingZeroMoney(currencyFormat.format(toReceive)),
                       Icons.assignment_turned_in,
                       AppTheme.warningColor,
                       tooltip: l10n?.tooltipToReceiveAll,
@@ -1133,4 +1150,90 @@ class WalletDetailsScreenMobile extends StatelessWidget {
       onArchiveToggle();
     }
   }
+
+  void _showLedgerHistoryDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
+    // Show transactions dialog optimized for mobile
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Icon(Icons.history, color: AppTheme.primaryColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n?.transactionHistory ?? 'Transaction History',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${wallet.name} - ${transactions.length} ${l10n?.transactions ?? 'transactions'}',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Transactions list
+              Expanded(
+                child: transactions.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 48,
+                              color: AppTheme.textSecondary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n?.noTransactions ?? 'No transactions found',
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 16,
+                              ),
+                            ),
+
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: transactions.length,
+                        itemBuilder: (context, index) {
+                          final transaction = transactions[index];
+                          return _buildTransactionItem(context, transaction);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
 }

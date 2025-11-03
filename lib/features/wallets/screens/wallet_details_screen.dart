@@ -108,9 +108,10 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       final balance = await _walletRepository.getWalletBalance(widget.walletId);
       print('💰 _loadData: Balance loaded: ${balance?.balance ?? 'null'}');
 
-      // Hide transactions history: do not load transactions list
-      final transactions = <LedgerTransaction>[];
-      print('📋 _loadData: Transactions loading skipped (hidden)');
+      // Load transactions history
+      print('📋 _loadData: Loading transactions...');
+      final transactions = await _walletRepository.getWalletTransactions(widget.walletId);
+      print('📋 _loadData: Loaded ${transactions.length} transactions');
 
       InvestmentSummary? investmentSummary;
 

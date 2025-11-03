@@ -86,14 +86,17 @@ class JWTAuth:
 def _update_wallet_aggregates(session, tx, wallet_id, user_id, exclude_installment_id, current_version, current_balance, now):
     """Helper function to update wallet aggregates - optimized but preserving all functionality"""
     
-    # Optimize by combining the first 3 queries into a single query
+    # Optimize by combining queries - FIXED: total_allocated should be sum of installment_price, not remaining
+    # ADDED: paid_amount_minor_units calculation
     if exclude_installment_id:
         combined_query = """
         DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $exclude_id AS Utf8;
         SELECT 
+            COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_allocated,
             COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_remaining,
             COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS profit_sum,
-            COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum
+            COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum,
+            COALESCE(SUM(CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_paid
         FROM installments i 
         LEFT JOIN (
             SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
@@ -106,9 +109,11 @@ def _update_wallet_aggregates(session, tx, wallet_id, user_id, exclude_installme
         combined_query = """
         DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
         SELECT 
+            COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_allocated,
             COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_remaining,
             COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9)) - CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS profit_sum,
-            COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum
+            COALESCE(SUM(CAST(i.cash_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS spent_sum,
+            COALESCE(SUM(CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_paid
         FROM installments i 
         LEFT JOIN (
             SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
@@ -123,15 +128,18 @@ def _update_wallet_aggregates(session, tx, wallet_id, user_id, exclude_installme
     
     if combined_rs[0].rows:
         row = combined_rs[0].rows[0]
-        total_remaining_dec = Decimal(str(row.total_remaining or 0))
+        total_allocated_dec = Decimal(str(row.total_allocated or 0))  # FIXED: This is the sum of installment_price
+        total_remaining_dec = Decimal(str(row.total_remaining or 0))  # This is remaining amounts (for other calculations)
         profit_sum = Decimal(str(row.profit_sum or 0))
         spent_sum_dec = Decimal(str(row.spent_sum or 0))
+        total_paid_dec = Decimal(str(row.total_paid or 0))  # ADDED: Total paid amount
     else:
-        total_remaining_dec = profit_sum = spent_sum_dec = Decimal('0')
+        total_allocated_dec = total_remaining_dec = profit_sum = spent_sum_dec = total_paid_dec = Decimal('0')
     
-    total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+    total_alloc_mu = int((total_allocated_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))  # FIXED: Use total_allocated_dec
     expected_revenue_mu = int((profit_sum * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
     spent_mu = int((spent_sum_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+    paid_amount_mu = int((total_paid_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))  # ADDED: Convert to minor units
     
     # Keep the original due_to_get calculation but optimize it
     if exclude_installment_id:
@@ -184,7 +192,7 @@ def _update_wallet_aggregates(session, tx, wallet_id, user_id, exclude_installme
             """
             DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
             DECLARE $new_balance AS Int64; DECLARE $new_version AS Uint64;
-            DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $spent_mu AS Int64;
+            DECLARE $total_alloc AS Int64; DECLARE $due_to_get AS Int64; DECLARE $exp_rev AS Int64; DECLARE $spent_mu AS Int64; DECLARE $paid_amount AS Int64;
             DECLARE $curr_version AS Uint64; DECLARE $now AS Timestamp;
             UPDATE wallet_balances
             SET balance_minor_units = $new_balance,
@@ -193,7 +201,8 @@ def _update_wallet_aggregates(session, tx, wallet_id, user_id, exclude_installme
                 total_allocated_minor_units = $total_alloc,
                 due_to_get_minor_units = $due_to_get,
                 expected_revenue_minor_units = $exp_rev,
-                spent_on_products_minor_units = $spent_mu
+                spent_on_products_minor_units = $spent_mu,
+                paid_amount_minor_units = $paid_amount
             WHERE wallet_id = $wallet_id AND user_id = $user_id AND COALESCE(version, CAST(0 AS Uint64)) = $curr_version;
             """
         ),
@@ -206,6 +215,7 @@ def _update_wallet_aggregates(session, tx, wallet_id, user_id, exclude_installme
             '$due_to_get': due_to_get_mu,
             '$exp_rev': expected_revenue_mu,
             '$spent_mu': spent_mu,
+            '$paid_amount': paid_amount_mu,
             '$curr_version': int(current_version),
             '$now': now
         }

@@ -132,6 +132,14 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                         const SizedBox(width: 8),
                       ],
                       CustomIconButton(
+                        icon: Icons.history,
+                        onPressed: () => _showLedgerHistoryDialog(context),
+                        hoverBackgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        hoverIconColor: AppTheme.primaryColor,
+                        hoverBorderColor: AppTheme.primaryColor.withOpacity(0.3),
+                      ),
+                      const SizedBox(width: 8),
+                      CustomIconButton(
                         icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
                         hoverBackgroundColor: AppTheme.warningColor.withOpacity(0.1),
@@ -149,9 +157,17 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     ],
                   ),
                 ] else if (!isPersonal && wallet.isActive) ...[
-                  // Active Investor Wallet: Archive + Delete
+                  // Active Investor Wallet: History + Archive + Delete
                   Row(
                     children: [
+                      CustomIconButton(
+                        icon: Icons.history,
+                        onPressed: () => _showLedgerHistoryDialog(context),
+                        hoverBackgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        hoverIconColor: AppTheme.primaryColor,
+                        hoverBorderColor: AppTheme.primaryColor.withOpacity(0.3),
+                      ),
+                      const SizedBox(width: 8),
                       CustomIconButton(
                         icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
@@ -170,9 +186,17 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                     ],
                   ),
                 ] else if (!isPersonal && !wallet.isActive) ...[
-                  // Stopped Investor Wallet: Archive + Delete
+                  // Stopped Investor Wallet: History + Archive + Delete
                   Row(
                     children: [
+                      CustomIconButton(
+                        icon: Icons.history,
+                        onPressed: () => _showLedgerHistoryDialog(context),
+                        hoverBackgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        hoverIconColor: AppTheme.primaryColor,
+                        hoverBorderColor: AppTheme.primaryColor.withOpacity(0.3),
+                      ),
+                      const SizedBox(width: 8),
                       CustomIconButton(
                         icon: wallet.status == WalletStatus.archived ? Icons.unarchive : Icons.archive,
                         onPressed: () => _showArchiveConfirmationDialog(context),
@@ -343,11 +367,12 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     // Calculate key metrics (rubles)
     final currentBalance = balance?.balance ?? 0;
     final paidAmount = balance?.paidAmount ?? 0;
-    final toReceiveAll = balance?.totalAllocated ?? 0; // К получению
+    final totalAllocated = balance?.totalAllocated ?? 0; // Total allocated to installments
+    final toReceive = totalAllocated - paidAmount; // К получению = Total allocated - Paid amount
     final toReceiveSoon = balance?.dueToGet ?? 0; // Скоро к получению
     final expectedProfit = balance?.expectedRevenue ?? 0; // Ожидаемая прибыль
 
-    final totalInstallmentsAmount = paidAmount + toReceiveAll; // Объём рассрочек
+    final totalInstallmentsAmount = totalAllocated; // Объём рассрочек - FIXED: should be just totalAllocated, not paidAmount + totalAllocated
     final spentOnProducts = (balance?.spentOnProducts ?? (totalInstallmentsAmount - expectedProfit))
         .clamp(0, double.infinity);
 
@@ -413,7 +438,7 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
                       child: _buildSummaryCell(
                         context,
                         'К получению',
-                        stripTrailingZeroMoney(currencyFormat.format(toReceiveAll)),
+                        stripTrailingZeroMoney(currencyFormat.format(toReceive)),
                         Icons.assignment_turned_in,
                         AppTheme.warningColor,
                         tooltip: l10n?.tooltipToReceiveAll,
@@ -1201,6 +1226,89 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
     if (confirmed == true) {
       onArchiveToggle();
     }
+  }
+
+  void _showLedgerHistoryDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
+    // For now, show a simple dialog with the existing transactions
+    // In the future, this could load fresh data from the repository
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 800,
+          height: 600,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Icon(Icons.history, color: AppTheme.primaryColor),
+                  const SizedBox(width: 12),
+                  Text(
+                    l10n?.transactionHistory ?? 'Transaction History',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '${wallet.name} - ${transactions.length} ${l10n?.transactions ?? 'transactions'}',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Transactions list
+              Expanded(
+                child: transactions.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 64,
+                              color: AppTheme.textSecondary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              l10n?.noTransactions ?? 'No transactions found',
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 16,
+                              ),
+                            ),
+
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: transactions.length,
+                        itemBuilder: (context, index) {
+                          final transaction = transactions[index];
+                          return _buildTransactionItem(context, transaction);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Click-to-show tooltip that closes when clicking outside
