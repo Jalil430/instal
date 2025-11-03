@@ -6,6 +6,20 @@
     <description>Latest updates for QistPay (macOS)</description>
     <language>ru</language>
 
+     <item>
+      <title>Version 1.0.5</title>
+      <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+      <pubDate>Mon, 3 Nov 2025 16:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/Jalil430/instal/releases/download/v1.0.5/QistPay-MacOS-1.0.5.zip"
+        sparkle:edSignature="YpcEhj2LF/O4VnMkwKoNPHhogMjxUgTals8hKrxa2jf6Capq5BmO1GNV2mPNKALl57beB5o0wClKL+61plJrAg=="
+        length="25903818"
+        sparkle:version="8"
+        type="application/octet-stream" />
+      <description>
+      </description>
+    </item>
+
     <item>
       <title>Version 1.0.4</title>
       <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
