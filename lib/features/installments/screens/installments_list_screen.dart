@@ -657,7 +657,16 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
       case 'status':
         final statusA = a is InstallmentModel ? a.dynamicStatus : 'предстоящий';
         final statusB = b is InstallmentModel ? b.dynamicStatus : 'предстоящий';
-        return _statusPriority(statusA).compareTo(_statusPriority(statusB));
+        
+        // First compare by status priority
+        final statusComparison = _statusPriority(statusA).compareTo(_statusPriority(statusB));
+        if (statusComparison != 0) {
+          return statusComparison;
+        }
+        
+        // If same status, sort by urgency within that status
+        return _compareByUrgencyWithinStatus(a, b, statusA);
+        
       case 'nextPayment':
         final dateA = _getNextPaymentDate(a);
         final dateB = _getNextPaymentDate(b);
@@ -698,6 +707,48 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         return 3;
       default:
         return 4;
+    }
+  }
+
+  /// Compare installments by urgency within the same status
+  int _compareByUrgencyWithinStatus(Installment a, Installment b, String status) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    switch (status.toLowerCase()) {
+      case 'просрочено':
+        // For overdue: most overdue first (furthest past due date)
+        final dateA = _getNextPaymentDate(a);
+        final dateB = _getNextPaymentDate(b);
+        final dueDateA = DateTime(dateA.year, dateA.month, dateA.day);
+        final dueDateB = DateTime(dateB.year, dateB.month, dateB.day);
+        
+        final daysOverdueA = today.difference(dueDateA).inDays;
+        final daysOverdueB = today.difference(dueDateB).inDays;
+        
+        // Most overdue first (higher number of days overdue)
+        return daysOverdueB.compareTo(daysOverdueA);
+        
+      case 'предстоящий':
+        // For upcoming: closest due date first
+        final dateA = _getNextPaymentDate(a);
+        final dateB = _getNextPaymentDate(b);
+        return dateA.compareTo(dateB);
+        
+      case 'к оплате':
+        // For due today: can sort by time if available, otherwise by creation date
+        final dateA = _getNextPaymentDate(a);
+        final dateB = _getNextPaymentDate(b);
+        final timeComparison = dateA.compareTo(dateB);
+        if (timeComparison != 0) {
+          return timeComparison;
+        }
+        // If same time, sort by creation date (older first)
+        return a.createdAt.compareTo(b.createdAt);
+        
+      default:
+        // For other statuses (like 'оплачено'), sort by creation date
+        return a.createdAt.compareTo(b.createdAt);
     }
   }
 
