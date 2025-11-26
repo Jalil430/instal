@@ -16,20 +16,28 @@ class TotalSalesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final currencyFormatter =
-        NumberFormat.currency(locale: 'ru_RU', symbol: '₽', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'ru_RU',
+      symbol: '₽',
+      decimalDigits: 0,
+    );
     final chartData = data.weeklySales;
     final averageSales = data.averageSales;
 
     return AnalyticsCard(
       title: l10n.paymentsThisWeek,
-      header: _buildHeader(l10n, currencyFormatter, averageSales, data.percentageChange),
+      header: _buildHeader(
+        l10n,
+        currencyFormatter,
+        averageSales,
+        data.percentageChange,
+      ),
       child: Padding(
         padding: const EdgeInsets.only(top: 8.0),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isSmallScreen = constraints.maxWidth < 400;
-            
+
             // Calculate max Y value with safety checks
             double maxY = 0;
             if (chartData.isNotEmpty) {
@@ -41,7 +49,7 @@ class TotalSalesSection extends StatelessWidget {
             } else {
               maxY = 100; // Default if no data
             }
-            
+
             return BarChart(
               BarChartData(
                 maxY: maxY,
@@ -53,22 +61,26 @@ class TotalSalesSection extends StatelessWidget {
                 barGroups: _barGroups(chartData, isSmallScreen),
               ),
             );
-          }
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeader(AppLocalizations l10n, NumberFormat currencyFormatter,
-      double averageSales, double? percentageChange) {
+  Widget _buildHeader(
+    AppLocalizations l10n,
+    NumberFormat currencyFormatter,
+    double averageSales,
+    double? percentageChange,
+  ) {
     final hasChange = percentageChange != null;
     final isPositive = hasChange && percentageChange! >= 0;
-    final changeText = hasChange
-        ? '${percentageChange.toStringAsFixed(1)}%'
-        : '— %';
-    final color = hasChange
-        ? (isPositive ? AppTheme.successColor : AppTheme.errorColor)
-        : AppTheme.textSecondary;
+    final changeText =
+        hasChange ? '${percentageChange.toStringAsFixed(1)}%' : '— %';
+    final color =
+        hasChange
+            ? (isPositive ? AppTheme.successColor : AppTheme.errorColor)
+            : AppTheme.textSecondary;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -88,10 +100,7 @@ class TotalSalesSection extends StatelessWidget {
             ),
             Text(
               currencyFormatter.format(averageSales),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -125,48 +134,53 @@ class TotalSalesSection extends StatelessWidget {
   }
 
   BarTouchData _barTouchData(NumberFormat currencyFormatter) => BarTouchData(
-        touchTooltipData: BarTouchTooltipData(
-          getTooltipColor: (group) => AppTheme.sidebarBackground,
-          tooltipRoundedRadius: 8,
-          tooltipPadding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
-          tooltipMargin: 8,
-          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            return BarTooltipItem(
-              currencyFormatter.format(rod.toY),
-              const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w400,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            );
-          },
-        ),
-      );
-
-  FlTitlesData _titlesData(AppLocalizations l10n, bool isSmallScreen) => FlTitlesData(
-        show: true,
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 30,
-            getTitlesWidget: (value, meta) =>
-                _bottomTitles(value, meta, l10n, isSmallScreen),
+    touchTooltipData: BarTouchTooltipData(
+      getTooltipColor: (group) => AppTheme.sidebarBackground,
+      tooltipRoundedRadius: 8,
+      tooltipPadding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
+      tooltipMargin: 8,
+      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+        return BarTooltipItem(
+          currencyFormatter.format(rod.toY),
+          const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+            fontSize: 12,
           ),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: !isSmallScreen,
-            reservedSize: 40,
-            getTitlesWidget: (value, meta) => _leftTitles(value, meta, l10n),
-          ),
-        ),
-        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      );
+          textAlign: TextAlign.center,
+        );
+      },
+    ),
+  );
 
-  List<BarChartGroupData> _barGroups(List<double> chartData, bool isSmallScreen) {
+  FlTitlesData _titlesData(
+    AppLocalizations l10n,
+    bool isSmallScreen,
+  ) => FlTitlesData(
+    show: true,
+    bottomTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true,
+        reservedSize: 30,
+        getTitlesWidget:
+            (value, meta) => _bottomTitles(value, meta, l10n, isSmallScreen),
+      ),
+    ),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: !isSmallScreen,
+        reservedSize: 40,
+        getTitlesWidget: (value, meta) => _leftTitles(value, meta, l10n),
+      ),
+    ),
+    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+  );
+
+  List<BarChartGroupData> _barGroups(
+    List<double> chartData,
+    bool isSmallScreen,
+  ) {
     final currentDayIndex = DateTime.now().weekday - 1;
     return List.generate(7, (index) {
       return BarChartGroupData(
@@ -174,12 +188,13 @@ class TotalSalesSection extends StatelessWidget {
         barRods: [
           BarChartRodData(
             toY: chartData[index],
-            color: index == currentDayIndex
-                ? AppTheme.primaryColor
-                : AppTheme.primaryColor.withOpacity(0.3),
+            color:
+                index == currentDayIndex
+                    ? AppTheme.primaryColor
+                    : AppTheme.primaryColor.withOpacity(0.3),
             width: isSmallScreen ? 12 : 16,
             borderRadius: BorderRadius.circular(8),
-          )
+          ),
         ],
       );
     });
@@ -202,35 +217,31 @@ class TotalSalesSection extends StatelessWidget {
     return SideTitleWidget(
       axisSide: meta.axisSide,
       space: 10,
-      child: Text(text,
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 12,
-          )),
+      child: Text(
+        text,
+        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+      ),
     );
   }
 
   Widget _bottomTitles(
-      double value, TitleMeta meta, AppLocalizations l10n, bool isSmallScreen) {
-    final titles = isSmallScreen 
-      ? [
-          'Пн',
-          'Вт',
-          'Ср',
-          'Чт',
-          'Пт',
-          'Сб',
-          'Вс',
-        ]
-      : [
-          l10n.dayMon,
-          l10n.dayTue,
-          l10n.dayWed,
-          l10n.dayThu,
-          l10n.dayFri,
-          l10n.daySat,
-          l10n.daySun,
-        ];
+    double value,
+    TitleMeta meta,
+    AppLocalizations l10n,
+    bool isSmallScreen,
+  ) {
+    final titles =
+        isSmallScreen
+            ? ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+            : [
+              l10n.dayMon,
+              l10n.dayTue,
+              l10n.dayWed,
+              l10n.dayThu,
+              l10n.dayFri,
+              l10n.daySat,
+              l10n.daySun,
+            ];
 
     return SideTitleWidget(
       axisSide: meta.axisSide,
@@ -245,4 +256,4 @@ class TotalSalesSection extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -9,15 +9,23 @@ abstract class InstallmentRemoteDataSource {
   Future<InstallmentModel?> getInstallmentById(String id);
   Future<String> createInstallment(InstallmentModel installment);
   Future<void> updateInstallment(InstallmentModel installment);
-  Future<void> updateInstallmentPartial(String id, Map<String, dynamic> updates);
+  Future<void> updateInstallmentPartial(
+    String id,
+    Map<String, dynamic> updates,
+  );
   Future<void> deleteInstallment(String id);
-  Future<List<InstallmentModel>> searchInstallments(String userId, String query);
+  Future<List<InstallmentModel>> searchInstallments(
+    String userId,
+    String query,
+  );
   Future<List<InstallmentModel>> getInstallmentsByClientId(String clientId);
   Future<List<InstallmentModel>> getInstallmentsByInvestorId(String investorId);
   Future<List<InstallmentModel>> getInstallmentsByWalletId(String walletId);
-  
+
   // Payment operations
-  Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(String installmentId);
+  Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(
+    String installmentId,
+  );
   Future<InstallmentPaymentModel?> getPaymentById(String id);
   Future<String> createPayment(InstallmentPaymentModel payment);
   Future<InstallmentModel> updatePayment(InstallmentPaymentModel payment);
@@ -41,16 +49,21 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
 
     // Use optimized endpoint that includes pre-calculated fields
     // Use longer timeout for installments list as it can be a large dataset
-    final response = await ApiClient.get('/installments?user_id=$userId&limit=1000&offset=0',
-        timeout: const Duration(seconds: 30));
+    final response = await ApiClient.get(
+      '/installments?user_id=$userId&limit=1000&offset=0',
+      timeout: const Duration(seconds: 30),
+    );
     ApiClient.handleResponse(response);
-    
+
     final List<dynamic> jsonList = json.decode(response.body);
-    final installments = jsonList.map((json) => InstallmentModel.fromMapOptimized(json)).toList();
-    
+    final installments =
+        jsonList
+            .map((json) => InstallmentModel.fromMapOptimized(json))
+            .toList();
+
     // Cache the result for longer (low-volatility list)
     _cache.set(cacheKey, installments, duration: const Duration(minutes: 30));
-    
+
     return installments;
   }
 
@@ -66,13 +79,13 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     try {
       final response = await ApiClient.get('/installments/$id');
       ApiClient.handleResponse(response);
-      
+
       final Map<String, dynamic> jsonMap = json.decode(response.body);
       final installment = InstallmentModel.fromMap(jsonMap);
-      
+
       // Cache the result
       _cache.set(cacheKey, installment);
-      
+
       return installment;
     } on NotFoundException {
       return null;
@@ -86,51 +99,64 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
     try {
       // Safe prints to help diagnose payload
       // ignore: avoid_print
-      print('🛰️ POST /installments wallet_id: ' + (installmentData['wallet_id']?.toString() ?? 'NULL'));
+      print(
+        '🛰️ POST /installments wallet_id: ' +
+            (installmentData['wallet_id']?.toString() ?? 'NULL'),
+      );
     } catch (_) {}
-    
+
     final response = await ApiClient.post('/installments', installmentData);
     ApiClient.handleResponse(response);
-    
+
     final Map<String, dynamic> result = json.decode(response.body);
     final installmentId = result['id'] as String;
-    
+
     // Invalidate cache after creating
     _cache.remove(CacheService.installmentsKey(installment.userId));
-    _cache.remove(CacheService.analyticsKey(installment.userId)); // Analytics will show new installment
-    
+    _cache.removeAnalyticsForUser(
+      installment.userId,
+    ); // Analytics will show new installment
+
     return installmentId;
   }
 
   @override
   Future<void> updateInstallment(InstallmentModel installment) async {
     final installmentData = installment.toApiMap();
-    
-    final response = await ApiClient.put('/installments/${installment.id}', installmentData);
+
+    final response = await ApiClient.put(
+      '/installments/${installment.id}',
+      installmentData,
+    );
     ApiClient.handleResponse(response);
-    
+
     // Invalidate cache after updating
     _cache.remove(CacheService.installmentKey(installment.id));
     _cache.remove(CacheService.installmentsKey(installment.userId));
     _cache.remove(CacheService.paymentsKey(installment.id));
-    _cache.remove(CacheService.analyticsKey(installment.userId)); // Analytics might be affected
+    _cache.removeAnalyticsForUser(
+      installment.userId,
+    ); // Analytics might be affected
   }
 
   @override
-  Future<void> updateInstallmentPartial(String id, Map<String, dynamic> updates) async {
+  Future<void> updateInstallmentPartial(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     final response = await ApiClient.put('/installments/$id', updates);
     ApiClient.handleResponse(response);
-    
+
     // Invalidate cache after updating
     _cache.remove(CacheService.installmentKey(id));
-    
+
     // Since we don't have userId here, we need to clear all installments caches
     // This is less efficient but ensures consistency
     final installmentKeys = _cache.getKeysWithPrefix('installments_');
     for (final key in installmentKeys) {
       _cache.remove(key);
     }
-    
+
     final analyticsKeys = _cache.getKeysWithPrefix('analytics_');
     for (final key in analyticsKeys) {
       _cache.remove(key);
@@ -148,18 +174,18 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
       // If we can't get the installment, continue with deletion anyway
       print('Warning: Could not get installment for cache invalidation: $e');
     }
-    
+
     final response = await ApiClient.delete('/installments/$id');
     ApiClient.handleResponse(response);
-    
+
     // Comprehensive cache invalidation after deleting
     _cache.remove(CacheService.installmentKey(id));
     _cache.remove(CacheService.paymentsKey(id));
-    
+
     // If we have userId, invalidate the installments list cache
     if (userId != null) {
       _cache.remove(CacheService.installmentsKey(userId));
-      _cache.remove(CacheService.analyticsKey(userId)); // Analytics will be affected too
+      _cache.removeAnalyticsForUser(userId); // Analytics will be affected too
     } else {
       // If we can't determine userId, clear all installments and analytics caches
       // This is less efficient but ensures consistency
@@ -168,37 +194,54 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   }
 
   @override
-  Future<List<InstallmentModel>> searchInstallments(String userId, String query) async {
+  Future<List<InstallmentModel>> searchInstallments(
+    String userId,
+    String query,
+  ) async {
     final encodedQuery = Uri.encodeComponent(query);
-    final response = await ApiClient.get('/installments/search?user_id=$userId&query=$encodedQuery',
-        timeout: const Duration(seconds: 30));
+    final response = await ApiClient.get(
+      '/installments/search?user_id=$userId&query=$encodedQuery',
+      timeout: const Duration(seconds: 30),
+    );
     ApiClient.handleResponse(response);
-    
+
     final List<dynamic> jsonList = json.decode(response.body);
     return jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
   }
 
   @override
-  Future<List<InstallmentModel>> getInstallmentsByClientId(String clientId) async {
-    final response = await ApiClient.get('/installments?client_id=$clientId&limit=50000&offset=0');
+  Future<List<InstallmentModel>> getInstallmentsByClientId(
+    String clientId,
+  ) async {
+    final response = await ApiClient.get(
+      '/installments?client_id=$clientId&limit=50000&offset=0',
+    );
     ApiClient.handleResponse(response);
-    
+
     final List<dynamic> jsonList = json.decode(response.body);
     return jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
   }
 
   @override
-  Future<List<InstallmentModel>> getInstallmentsByInvestorId(String investorId) async {
-    final response = await ApiClient.get('/installments?investor_id=$investorId&limit=50000&offset=0');
+  Future<List<InstallmentModel>> getInstallmentsByInvestorId(
+    String investorId,
+  ) async {
+    final response = await ApiClient.get(
+      '/installments?investor_id=$investorId&limit=50000&offset=0',
+    );
     ApiClient.handleResponse(response);
-    
+
     final List<dynamic> jsonList = json.decode(response.body);
     return jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
   }
 
   @override
-  Future<List<InstallmentModel>> getInstallmentsByWalletId(String walletId) async {
-    final response = await ApiClient.get('/installments?wallet_id=$walletId&limit=50000&offset=0');
+  Future<List<InstallmentModel>> getInstallmentsByWalletId(
+    String walletId,
+  ) async {
+    final response = await ApiClient.get(
+      '/installments?wallet_id=$walletId&limit=50000&offset=0',
+    );
     ApiClient.handleResponse(response);
     final List<dynamic> jsonList = json.decode(response.body);
     return jsonList.map((json) => InstallmentModel.fromMap(json)).toList();
@@ -206,7 +249,9 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
 
   // Payment operations
   @override
-  Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(String installmentId) async {
+  Future<List<InstallmentPaymentModel>> getPaymentsByInstallmentId(
+    String installmentId,
+  ) async {
     // Check cache first
     final cacheKey = CacheService.paymentsKey(installmentId);
     final cachedPayments = _cache.get<List<InstallmentPaymentModel>>(cacheKey);
@@ -218,14 +263,17 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
       // Get the installment which includes payments in the response
       final response = await ApiClient.get('/installments/$installmentId');
       ApiClient.handleResponse(response);
-      
+
       final Map<String, dynamic> jsonMap = json.decode(response.body);
       final List<dynamic> paymentsJson = jsonMap['payments'] ?? [];
-      final payments = paymentsJson.map((json) => InstallmentPaymentModel.fromMap(json)).toList();
-      
+      final payments =
+          paymentsJson
+              .map((json) => InstallmentPaymentModel.fromMap(json))
+              .toList();
+
       // Cache the result
       _cache.set(cacheKey, payments);
-      
+
       return payments;
     } on NotFoundException {
       return [];
@@ -236,47 +284,64 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   Future<InstallmentPaymentModel?> getPaymentById(String id) async {
     // Note: There's no specific endpoint for individual payments in your cloud functions
     // This would need to be implemented if required, or we can fetch via installment
-    throw UnimplementedError('Individual payment fetching not implemented - use getPaymentsByInstallmentId instead');
+    throw UnimplementedError(
+      'Individual payment fetching not implemented - use getPaymentsByInstallmentId instead',
+    );
   }
 
   @override
   Future<String> createPayment(InstallmentPaymentModel payment) async {
     // Payments are created automatically when creating installments
     // This method might not be needed for the current cloud function structure
-    throw UnimplementedError('Individual payment creation not implemented - payments are created with installments');
+    throw UnimplementedError(
+      'Individual payment creation not implemented - payments are created with installments',
+    );
   }
 
   @override
-  Future<InstallmentModel> updatePayment(InstallmentPaymentModel payment) async {
+  Future<InstallmentModel> updatePayment(
+    InstallmentPaymentModel payment,
+  ) async {
     final paymentData = {
       'paid_amount': payment.paidAmount, // supports 0 or more
       'is_paid': payment.isPaid,
-      'paid_date': payment.paidDate?.toIso8601String().split('T')[0], // YYYY-MM-DD format
+      'paid_date':
+          payment.paidDate?.toIso8601String().split(
+            'T',
+          )[0], // YYYY-MM-DD format
     };
-    
-    final response = await ApiClient.put('/installment-payments/${payment.id}', paymentData);
+
+    final response = await ApiClient.put(
+      '/installment-payments/${payment.id}',
+      paymentData,
+    );
     ApiClient.handleResponse(response);
-    
+
     // Parse the response to get the updated installment
     final responseData = json.decode(response.body);
-    final updatedInstallment = InstallmentModel.fromMapOptimized(responseData['installment']);
-    
+    final updatedInstallment = InstallmentModel.fromMapOptimized(
+      responseData['installment'],
+    );
+
     // Update cache with the new installment data
-    _cache.set(CacheService.installmentKey(updatedInstallment.id), updatedInstallment);
-    
+    _cache.set(
+      CacheService.installmentKey(updatedInstallment.id),
+      updatedInstallment,
+    );
+
     // Invalidate related cache entries
     _cache.remove(CacheService.paymentsKey(payment.installmentId));
-    
+
     // Payment status changes affect analytics, so we need to invalidate analytics cache
     _cache.cleanup(); // Remove expired entries
-    
+
     // Since payment changes affect analytics for all users potentially,
     // we'll use a simple approach: remove all analytics cache entries
     final analyticsKeys = _cache.getKeysWithPrefix('analytics_');
     for (final key in analyticsKeys) {
       _cache.remove(key);
     }
-    
+
     return updatedInstallment;
   }
 
@@ -287,20 +352,28 @@ class InstallmentRemoteDataSourceImpl implements InstallmentRemoteDataSource {
   }
 
   @override
-  Future<List<InstallmentPaymentModel>> getOverduePayments(String userId) async {
+  Future<List<InstallmentPaymentModel>> getOverduePayments(
+    String userId,
+  ) async {
     // This would require a specific endpoint or filtering on the client side
-    throw UnimplementedError('Overdue payments endpoint not implemented - filter on client side');
+    throw UnimplementedError(
+      'Overdue payments endpoint not implemented - filter on client side',
+    );
   }
 
   @override
   Future<List<InstallmentPaymentModel>> getDuePayments(String userId) async {
     // This would require a specific endpoint or filtering on the client side
-    throw UnimplementedError('Due payments endpoint not implemented - filter on client side');
+    throw UnimplementedError(
+      'Due payments endpoint not implemented - filter on client side',
+    );
   }
 
   @override
   Future<List<InstallmentPaymentModel>> getAllPayments(String userId) async {
     // This would require a specific endpoint or filtering on the client side
-    throw UnimplementedError('All payments endpoint not implemented - filter on client side');
+    throw UnimplementedError(
+      'All payments endpoint not implemented - filter on client side',
+    );
   }
-} 
+}

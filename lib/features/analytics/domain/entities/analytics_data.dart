@@ -5,12 +5,14 @@ class AnalyticsData {
   final TotalSalesData totalSales;
   final InstallmentStatusData installmentStatus;
   final InstallmentDetailsData installmentDetails;
+  final ProfitAnalyticsData profitAnalytics;
 
   AnalyticsData({
     required this.keyMetrics,
     required this.totalSales,
     required this.installmentStatus,
     required this.installmentDetails,
+    required this.profitAnalytics,
   });
 }
 
@@ -90,4 +92,44 @@ class InstallmentDetailsData {
     required this.totalInstallmentValue,
     required this.upcomingRevenue30Days,
   });
-} 
+}
+
+class ProfitAnalyticsData {
+  final double profitNext30Days;
+  final double profitNext90Days;
+  final double profitNext365Days;
+  final double profitEarnedToDate;
+  final double profitOverdue;
+  final double totalRemainingProfit;
+  final List<PaymentProfitItem> upcomingPayments;
+
+  ProfitAnalyticsData({
+    required this.profitNext30Days,
+    required this.profitNext90Days,
+    required this.profitNext365Days,
+    required this.profitEarnedToDate,
+    required this.profitOverdue,
+    required this.totalRemainingProfit,
+    required this.upcomingPayments,
+  });
+}
+
+class PaymentProfitItem {
+  final String installmentId;
+  final String? clientName;
+  final String? productName;
+  final int? paymentNumber;
+  final DateTime? dueDate;
+  final double paymentAmount;
+  final double profitAmount;
+
+  PaymentProfitItem({
+    required this.installmentId,
+    this.clientName,
+    this.productName,
+    this.paymentNumber,
+    this.dueDate,
+    required this.paymentAmount,
+    required this.profitAmount,
+  });
+}

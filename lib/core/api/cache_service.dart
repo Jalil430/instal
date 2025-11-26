@@ -4,7 +4,7 @@ class CacheService {
   CacheService._internal();
 
   final Map<String, CacheEntry> _cache = {};
-  
+
   // Optimized cache durations based on data volatility
   static const Duration _defaultCacheDuration = Duration(minutes: 5);
   static const Duration _listCacheDuration = Duration(minutes: 3);
@@ -16,10 +16,17 @@ class CacheService {
     _cache[key] = CacheEntry(value, expiry);
   }
 
+  void removeAnalyticsForUser(String userId) {
+    final keys = getKeysWithPrefix('analytics_${userId}_');
+    for (final key in keys) {
+      _cache.remove(key);
+    }
+  }
+
   // Smart cache invalidation - only invalidate related data
   void invalidateRelated(String entityType, String userId) {
     final keysToRemove = <String>[];
-    
+
     switch (entityType) {
       case 'client':
         // Remove client-related caches
@@ -43,7 +50,7 @@ class CacheService {
         keysToRemove.addAll(getKeysWithPrefix('analytics_$userId'));
         break;
     }
-    
+
     for (final key in keysToRemove) {
       _cache.remove(key);
     }
@@ -82,18 +89,22 @@ class CacheService {
   static String walletsKey(String userId) => 'wallets_$userId';
   static String installmentsKey(String userId) => 'installments_$userId';
   static String paymentsKey(String installmentId) => 'payments_$installmentId';
-  static String analyticsKey(String userId) => 'analytics_$userId';
+  static String analyticsKey(String userId, [String? walletId]) =>
+      'analytics_${userId}_${walletId ?? 'all'}';
   static String clientKey(String clientId) => 'client_$clientId';
   static String investorKey(String investorId) => 'investor_$investorId';
   static String walletKey(String walletId) => 'wallet_$walletId';
-  static String installmentKey(String installmentId) => 'installment_$installmentId';
+  static String installmentKey(String installmentId) =>
+      'installment_$installmentId';
 
   // Wallet-specific cache keys
   static String walletBalancesKey(String userId) => 'wallet_balances_$userId';
   static String walletBalanceKey(String walletId) => 'wallet_balance_$walletId';
-  static String walletTransactionsKey(String walletId) => 'wallet_transactions_$walletId';
+  static String walletTransactionsKey(String walletId) =>
+      'wallet_transactions_$walletId';
   static String walletLedgerKey(String walletId) => 'wallet_ledger_$walletId';
-  static String investmentSummaryKey(String walletId) => 'investment_summary_$walletId';
+  static String investmentSummaryKey(String walletId) =>
+      'investment_summary_$walletId';
 
   // Clear all wallet-related caches
   void clearWalletCaches() {
@@ -111,4 +122,4 @@ class CacheEntry {
   CacheEntry(this.value, this.expiry);
 
   bool get isExpired => DateTime.now().isAfter(expiry);
-} 
+}

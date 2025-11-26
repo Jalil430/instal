@@ -22,7 +22,7 @@ class MetricItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     final hasChange = change != null;
 
     bool isGood;
@@ -36,7 +36,8 @@ class MetricItem extends StatelessWidget {
       isGood = higherIsBetter;
     }
 
-    final changeText = hasChange ? '${change!.abs().toStringAsFixed(1)}%' : '— %';
+    final changeText =
+        hasChange ? '${change!.abs().toStringAsFixed(1)}%' : '— %';
     final color = isGood ? AppTheme.successColor : AppTheme.errorColor;
 
     return Column(
@@ -93,4 +94,4 @@ class MetricItem extends StatelessWidget {
       ],
     );
   }
-} 
+}

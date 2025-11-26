@@ -250,8 +250,12 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
       } else {
         sortBy = value;
         // Default direction per sort type
-        if (value == 'nextPayment' || value == 'client' || value == 'status' || 
-            value == 'installmentNumber' || value == 'dueDate' || value == 'creationDate') {
+        if (value == 'nextPayment' ||
+            value == 'client' ||
+            value == 'status' ||
+            value == 'installmentNumber' ||
+            value == 'dueDate' ||
+            value == 'creationDate') {
           sortAscending = true;
         } else {
           sortAscending = false;
@@ -605,7 +609,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
   bool _matchesCreatedDateFilter(Installment installment) {
     final now = DateTime.now();
     final createdDate = installment.createdAt;
-    
+
     switch (createdDateFilter) {
       case 'today':
         return _isSameDay(createdDate, now);
@@ -614,23 +618,34 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         return _isSameDay(createdDate, yesterday);
       case 'thisWeek':
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        return createdDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
+        return createdDate.isAfter(
+          startOfWeek.subtract(const Duration(days: 1)),
+        );
       case 'lastWeek':
         final startOfThisWeek = now.subtract(Duration(days: now.weekday - 1));
-        final startOfLastWeek = startOfThisWeek.subtract(const Duration(days: 7));
-        return createdDate.isAfter(startOfLastWeek.subtract(const Duration(days: 1))) &&
-               createdDate.isBefore(startOfThisWeek);
+        final startOfLastWeek = startOfThisWeek.subtract(
+          const Duration(days: 7),
+        );
+        return createdDate.isAfter(
+              startOfLastWeek.subtract(const Duration(days: 1)),
+            ) &&
+            createdDate.isBefore(startOfThisWeek);
       case 'thisMonth':
         return createdDate.year == now.year && createdDate.month == now.month;
       case 'lastMonth':
         final lastMonth = DateTime(now.year, now.month - 1);
-        return createdDate.year == lastMonth.year && createdDate.month == lastMonth.month;
+        return createdDate.year == lastMonth.year &&
+            createdDate.month == lastMonth.month;
       case 'last3Months':
         final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
-        return createdDate.isAfter(threeMonthsAgo.subtract(const Duration(days: 1)));
+        return createdDate.isAfter(
+          threeMonthsAgo.subtract(const Duration(days: 1)),
+        );
       case 'last6Months':
         final sixMonthsAgo = DateTime(now.year, now.month - 6, now.day);
-        return createdDate.isAfter(sixMonthsAgo.subtract(const Duration(days: 1)));
+        return createdDate.isAfter(
+          sixMonthsAgo.subtract(const Duration(days: 1)),
+        );
       case 'thisYear':
         return createdDate.year == now.year;
       default:
@@ -640,8 +655,8 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
 
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
-           date1.month == date2.month &&
-           date1.day == date2.day;
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
   bool _isInstallmentPaid(Installment installment) {
@@ -657,16 +672,18 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
       case 'status':
         final statusA = a is InstallmentModel ? a.dynamicStatus : 'предстоящий';
         final statusB = b is InstallmentModel ? b.dynamicStatus : 'предстоящий';
-        
+
         // First compare by status priority
-        final statusComparison = _statusPriority(statusA).compareTo(_statusPriority(statusB));
+        final statusComparison = _statusPriority(
+          statusA,
+        ).compareTo(_statusPriority(statusB));
         if (statusComparison != 0) {
           return statusComparison;
         }
-        
+
         // If same status, sort by urgency within that status
         return _compareByUrgencyWithinStatus(a, b, statusA);
-        
+
       case 'nextPayment':
         final dateA = _getNextPaymentDate(a);
         final dateB = _getNextPaymentDate(b);
@@ -711,10 +728,14 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
   }
 
   /// Compare installments by urgency within the same status
-  int _compareByUrgencyWithinStatus(Installment a, Installment b, String status) {
+  int _compareByUrgencyWithinStatus(
+    Installment a,
+    Installment b,
+    String status,
+  ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     switch (status.toLowerCase()) {
       case 'просрочено':
         // For overdue: most overdue first (furthest past due date)
@@ -722,19 +743,19 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         final dateB = _getNextPaymentDate(b);
         final dueDateA = DateTime(dateA.year, dateA.month, dateA.day);
         final dueDateB = DateTime(dateB.year, dateB.month, dateB.day);
-        
+
         final daysOverdueA = today.difference(dueDateA).inDays;
         final daysOverdueB = today.difference(dueDateB).inDays;
-        
+
         // Most overdue first (higher number of days overdue)
         return daysOverdueB.compareTo(daysOverdueA);
-        
+
       case 'предстоящий':
         // For upcoming: closest due date first
         final dateA = _getNextPaymentDate(a);
         final dateB = _getNextPaymentDate(b);
         return dateA.compareTo(dateB);
-        
+
       case 'к оплате':
         // For due today: can sort by time if available, otherwise by creation date
         final dateA = _getNextPaymentDate(a);
@@ -745,7 +766,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
         }
         // If same time, sort by creation date (older first)
         return a.createdAt.compareTo(b.createdAt);
-        
+
       default:
         // For other statuses (like 'оплачено'), sort by creation date
         return a.createdAt.compareTo(b.createdAt);
@@ -880,7 +901,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
 
       if (currentUser != null) {
         cache.remove(CacheService.installmentsKey(currentUser.id));
-        cache.remove(CacheService.analyticsKey(currentUser.id));
+        cache.removeAnalyticsForUser(currentUser.id);
       }
 
       // Show loading indicator (ensure any existing is hidden first)
@@ -1086,7 +1107,7 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
 
         if (currentUser != null) {
           cache.remove(CacheService.installmentsKey(currentUser.id));
-          cache.remove(CacheService.analyticsKey(currentUser.id));
+          cache.removeAnalyticsForUser(currentUser.id);
         }
         cache.remove(CacheService.installmentKey(installment.id));
         cache.remove(CacheService.paymentsKey(installment.id));
@@ -1146,10 +1167,11 @@ class InstallmentsListScreenState extends State<InstallmentsListScreen>
   void editInstallment(Installment installment) {
     showDialog(
       context: context,
-      builder: (context) => CreateInstallmentDialog(
-        installment: installment,
-        onSuccess: loadData,
-      ),
+      builder:
+          (context) => CreateInstallmentDialog(
+            installment: installment,
+            onSuccess: loadData,
+          ),
     );
   }
 

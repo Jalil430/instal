@@ -6,7 +6,7 @@ class GetAnalyticsData {
 
   GetAnalyticsData(this._repository);
 
-  Future<AnalyticsData> call(String userId) async {
-    return await _repository.getAnalyticsData(userId);
+  Future<AnalyticsData> call(String userId, {String? walletId}) async {
+    return await _repository.getAnalyticsData(userId, walletId: walletId);
   }
-} 
+}

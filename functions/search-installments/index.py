@@ -115,10 +115,10 @@ def handler(event, context):
         
         # Get search parameters from query string - enforce user_id from JWT
         query_params = event.get('queryStringParameters') or {}
-        client_short_id = query_params.get('client_id')  # First 8 characters of client ID
-        client_name = query_params.get('client_name')    # Client full name
+        installment_number = query_params.get('installment_number')  # Installment number to search
+        client_name = query_params.get('client_name')               # Client full name
         
-        logger.info(f"Search parameters: client_id='{client_short_id}', client_name='{client_name}'")
+        logger.info(f"Search parameters: installment_number='{installment_number}', client_name='{client_name}'")
         logger.info(f"User ID from JWT: {user_id}")
         
         # Database connection
@@ -138,30 +138,66 @@ def handler(event, context):
         
         def execute_query(session):
             # Validate input parameters
-            if not client_short_id or not client_name:
-                raise ValueError("Both client_id (8 characters) and client_name are required")
+            if not installment_number or not client_name:
+                raise ValueError("Both installment_number and client_name are required")
             
-            if len(client_short_id) != 8:
-                raise ValueError("client_id must be exactly 8 characters")
+            try:
+                installment_num = int(installment_number)
+            except ValueError:
+                raise ValueError("installment_number must be a valid integer")
             
-            # Step 1: Find client by short ID and name
+            # Step 1: Find installment by installment_number and client_name to get client_id
+            installment_search_query = """
+            DECLARE $user_id AS Utf8;
+            DECLARE $installment_number AS Int32;
+            DECLARE $client_name AS Utf8;
+            
+            SELECT client_id, client_name, id as searched_installment_id
+            FROM installments
+            WHERE user_id = $user_id 
+              AND installment_number = $installment_number
+              AND client_name LIKE $client_name
+            LIMIT 1;
+            """
+            
+            search_params = {
+                '$user_id': user_id,
+                '$installment_number': installment_num,
+                '$client_name': f"%{client_name}%"
+            }
+            
+            prepared_search_query = session.prepare(installment_search_query)
+            search_result_sets = session.transaction().execute(
+                prepared_search_query,
+                search_params,
+                commit_tx=True
+            )
+            
+            # Check if installment found
+            search_rows = list(search_result_sets[0].rows)
+            if not search_rows:
+                return []  # No installment found, return empty list
+            
+            search_row = search_rows[0]
+            full_client_id = search_row['client_id']
+            searched_installment_id = search_row['searched_installment_id']
+            
+            logger.info(f"Found installment #{installment_num} for client: {search_row['client_name']} with client_id: {full_client_id}")
+            
+            # Step 2: Get client info
             client_query = """
             DECLARE $user_id AS Utf8;
-            DECLARE $client_short_id AS Utf8;
-            DECLARE $client_name AS Utf8;
+            DECLARE $client_id AS Utf8;
             
             SELECT id, full_name
             FROM clients
-            WHERE user_id = $user_id 
-              AND String::Substring(id, 0, 8) = $client_short_id
-              AND full_name LIKE $client_name
+            WHERE user_id = $user_id AND id = $client_id
             LIMIT 1;
             """
             
             client_params = {
                 '$user_id': user_id,
-                '$client_short_id': client_short_id,
-                '$client_name': f"%{client_name}%"
+                '$client_id': full_client_id
             }
             
             prepared_client_query = session.prepare(client_query)
@@ -171,17 +207,13 @@ def handler(event, context):
                 commit_tx=True
             )
             
-            # Check if client found
             client_rows = list(client_result_sets[0].rows)
             if not client_rows:
-                return []  # No client found, return empty list
+                return []
             
             client_row = client_rows[0]
-            full_client_id = client_row.id
             
-            logger.info(f"Found client: {client_row.full_name} with ID: {full_client_id}")
-            
-            # Step 2: Get all installments for this client - ALL COLUMNS
+            # Step 3: Get all installments for this client - ALL COLUMNS
             installments_query = """
             DECLARE $user_id AS Utf8;
             DECLARE $client_id AS Utf8;
@@ -230,7 +262,7 @@ def handler(event, context):
                 commit_tx=True
             )
             
-            # Step 3: Get all payments for all installments of this client
+            # Step 4: Get all payments for all installments of this client
             payments_query = """
             DECLARE $user_id AS Utf8;
             DECLARE $client_id AS Utf8;
@@ -264,7 +296,7 @@ def handler(event, context):
                 commit_tx=True
             )
             
-            return installments_result_sets[0], payments_result_sets[0], client_row
+            return installments_result_sets[0], payments_result_sets[0], client_row, searched_installment_id
         
         try:
             query_result = pool.retry_operation_sync(execute_query)
@@ -281,12 +313,12 @@ def handler(event, context):
                         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
                     },
                     'body': json.dumps({
-                        'error': 'Client not found',
-                        'message': f'No client found with ID starting with "{client_short_id}" and name containing "{client_name}"'
+                        'error': 'Installment not found',
+                        'message': f'No installment found with number "{installment_number}" and client name containing "{client_name}"'
                     })
                 }
             
-            installments_result_set, payments_result_set, client_info = query_result
+            installments_result_set, payments_result_set, client_info, searched_installment_id = query_result
             
             def convert_timestamp(ts):
                 if ts is None: return None
@@ -382,26 +414,40 @@ def handler(event, context):
                 }
                 installments.append(installment)
             
+            # Sort installments: searched installment first, then others
+            installments.sort(key=lambda x: (x['id'] != searched_installment_id, x['created_at']))
+            
             driver.stop()
             
-            # Calculate summary statistics
+            # Calculate summary statistics with proper overdue amount
             total_amount = sum(inst['installment_price'] for inst in installments)
             total_paid = sum(inst['paid_amount'] for inst in installments)
             total_remaining = sum(inst['remaining_amount'] for inst in installments)
-            overdue_count = sum(1 for inst in installments if inst['overdue_count'] > 0)
+            
+            # Calculate total overdue amount from overdue payments
+            total_overdue = 0.0
+            for inst in installments:
+                for payment in inst['payments']:
+                    if not payment['is_paid'] and payment['due_date']:
+                        try:
+                            due_date = datetime.strptime(payment['due_date'], '%Y-%m-%d').date()
+                            if due_date < datetime.now().date():
+                                total_overdue += payment['expected_amount']
+                        except:
+                            continue
             
             response_data = {
                 'client': {
                     'id': client_info.id,
                     'name': client_info.full_name,
-                    'short_id': client_short_id
+                    'searched_installment_number': int(installment_number)
                 },
                 'summary': {
                     'total_installments': len(installments),
                     'total_amount': total_amount,
                     'total_paid': total_paid,
                     'total_remaining': total_remaining,
-                    'overdue_count': overdue_count
+                    'total_overdue': total_overdue
                 },
                 'installments': installments
             }

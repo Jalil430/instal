@@ -14,32 +14,36 @@ class InstallmentStatusSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final total = data.overdueCount + data.dueToPayCount + data.upcomingCount + data.paidCount;
+    final total =
+        data.overdueCount +
+        data.dueToPayCount +
+        data.upcomingCount +
+        data.paidCount;
 
     final statusData = [
       {
         'status': l10n.overdue,
         'value': total > 0 ? (data.overdueCount / total) * 100 : 0.0,
         'count': data.overdueCount,
-        'color': AppTheme.errorColor
+        'color': AppTheme.errorColor,
       },
       {
         'status': l10n.dueToPay,
         'value': total > 0 ? (data.dueToPayCount / total) * 100 : 0.0,
         'count': data.dueToPayCount,
-        'color': AppTheme.warningColor
+        'color': AppTheme.warningColor,
       },
       {
         'status': l10n.upcoming,
         'value': total > 0 ? (data.upcomingCount / total) * 100 : 0.0,
         'count': data.upcomingCount,
-        'color': AppTheme.pendingColor
+        'color': AppTheme.pendingColor,
       },
       {
         'status': l10n.paid,
         'value': total > 0 ? (data.paidCount / total) * 100 : 0.0,
         'count': data.paidCount,
-        'color': AppTheme.successColor
+        'color': AppTheme.successColor,
       },
     ];
 
@@ -56,21 +60,34 @@ class InstallmentStatusSection extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 400;
-          
+
           return isSmallScreen
-              ? _buildMobileLayout(statusData, centerPercentage, centerLabel, centerColor, l10n)
-              : _buildDesktopLayout(statusData, centerPercentage, centerLabel, centerColor, l10n);
-        }
+              ? _buildMobileLayout(
+                statusData,
+                centerPercentage,
+                centerLabel,
+                centerColor,
+                l10n,
+              )
+              : _buildDesktopLayout(
+                statusData,
+                centerPercentage,
+                centerLabel,
+                centerColor,
+                l10n,
+              );
+        },
       ),
     );
   }
-  
+
   Widget _buildDesktopLayout(
-      List<Map<String, dynamic>> statusData,
-      int centerPercentage,
-      String centerLabel,
-      Color centerColor,
-      AppLocalizations l10n) {
+    List<Map<String, dynamic>> statusData,
+    int centerPercentage,
+    String centerLabel,
+    Color centerColor,
+    AppLocalizations l10n,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -78,15 +95,16 @@ class InstallmentStatusSection extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: statusData.map((data) {
-              final count = data['count'] as int;
-              return StatusIndicator(
-                color: data['color'] as Color,
-                text:
-                    '${data['status']} (${(data['value'] as double).toInt()}%)',
-                countText: l10n.installmentsCount(count),
-              );
-            }).toList(),
+            children:
+                statusData.map((data) {
+                  final count = data['count'] as int;
+                  return StatusIndicator(
+                    color: data['color'] as Color,
+                    text:
+                        '${data['status']} (${(data['value'] as double).toInt()}%)',
+                    countText: l10n.installmentsCount(count),
+                  );
+                }).toList(),
           ),
         ),
         Expanded(
@@ -120,20 +138,21 @@ class InstallmentStatusSection extends StatelessWidget {
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
       ],
     );
   }
-  
+
   Widget _buildMobileLayout(
-      List<Map<String, dynamic>> statusData,
-      int centerPercentage,
-      String centerLabel,
-      Color centerColor,
-      AppLocalizations l10n) {
+    List<Map<String, dynamic>> statusData,
+    int centerPercentage,
+    String centerLabel,
+    Color centerColor,
+    AppLocalizations l10n,
+  ) {
     return Column(
       children: [
         // Pie chart at the top
@@ -168,11 +187,11 @@ class InstallmentStatusSection extends StatelessWidget {
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
-        
+
         // Status indicators at the bottom in a row
         Padding(
           padding: const EdgeInsets.only(top: 8.0, left: 8.0, right: 8.0),
@@ -186,14 +205,20 @@ class InstallmentStatusSection extends StatelessWidget {
                   children: [
                     StatusIndicator(
                       color: statusData[0]['color'] as Color,
-                      text: '${statusData[0]['status']} (${(statusData[0]['value'] as double).toInt()}%)',
-                      countText: l10n.installmentsCount(statusData[0]['count'] as int),
+                      text:
+                          '${statusData[0]['status']} (${(statusData[0]['value'] as double).toInt()}%)',
+                      countText: l10n.installmentsCount(
+                        statusData[0]['count'] as int,
+                      ),
                       isCompact: true,
                     ),
                     StatusIndicator(
                       color: statusData[1]['color'] as Color,
-                      text: '${statusData[1]['status']} (${(statusData[1]['value'] as double).toInt()}%)',
-                      countText: l10n.installmentsCount(statusData[1]['count'] as int),
+                      text:
+                          '${statusData[1]['status']} (${(statusData[1]['value'] as double).toInt()}%)',
+                      countText: l10n.installmentsCount(
+                        statusData[1]['count'] as int,
+                      ),
                       isCompact: true,
                     ),
                   ],
@@ -207,14 +232,20 @@ class InstallmentStatusSection extends StatelessWidget {
                   children: [
                     StatusIndicator(
                       color: statusData[2]['color'] as Color,
-                      text: '${statusData[2]['status']} (${(statusData[2]['value'] as double).toInt()}%)',
-                      countText: l10n.installmentsCount(statusData[2]['count'] as int),
+                      text:
+                          '${statusData[2]['status']} (${(statusData[2]['value'] as double).toInt()}%)',
+                      countText: l10n.installmentsCount(
+                        statusData[2]['count'] as int,
+                      ),
                       isCompact: true,
                     ),
                     StatusIndicator(
                       color: statusData[3]['color'] as Color,
-                      text: '${statusData[3]['status']} (${(statusData[3]['value'] as double).toInt()}%)',
-                      countText: l10n.installmentsCount(statusData[3]['count'] as int),
+                      text:
+                          '${statusData[3]['status']} (${(statusData[3]['value'] as double).toInt()}%)',
+                      countText: l10n.installmentsCount(
+                        statusData[3]['count'] as int,
+                      ),
                       isCompact: true,
                     ),
                   ],
@@ -226,11 +257,15 @@ class InstallmentStatusSection extends StatelessWidget {
       ],
     );
   }
-  
-  Widget _buildPieChart(List<Map<String, dynamic>> statusData, double centerSpaceRadius, double radius) {
+
+  Widget _buildPieChart(
+    List<Map<String, dynamic>> statusData,
+    double centerSpaceRadius,
+    double radius,
+  ) {
     // Check if there's any non-zero data
     bool hasData = statusData.any((data) => (data['value'] as double) > 0);
-    
+
     // If no data, show a placeholder circle
     if (!hasData) {
       return Container(
@@ -243,15 +278,12 @@ class InstallmentStatusSection extends StatelessWidget {
         child: Center(
           child: Text(
             'Нет данных',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           ),
         ),
       );
     }
-    
+
     return PieChart(
       PieChartData(
         sectionsSpace: 0,
@@ -259,7 +291,7 @@ class InstallmentStatusSection extends StatelessWidget {
         sections: List.generate(statusData.length, (i) {
           final data = statusData[i];
           final value = data['value'] as double;
-          
+
           // Skip sections with zero value
           if (value <= 0) {
             return PieChartSectionData(
@@ -270,7 +302,7 @@ class InstallmentStatusSection extends StatelessWidget {
               showTitle: false,
             );
           }
-          
+
           return PieChartSectionData(
             color: data['color'] as Color,
             value: value,
@@ -281,4 +313,4 @@ class InstallmentStatusSection extends StatelessWidget {
       ),
     );
   }
-} 
+}

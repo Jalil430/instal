@@ -68,4 +68,4 @@ class StatusIndicator extends StatelessWidget {
       ),
     );
   }
-} 
+}

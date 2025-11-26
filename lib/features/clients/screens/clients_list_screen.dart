@@ -385,7 +385,7 @@ class ClientsListScreenState extends State<ClientsListScreen>
 
       if (currentUser != null) {
         cache.remove(CacheService.clientsKey(currentUser.id));
-        cache.remove(CacheService.analyticsKey(currentUser.id));
+        cache.removeAnalyticsForUser(currentUser.id);
       }
 
       // Show loading indicator (ensure any existing is hidden first)
@@ -553,7 +553,7 @@ class ClientsListScreenState extends State<ClientsListScreen>
 
         if (currentUser != null) {
           cache.remove(CacheService.clientsKey(currentUser.id));
-          cache.remove(CacheService.analyticsKey(currentUser.id));
+          cache.removeAnalyticsForUser(currentUser.id);
         }
         cache.remove(CacheService.clientKey(client.id));
 

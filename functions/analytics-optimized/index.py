@@ -100,10 +100,12 @@ def handler(event, context):
         query_params = event.get('queryStringParameters', {}) or {}
         query_user_id = query_params.get('user_id')
         client_date_str = query_params.get('client_date')
+        wallet_id = query_params.get('wallet_id')
         
-        print(f"QUERY EXTRACTED - user_id: {query_user_id}, client_date: {client_date_str}")
+        print(f"QUERY EXTRACTED - user_id: {query_user_id}, client_date: {client_date_str}, wallet_id: {wallet_id}")
         logger.info(f"ANALYTICS REQUEST - Extracted user_id from query: {query_user_id}")
         logger.info(f"ANALYTICS REQUEST - Extracted client_date: {client_date_str}")
+        logger.info(f"ANALYTICS REQUEST - Wallet filter: {wallet_id}")
         
         # Authentication
         user_id, auth_error = JWTAuth.authenticate_request(event)
@@ -166,9 +168,15 @@ def handler(event, context):
                 thirty_days_ago_str = thirty_days_ago.isoformat()
                 
                 # Get installments data
-                installments_query = """
+                wallet_declaration = ""
+                wallet_filter_clause = ""
+                if wallet_id:
+                    wallet_declaration = "DECLARE $wallet_id AS Utf8;\n"
+                    wallet_filter_clause = " AND wallet_id = $wallet_id"
+                
+                installments_query = f"""
                 DECLARE $user_id AS Utf8;
-                DECLARE $thirty_days_ago AS Date;
+                {wallet_declaration}DECLARE $thirty_days_ago AS Date;
                 
                 SELECT 
                     installment_price,
@@ -181,18 +189,26 @@ def handler(event, context):
                     COALESCE(next_payment_amount, CAST(0 AS Decimal(22,9))) as next_payment_amount,
                     created_at,
                     id as installment_id,
-                    term_months
+                    term_months,
+                    product_name,
+                    client_name,
+                    COALESCE(down_payment, CAST(0 AS Decimal(22,9))) as down_payment,
+                    down_payment_date
                 FROM installments
-                WHERE user_id = $user_id;
+                WHERE user_id = $user_id{wallet_filter_clause};
                 """
                 
                 prepared_query = session.prepare(installments_query)
+                params = {
+                    '$user_id': user_id,
+                    '$thirty_days_ago': thirty_days_ago
+                }
+                if wallet_id:
+                    params['$wallet_id'] = wallet_id
+                
                 result_sets = session.transaction(ydb.SerializableReadWrite()).execute(
                     prepared_query,
-                    {
-                        '$user_id': user_id,
-                        '$thirty_days_ago': thirty_days_ago
-                    },
+                    params,
                     commit_tx=True
                 )
                 
@@ -219,7 +235,11 @@ def handler(event, context):
                         'next_payment_amount': float(row.next_payment_amount),
                         'created_at': convert_timestamp(row.created_at),
                         'id': row.installment_id,
-                        'term_months': getattr(row, 'term_months', 0)
+                        'term_months': getattr(row, 'term_months', 0),
+                        'product_name': getattr(row, 'product_name', None),
+                        'client_name': getattr(row, 'client_name', None),
+                        'down_payment': float(getattr(row, 'down_payment', 0.0) or 0.0),
+                        'down_payment_date': convert_date(getattr(row, 'down_payment_date', None))
                     }
                     installments.append(installment)
                 
@@ -233,7 +253,16 @@ def handler(event, context):
                         'key_metrics': {'total_revenue': 0, 'new_installments': 0, 'collection_rate': 0, 'portfolio_growth': 0},
                         'total_sales': {'weekly_sales': [0, 0, 0, 0, 0, 0, 0], 'average_sales': 0},
                         'installment_status': {'overdue_count': 0, 'due_to_pay_count': 0, 'upcoming_count': 0, 'paid_count': 0},
-                        'installment_details': {'active_installments': 0, 'total_portfolio': 0, 'total_cash_price': 0, 'total_overdue': 0, 'average_installment_value': 0}
+                        'installment_details': {'active_installments': 0, 'total_portfolio': 0, 'total_cash_price': 0, 'total_overdue': 0, 'average_installment_value': 0},
+                        'profit_analytics': {
+                            'profit_next_30_days': 0,
+                            'profit_next_90_days': 0,
+                            'profit_next_365_days': 0,
+                            'profit_earned_to_date': 0,
+                            'profit_overdue': 0,
+                            'total_remaining_profit': 0,
+                            'upcoming_payments': []
+                        }
                     })}
                 
                 # Get ALL payments data for this user's installments (no date filtering yet)
@@ -245,11 +274,11 @@ def handler(event, context):
                     expected_amount,
                     paid_date,
                     is_paid,
-                    payment_number
+                    payment_number,
+                    due_date,
+                    paid_amount
                 FROM installment_payments 
-                WHERE installment_id IN $installment_ids
-                AND is_paid = true
-                AND paid_date IS NOT NULL;
+                WHERE installment_id IN $installment_ids;
                 """
                 
                 try:
@@ -262,8 +291,9 @@ def handler(event, context):
                         commit_tx=True
                     )
                     
-                    # Process all payments
-                    all_payments = []
+                    # Process payments (both paid and scheduled)
+                    paid_payments = []
+                    scheduled_payments = []
                     rows = payments_result[0].rows
                     logger.info(f"Payment query returned {len(rows)} rows")
                     
@@ -271,8 +301,12 @@ def handler(event, context):
                         try:
                             # Access fields safely
                             installment_id = getattr(row, 'installment_id', None)
-                            expected_amount = getattr(row, 'expected_amount', 0.0)
+                            expected_amount = getattr(row, 'expected_amount', 0.0) or 0.0
+                            paid_amount = getattr(row, 'paid_amount', None)
                             paid_date_raw = getattr(row, 'paid_date', None)
+                            due_date_raw = getattr(row, 'due_date', None)
+                            is_paid = bool(getattr(row, 'is_paid', False))
+                            payment_number = getattr(row, 'payment_number', None)
                             
                             def convert_date(d):
                                 if d is None: return None
@@ -281,29 +315,40 @@ def handler(event, context):
                                 return d
                             
                             paid_date = convert_date(paid_date_raw)
+                            due_date = convert_date(due_date_raw)
                             
-                            if paid_date and installment_id:
+                            scheduled_payments.append({
+                                'installment_id': installment_id,
+                                'expected_amount': float(expected_amount),
+                                'due_date': due_date,
+                                'is_paid': is_paid,
+                                'payment_number': payment_number
+                            })
+                            
+                            if paid_date and installment_id and is_paid:
                                 payment = {
                                     'installment_id': installment_id,
-                                    'paid_amount': float(expected_amount) if expected_amount else 0.0,
+                                    'paid_amount': float(paid_amount) if paid_amount is not None else float(expected_amount),
                                     'payment_date': paid_date
                                 }
-                                all_payments.append(payment)
+                                paid_payments.append(payment)
                                 logger.info(f"Processed payment: {payment['paid_amount']} on {payment['payment_date']}")
                         except Exception as e:
                             logger.error(f"Error processing payment row {i}: {e}")
                             continue
                     
-                    logger.info(f"Successfully processed {len(all_payments)} payments")
+                    logger.info(f"Successfully processed {len(paid_payments)} paid payments and {len(scheduled_payments)} scheduled payments")
                     
                 except Exception as e:
                     logger.warning(f"Failed to fetch payment data: {e}. Using installment data only.")
-                    all_payments = []
+                    paid_payments = []
+                    scheduled_payments = []
                 
                 # Calculate analytics from the data
                 analytics_data = calculate_analytics(
                     installments=installments, 
-                    all_payments=all_payments, 
+                    paid_payments=paid_payments, 
+                    scheduled_payments=scheduled_payments,
                     today=today,
                     current_week_start=current_week_start,
                     current_week_end=current_week_end,
@@ -312,7 +357,7 @@ def handler(event, context):
                     thirty_days_ago=thirty_days_ago
                 )
                 
-                logger.info(f"Generated analytics for {len(installments)} installments and {len(all_payments)} payments")
+                logger.info(f"Generated analytics for {len(installments)} installments and {len(paid_payments)} paid payments")
                 return {'statusCode': 200, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps(analytics_data)}
 
             result = pool.retry_operation_sync(get_analytics_from_db)
@@ -327,7 +372,7 @@ def handler(event, context):
         logger.error(f"Unexpected error: {str(e)}")
         return {'statusCode': 500, 'headers': {'Content-Type': 'application/json'}, 'body': json.dumps({'error': 'Internal server error'})}
 
-def calculate_analytics(installments, all_payments, today, current_week_start, current_week_end, previous_week_start, previous_week_end, thirty_days_ago):
+def calculate_analytics(installments, paid_payments, scheduled_payments, today, current_week_start, current_week_end, previous_week_start, previous_week_end, thirty_days_ago):
     """
     Calculate analytics data from installments and payments.
     
@@ -358,12 +403,12 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
     
     # Filter payments by date ranges
     current_week_payments = [
-        p for p in all_payments 
+        p for p in paid_payments 
         if p['payment_date'] and current_week_start <= p['payment_date'] <= current_week_end
     ]
     
     previous_week_payments = [
-        p for p in all_payments 
+        p for p in paid_payments 
         if p['payment_date'] and previous_week_start <= p['payment_date'] <= previous_week_end
     ]
     
@@ -487,6 +532,8 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
     if percentage_change is not None:
         formatted_percentage_change = percentage_change
     
+    profit_analytics = calculate_profit_analytics(installments, scheduled_payments, paid_payments, today)
+    
     return {
         'key_metrics': {
             'total_revenue': total_revenue,
@@ -522,5 +569,127 @@ def calculate_analytics(installments, all_payments, today, current_week_start, c
             'average_term': average_term,
             'total_installment_value': total_portfolio,
             'upcoming_revenue_30_days': upcoming_revenue_30_days,
+        },
+        'profit_analytics': profit_analytics
+    }
+
+def calculate_profit_analytics(installments, scheduled_payments, paid_payments, today):
+    if not installments:
+        return {
+            'profit_next_30_days': 0.0,
+            'profit_next_90_days': 0.0,
+            'profit_next_365_days': 0.0,
+            'profit_earned_to_date': 0.0,
+            'profit_overdue': 0.0,
+            'total_remaining_profit': 0.0,
+            'upcoming_payments': []
         }
+    
+    installment_lookup = {inst['id']: inst for inst in installments}
+    upcoming_payments_raw = []
+    profit_next_30 = 0.0
+    profit_next_90 = 0.0
+    profit_next_365 = 0.0
+    total_remaining_profit = 0.0
+    profit_overdue = 0.0
+    profit_earned_to_date = 0.0
+    
+    horizon_30 = today + timedelta(days=30)
+    horizon_90 = today + timedelta(days=90)
+    horizon_365 = today + timedelta(days=365)
+    
+    for payment in scheduled_payments or []:
+        installment_id = payment.get('installment_id')
+        if not installment_id:
+            continue
+        if payment.get('is_paid'):
+            continue
+        
+        installment = installment_lookup.get(installment_id)
+        if not installment:
+            continue
+        
+        installment_price = installment.get('installment_price', 0.0) or 0.0
+        cash_price = installment.get('cash_price', 0.0) or 0.0
+        if installment_price <= 0:
+            continue
+        
+        profit_ratio = (installment_price - cash_price) / installment_price
+        if profit_ratio <= 0:
+            continue
+        
+        payment_amount = payment.get('expected_amount', 0.0) or 0.0
+        if payment_amount <= 0:
+            continue
+        
+        profit_amount = payment_amount * profit_ratio
+        total_remaining_profit += profit_amount
+        
+        due_date = payment.get('due_date')
+        if due_date:
+            if due_date < today:
+                profit_overdue += profit_amount
+            else:
+                if due_date <= horizon_30:
+                    profit_next_30 += profit_amount
+                if due_date <= horizon_90:
+                    profit_next_90 += profit_amount
+                if due_date <= horizon_365:
+                    profit_next_365 += profit_amount
+        else:
+            # No due date - treat as overdue if installment status is marked overdue
+            if installment.get('payment_status') == 'просрочено':
+                profit_overdue += profit_amount
+        
+        include_in_list = due_date is not None and today <= due_date <= horizon_30
+        if include_in_list:
+            upcoming_payments_raw.append({
+                'installment_id': installment_id,
+                'client_name': installment.get('client_name'),
+                'product_name': installment.get('product_name'),
+                'payment_number': payment.get('payment_number'),
+                'due_date': due_date,
+                'payment_amount': payment_amount,
+                'profit_amount': profit_amount,
+            })
+
+    for payment in paid_payments or []:
+        installment_id = payment.get('installment_id')
+        if not installment_id:
+            continue
+        installment = installment_lookup.get(installment_id)
+        if not installment:
+            continue
+        installment_price = installment.get('installment_price', 0.0) or 0.0
+        cash_price = installment.get('cash_price', 0.0) or 0.0
+        if installment_price <= 0:
+            continue
+        profit_ratio = (installment_price - cash_price) / installment_price
+        if profit_ratio <= 0:
+            continue
+        paid_amount = payment.get('paid_amount', 0.0) or 0.0
+        if paid_amount <= 0:
+            continue
+        profit_earned_to_date += paid_amount * profit_ratio
+    
+    # Sort by due date (soonest first) and include all items within 30 days
+    upcoming_payments_raw.sort(key=lambda item: item['due_date'])
+    upcoming_payments = [{
+        'installment_id': item['installment_id'],
+        'client_name': item['client_name'],
+        'product_name': item['product_name'],
+        'payment_number': item['payment_number'],
+        'due_date': item['due_date'].isoformat(),
+        'payment_amount': item['payment_amount'],
+        'profit_amount': item['profit_amount'],
+    } for item in upcoming_payments_raw]
+    
+    return {
+        'profit_next_30_days': profit_next_30,
+        'profit_next_90_days': profit_next_90,
+        'profit_next_365_days': profit_next_365,
+        'profit_earned_to_date': profit_earned_to_date,
+        'profit_overdue': profit_overdue,
+        'total_remaining_profit': total_remaining_profit,
+        'upcoming_payments': upcoming_payments
     }

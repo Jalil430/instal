@@ -15,15 +15,18 @@ class KeyMetricsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final currencyFormatter =
-        NumberFormat.currency(locale: 'ru_RU', symbol: '₽', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'ru_RU',
+      symbol: '₽',
+      decimalDigits: 0,
+    );
 
     return AnalyticsCard(
       padding: EdgeInsets.zero,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 400;
-          
+
           return Column(
             children: [
               Expanded(
@@ -40,7 +43,10 @@ class KeyMetricsSection extends StatelessWidget {
                         ),
                       ),
                     ),
-                    VerticalDivider(width: 1, color: AppTheme.subtleBorderColor),
+                    VerticalDivider(
+                      width: 1,
+                      color: AppTheme.subtleBorderColor,
+                    ),
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.all(isSmallScreen ? 12.0 : 20.0),
@@ -70,7 +76,10 @@ class KeyMetricsSection extends StatelessWidget {
                         ),
                       ),
                     ),
-                    VerticalDivider(width: 1, color: AppTheme.subtleBorderColor),
+                    VerticalDivider(
+                      width: 1,
+                      color: AppTheme.subtleBorderColor,
+                    ),
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.all(isSmallScreen ? 12.0 : 20.0),
@@ -87,8 +96,8 @@ class KeyMetricsSection extends StatelessWidget {
               ),
             ],
           );
-        }
+        },
       ),
     );
   }
-} 
+}

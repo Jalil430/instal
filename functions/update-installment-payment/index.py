@@ -603,7 +603,7 @@ ORDER BY due_date ASC LIMIT 1;
                 next_payment_amount = None
                 logger.info("No unpaid payments found")
             
-            # Simple UPDATE with calculated values
+            # Simple UPDATE with calculated values - preserve wallet_id
             update_installment_query = """
 DECLARE $installment_id AS Utf8;
 DECLARE $paid_amount AS Decimal(22,9);
@@ -625,7 +625,8 @@ UPDATE installments SET
     next_payment_date = $next_payment_date,
     next_payment_amount = $next_payment_amount,
     last_payment_date = $last_payment_date,
-    updated_at = $updated_at
+    updated_at = $updated_at,
+    wallet_id = wallet_id  -- Explicitly preserve wallet_id
 WHERE id = $installment_id;
 """
             
@@ -760,31 +761,21 @@ WHERE id = $installment_id;
                         })
 
                         # Recompute aggregates for this wallet
-                        # total_allocated = sum of remaining per linked installments (installment_price - sum(paid_amount))
                         total_alloc_rs = tx.execute(
                             session.prepare(
                                 """
                                 DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
-                                SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
-                                FROM (
-                                    SELECT i.id,
-                                      CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
-                                    FROM installments i
-                                    LEFT JOIN (
-                                        SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
-                                        FROM installment_payments
-                                        GROUP BY installment_id
-                                    ) AS p ON p.installment_id = i.id
-                                    WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id
-                                );
+                                SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_allocated
+                                FROM installments i
+                                WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
                                 """
                             ),
                             {'$wallet_id': installment_wallet_id, '$user_id': installment_user_id}
                         )
-                        total_remaining_dec = Decimal('0')
+                        total_allocated_dec = Decimal('0')
                         if total_alloc_rs[0].rows:
-                            total_remaining_dec = Decimal(str(total_alloc_rs[0].rows[0].total_remaining or 0))
-                        total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                            total_allocated_dec = Decimal(str(total_alloc_rs[0].rows[0].total_allocated or 0))
+                        total_alloc_mu = int((total_allocated_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
                         # due_to_get = sum of the next unpaid payment per installment linked to this wallet
                         next_due_q = session.prepare(

@@ -519,29 +519,21 @@ def handler(event, context):
                         new_balance += dp_mu
                         paid_mu += dp_mu
 
-                    # Recompute aggregates for wallet: total remaining, due_to_get, expected revenue
-                    total_rem_rs = tx.execute(
+                    # Recompute aggregates for wallet: total installment volume, due_to_get, expected revenue
+                    total_alloc_rs = tx.execute(
                         session.prepare(
                             """
                             DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
-                            SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
-                            FROM (
-                                SELECT i.id,
-                                  CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
-                                FROM installments i
-                                LEFT JOIN (
-                                    SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
-                                    FROM installment_payments GROUP BY installment_id
-                                ) AS p ON p.installment_id = i.id
-                                WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id
-                            );
+                            SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_allocated
+                            FROM installments i
+                            WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
                             """
                         ),
                         {'$wallet_id': wallet_id_opt, '$user_id': body['user_id']}
                     )
-                    tr_rows = total_rem_rs[0].rows if (total_rem_rs and len(total_rem_rs) > 0) else []
-                    total_remaining_dec = Decimal(str(tr_rows[0].total_remaining or 0)) if tr_rows else Decimal('0')
-                    total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
+                    alloc_rows = total_alloc_rs[0].rows if (total_alloc_rs and len(total_alloc_rs) > 0) else []
+                    total_allocated_dec = Decimal(str(alloc_rows[0].total_allocated or 0)) if alloc_rows else Decimal('0')
+                    total_alloc_mu = int((total_allocated_dec * Decimal('100')).quantize(Decimal('1'), rounding=RHU))
 
                     # due_to_get = sum of next unpaid payment per installment linked to this wallet
                     next_due_q = session.prepare(

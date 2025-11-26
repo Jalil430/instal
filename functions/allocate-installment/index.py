@@ -219,28 +219,19 @@ def create_installment_allocation(installment_id, wallet_id, amount_minor_units,
                         '$created_at': now_iso
                     })
                     
-                    # Recompute wallet aggregates: total_allocated (remaining), due_to_get, expected_revenue
-                    # total_allocated = sum remaining across linked installments
+                    # Recompute wallet aggregates: total installment volume, due_to_get, expected_revenue
                     total_alloc_rs = tx.execute(
                         """
                         DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8;
-                        SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
-                        FROM (
-                          SELECT i.id,
-                            CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
-                          FROM installments i
-                          LEFT JOIN (
-                            SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
-                            FROM installment_payments GROUP BY installment_id
-                          ) AS p ON p.installment_id = i.id
-                          WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id
-                        );
+                        SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_allocated
+                        FROM installments i
+                        WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id;
                         """,
                         {'$wallet_id': wallet_id, '$user_id': user_id}
                     )
                     from decimal import Decimal, ROUND_HALF_UP
-                    total_remaining_dec = Decimal(str(total_alloc_rs[0].rows[0].total_remaining or 0)) if total_alloc_rs[0].rows else Decimal('0')
-                    total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                    total_allocated_dec = Decimal(str(total_alloc_rs[0].rows[0].total_allocated or 0)) if total_alloc_rs[0].rows else Decimal('0')
+                    total_alloc_mu = int((total_allocated_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
                     # due_to_get = sum of next unpaid payment per installment
                     nd_rs = tx.execute(

@@ -174,22 +174,15 @@ def handler(event, context):
                     session.prepare(
                         """
                         DECLARE $wallet_id AS Utf8; DECLARE $user_id AS Utf8; DECLARE $exclude_id AS Utf8;
-                        SELECT COALESCE(SUM(rem), CAST(0 AS Decimal(22,9))) AS total_remaining
-                        FROM (
-                          SELECT i.id,
-                            CAST(i.installment_price AS Decimal(22,9)) - CAST(COALESCE(p.paid_sum, CAST(0 AS Decimal(22,9))) AS Decimal(22,9)) AS rem
-                          FROM installments i LEFT JOIN (
-                            SELECT installment_id, COALESCE(SUM(paid_amount), CAST(0 AS Decimal(22,9))) AS paid_sum
-                            FROM installment_payments GROUP BY installment_id
-                          ) AS p ON p.installment_id = i.id
-                          WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id AND i.id != $exclude_id
-                        );
+                        SELECT COALESCE(SUM(CAST(i.installment_price AS Decimal(22,9))), CAST(0 AS Decimal(22,9))) AS total_allocated
+                        FROM installments i
+                        WHERE i.wallet_id = $wallet_id AND i.user_id = $user_id AND i.id != $exclude_id;
                         """
                     ),
                     {'$wallet_id': wallet_id, '$user_id': user_id, '$exclude_id': installment_id}
                 )
-                total_remaining_dec = Decimal(str(total_alloc_rs[0].rows[0].total_remaining or 0)) if total_alloc_rs[0].rows else Decimal('0')
-                total_alloc_mu = int((total_remaining_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                total_allocated_dec = Decimal(str(total_alloc_rs[0].rows[0].total_allocated or 0)) if total_alloc_rs[0].rows else Decimal('0')
+                total_alloc_mu = int((total_allocated_dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
                 nd_rs = tx.execute(
                     session.prepare(
