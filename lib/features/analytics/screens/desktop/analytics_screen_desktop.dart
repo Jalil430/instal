@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../domain/entities/analytics_data.dart';
-import '../../widgets/total_sales_section.dart';
-import '../../widgets/key_metrics_section.dart';
 import '../../widgets/installment_details_section.dart';
 import '../../widgets/installment_status_section.dart';
 import '../../widgets/profit_analytics_section.dart';
 import '../../../wallets/domain/entities/wallet.dart';
+import '../../../wallets/domain/entities/wallet_balance.dart';
 
-class AnalyticsScreenDesktop extends StatelessWidget {
+class AnalyticsScreenDesktop extends StatefulWidget {
   final AnalyticsData analyticsData;
   final bool isRefreshing;
   final VoidCallback refreshAnalytics;
@@ -21,6 +22,8 @@ class AnalyticsScreenDesktop extends StatelessWidget {
   final ProfitAnalyticsData profitAnalyticsData;
   final InstallmentDetailsData installmentDetailsData;
   final bool isWalletDataLoading;
+  final InstallmentStatusData installmentStatusData;
+  final Map<String, WalletBalance> walletBalances;
 
   const AnalyticsScreenDesktop({
     Key? key,
@@ -34,7 +37,22 @@ class AnalyticsScreenDesktop extends StatelessWidget {
     required this.profitAnalyticsData,
     required this.installmentDetailsData,
     required this.isWalletDataLoading,
+    required this.installmentStatusData,
+    required this.walletBalances,
   }) : super(key: key);
+
+  @override
+  State<AnalyticsScreenDesktop> createState() => _AnalyticsScreenDesktopState();
+}
+
+class _AnalyticsScreenDesktopState extends State<AnalyticsScreenDesktop> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,12 +87,12 @@ class AnalyticsScreenDesktop extends StatelessWidget {
                 // Refresh button
                 CustomIconButton(
                   icon: Icons.refresh_rounded,
-                  onPressed: refreshAnalytics,
-                  size: 36,
-                  animate: isRefreshing,
-                  rotation: isRefreshing ? 1.0 : 0.0,
+                  onPressed: widget.refreshAnalytics,
+                  size: 40,
+                  animate: widget.isRefreshing,
+                  rotation: widget.isRefreshing ? 1.0 : 0.0,
                   animationDuration: const Duration(milliseconds: 1000),
-                  interactive: !isRefreshing,
+                  interactive: !widget.isRefreshing,
                 ),
               ],
             ),
@@ -95,23 +113,20 @@ class AnalyticsScreenDesktop extends StatelessWidget {
   Widget _buildDesktopLayout(AppLocalizations l10n) {
     return Scrollbar(
       thumbVisibility: true,
+      controller: _scrollController,
       child: SingleChildScrollView(
+        controller: _scrollController,
+        primary: false,
+        physics: const RangeMaintainingScrollPhysics(parent: ClampingScrollPhysics()),
         padding: const EdgeInsets.only(bottom: 16),
         child: Column(
           children: [
             SizedBox(
-              height: 360,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: TotalSalesSection(data: analyticsData.totalSales),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: KeyMetricsSection(data: analyticsData.keyMetrics),
-                  ),
-                ],
+              height: 520,
+              child: ProfitAnalyticsSection(
+                data: widget.profitAnalyticsData,
+                walletLabel: _currentWalletLabel(l10n),
+                isLoading: widget.isWalletDataLoading,
               ),
             ),
             const SizedBox(height: 16),
@@ -122,27 +137,19 @@ class AnalyticsScreenDesktop extends StatelessWidget {
                 children: [
                   Expanded(
                     child: InstallmentDetailsSection(
-                      data: installmentDetailsData,
+                      data: widget.installmentDetailsData,
                       walletLabel: _currentWalletLabel(l10n),
-                      isLoading: isWalletDataLoading,
+                      isLoading: widget.isWalletDataLoading,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: InstallmentStatusSection(
-                      data: analyticsData.installmentStatus,
+                      data: widget.installmentStatusData,
+                      isLoading: widget.isWalletDataLoading,
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 520,
-              child: ProfitAnalyticsSection(
-                data: profitAnalyticsData,
-                walletLabel: _currentWalletLabel(l10n),
-                isLoading: isWalletDataLoading,
               ),
             ),
           ],
@@ -152,69 +159,78 @@ class AnalyticsScreenDesktop extends StatelessWidget {
   }
 
   Widget _buildWalletDropdown(AppLocalizations l10n) {
-    if (isWalletsLoading) {
-      return Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.subtleBorderColor),
-          color: AppTheme.subtleBackgroundColor,
-        ),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                l10n.loadingWallets,
-                style: const TextStyle(color: AppTheme.textSecondary),
+    final currency = NumberFormat.currency(
+      locale: l10n.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: l10n.locale.languageCode == 'ru' ? '₽' : '\$',
+      decimalDigits: 2,
+    );
+
+    final options = <String, String>{
+      'all': l10n.allWallets,
+      'noWallet': l10n.withoutWallet,
+      ...{
+        for (final wallet in widget.wallets)
+          wallet.id:
+              '${wallet.name} (${currency.format(widget.walletBalances[wallet.id]?.balance ?? 0)})',
+      },
+    };
+
+    return SizedBox(
+      height: 40,
+      child: widget.isWalletsLoading
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.subtleBackgroundColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderColor),
               ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.loadingWallets,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : CustomDropdown<String>(
+              value: widget.selectedWalletId ?? 'all',
+              items: options,
+              onChanged: (value) {
+                final v = value ?? 'all';
+                if (v == 'all') {
+                  widget.onWalletSelected(null);
+                } else {
+                  widget.onWalletSelected(v);
+                }
+              },
+              hint: l10n.allWallets,
+              width: double.infinity,
+              height: 40,
             ),
-          ],
-        ),
-      );
-    }
-
-    final dropdownItems = <DropdownMenuItem<String?>>[
-      DropdownMenuItem(value: null, child: Text(l10n.allWallets)),
-      ...wallets.map(
-        (wallet) =>
-            DropdownMenuItem(value: wallet.id, child: Text(wallet.name)),
-      ),
-    ];
-
-    return DropdownButtonFormField<String?>(
-      value: selectedWalletId,
-      items: dropdownItems,
-      onChanged: onWalletSelected,
-      decoration: InputDecoration(
-        labelText: l10n.wallet,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.subtleBorderColor),
-        ),
-      ),
     );
   }
 
   String _currentWalletLabel(AppLocalizations l10n) {
-    if (selectedWalletId == null) {
+    if (widget.selectedWalletId == null) {
       return l10n.allWallets;
     }
-    for (final wallet in wallets) {
-      if (wallet.id == selectedWalletId) {
+    for (final wallet in widget.wallets) {
+      if (wallet.id == widget.selectedWalletId) {
         return wallet.name;
       }
     }
-    return l10n.allWallets;
+    return widget.wallets.isNotEmpty ? widget.wallets.first.name : l10n.allWallets;
   }
 }

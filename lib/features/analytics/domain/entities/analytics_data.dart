@@ -95,41 +95,51 @@ class InstallmentDetailsData {
 }
 
 class ProfitAnalyticsData {
-  final double profitNext30Days;
-  final double profitNext90Days;
-  final double profitNext365Days;
-  final double profitEarnedToDate;
-  final double profitOverdue;
-  final double totalRemainingProfit;
-  final List<PaymentProfitItem> upcomingPayments;
+  final List<MonthlyProfitData> months;
+  final double totalOverdue;
 
   ProfitAnalyticsData({
-    required this.profitNext30Days,
-    required this.profitNext90Days,
-    required this.profitNext365Days,
-    required this.profitEarnedToDate,
-    required this.profitOverdue,
-    required this.totalRemainingProfit,
-    required this.upcomingPayments,
+    required this.months,
+    required this.totalOverdue,
   });
 }
 
-class PaymentProfitItem {
-  final String installmentId;
-  final String? clientName;
-  final String? productName;
-  final int? paymentNumber;
-  final DateTime? dueDate;
-  final double paymentAmount;
-  final double profitAmount;
+class MonthlyProfitData {
+  final DateTime month;
+  final List<ExpectedProfitPoint> expectedDaily;
+  final List<ReceivedProfitPoint> receivedDaily;
+  final double overdueAmount;
+  final double outsideMonthPaid;
 
-  PaymentProfitItem({
-    required this.installmentId,
-    this.clientName,
-    this.productName,
-    this.paymentNumber,
-    this.dueDate,
-    required this.paymentAmount,
-    required this.profitAmount,
+  MonthlyProfitData({
+    required this.month,
+    required this.expectedDaily,
+    required this.receivedDaily,
+    required this.overdueAmount,
+    required this.outsideMonthPaid,
+  });
+}
+
+class ExpectedProfitPoint {
+  final int day;
+  final double expectedAmount;
+  final double paidAmount;
+  final bool isOverdue;
+
+  ExpectedProfitPoint({
+    required this.day,
+    required this.expectedAmount,
+    required this.paidAmount,
+    required this.isOverdue,
+  });
+}
+
+class ReceivedProfitPoint {
+  final int day;
+  final double amount;
+
+  ReceivedProfitPoint({
+    required this.day,
+    required this.amount,
   });
 }

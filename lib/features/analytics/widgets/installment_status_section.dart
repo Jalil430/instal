@@ -8,8 +8,13 @@ import '../../../core/localization/app_localizations.dart';
 
 class InstallmentStatusSection extends StatelessWidget {
   final InstallmentStatusData data;
+  final bool isLoading;
 
-  const InstallmentStatusSection({super.key, required this.data});
+  const InstallmentStatusSection({
+    super.key,
+    required this.data,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,61 +28,63 @@ class InstallmentStatusSection extends StatelessWidget {
     final statusData = [
       {
         'status': l10n.overdue,
-        'value': total > 0 ? (data.overdueCount / total) * 100 : 0.0,
+        'percent': total > 0 ? (data.overdueCount / total) * 100 : 0.0,
         'count': data.overdueCount,
         'color': AppTheme.errorColor,
       },
       {
         'status': l10n.dueToPay,
-        'value': total > 0 ? (data.dueToPayCount / total) * 100 : 0.0,
+        'percent': total > 0 ? (data.dueToPayCount / total) * 100 : 0.0,
         'count': data.dueToPayCount,
         'color': AppTheme.warningColor,
       },
       {
         'status': l10n.upcoming,
-        'value': total > 0 ? (data.upcomingCount / total) * 100 : 0.0,
+        'percent': total > 0 ? (data.upcomingCount / total) * 100 : 0.0,
         'count': data.upcomingCount,
         'color': AppTheme.pendingColor,
       },
       {
         'status': l10n.paid,
-        'value': total > 0 ? (data.paidCount / total) * 100 : 0.0,
+        'percent': total > 0 ? (data.paidCount / total) * 100 : 0.0,
         'count': data.paidCount,
         'color': AppTheme.successColor,
       },
     ];
-
     final dataForCenter = statusData.firstWhere(
       (d) => (d['count'] as int) > 0,
       orElse: () => statusData.last,
     );
-    final centerPercentage = (dataForCenter['value'] as double).toInt();
+    final centerPercentage = (dataForCenter['percent'] as double).toInt();
     final centerLabel = dataForCenter['status'] as String;
     final centerColor = dataForCenter['color'] as Color;
 
     return AnalyticsCard(
       title: l10n.installmentStatus,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isSmallScreen = constraints.maxWidth < 400;
+      child:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : LayoutBuilder(
+                builder: (context, constraints) {
+                  final isSmallScreen = constraints.maxWidth < 400;
 
-          return isSmallScreen
-              ? _buildMobileLayout(
-                statusData,
-                centerPercentage,
-                centerLabel,
-                centerColor,
-                l10n,
-              )
-              : _buildDesktopLayout(
-                statusData,
-                centerPercentage,
-                centerLabel,
-                centerColor,
-                l10n,
-              );
-        },
-      ),
+                  return isSmallScreen
+                      ? _buildMobileLayout(
+                        statusData,
+                        centerPercentage,
+                        centerLabel,
+                        centerColor,
+                        l10n,
+                      )
+                      : _buildDesktopLayout(
+                        statusData,
+                        centerPercentage,
+                        centerLabel,
+                        centerColor,
+                        l10n,
+                      );
+                },
+              ),
     );
   }
 
@@ -98,10 +105,10 @@ class InstallmentStatusSection extends StatelessWidget {
             children:
                 statusData.map((data) {
                   final count = data['count'] as int;
+                  final percent = data['percent'] as double;
                   return StatusIndicator(
                     color: data['color'] as Color,
-                    text:
-                        '${data['status']} (${(data['value'] as double).toInt()}%)',
+                    text: '${data['status']} (${percent.toInt()}%)',
                     countText: l10n.installmentsCount(count),
                   );
                 }).toList(),
@@ -206,7 +213,7 @@ class InstallmentStatusSection extends StatelessWidget {
                     StatusIndicator(
                       color: statusData[0]['color'] as Color,
                       text:
-                          '${statusData[0]['status']} (${(statusData[0]['value'] as double).toInt()}%)',
+                          '${statusData[0]['status']} (${(statusData[0]['percent'] as double).toInt()}%)',
                       countText: l10n.installmentsCount(
                         statusData[0]['count'] as int,
                       ),
@@ -215,7 +222,7 @@ class InstallmentStatusSection extends StatelessWidget {
                     StatusIndicator(
                       color: statusData[1]['color'] as Color,
                       text:
-                          '${statusData[1]['status']} (${(statusData[1]['value'] as double).toInt()}%)',
+                          '${statusData[1]['status']} (${(statusData[1]['percent'] as double).toInt()}%)',
                       countText: l10n.installmentsCount(
                         statusData[1]['count'] as int,
                       ),
@@ -233,7 +240,7 @@ class InstallmentStatusSection extends StatelessWidget {
                     StatusIndicator(
                       color: statusData[2]['color'] as Color,
                       text:
-                          '${statusData[2]['status']} (${(statusData[2]['value'] as double).toInt()}%)',
+                          '${statusData[2]['status']} (${(statusData[2]['percent'] as double).toInt()}%)',
                       countText: l10n.installmentsCount(
                         statusData[2]['count'] as int,
                       ),
@@ -242,7 +249,7 @@ class InstallmentStatusSection extends StatelessWidget {
                     StatusIndicator(
                       color: statusData[3]['color'] as Color,
                       text:
-                          '${statusData[3]['status']} (${(statusData[3]['value'] as double).toInt()}%)',
+                          '${statusData[3]['status']} (${(statusData[3]['percent'] as double).toInt()}%)',
                       countText: l10n.installmentsCount(
                         statusData[3]['count'] as int,
                       ),
@@ -264,7 +271,7 @@ class InstallmentStatusSection extends StatelessWidget {
     double radius,
   ) {
     // Check if there's any non-zero data
-    bool hasData = statusData.any((data) => (data['value'] as double) > 0);
+    bool hasData = statusData.any((data) => (data['percent'] as double) > 0);
 
     // If no data, show a placeholder circle
     if (!hasData) {
@@ -290,7 +297,7 @@ class InstallmentStatusSection extends StatelessWidget {
         centerSpaceRadius: centerSpaceRadius,
         sections: List.generate(statusData.length, (i) {
           final data = statusData[i];
-          final value = data['value'] as double;
+          final value = data['percent'] as double;
 
           // Skip sections with zero value
           if (value <= 0) {

@@ -50,7 +50,8 @@ dependencies:
   
   # Charting
   fl_chart: ^0.68.0
-  
+  month_picker_dialog: ^6.5.0
+ 
   # Utilities
   # Don't pin intl; let flutter_localizations decide the compatible version
   # intl: ^0.19.0 or ^0.20.2 (transitive via flutter_localizations)

@@ -322,7 +322,9 @@ def handler(event, context):
                                 'expected_amount': float(expected_amount),
                                 'due_date': due_date,
                                 'is_paid': is_paid,
-                                'payment_number': payment_number
+                                'payment_number': payment_number,
+                                'paid_amount': float(paid_amount) if paid_amount is not None else None,
+                                'paid_date': paid_date
                             })
                             
                             if paid_date and installment_id and is_paid:
@@ -387,7 +389,7 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
     total_revenue = 0.0
     total_portfolio = 0.0
     total_cash_price = 0.0
-    total_overdue = 0.0
+    fallback_total_overdue = 0.0
     upcoming_revenue_30_days = 0.0
     
     # Status counters
@@ -414,6 +416,27 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
     
     # Log payment counts for debugging
     logger.info(f"Found {len(current_week_payments)} payments in current week and {len(previous_week_payments)} in previous week")
+    
+    # Calculate total overdue amount from scheduled payments when available.
+    scheduled_total_overdue = None
+    if scheduled_payments:
+        scheduled_total_overdue = 0.0
+        for payment in scheduled_payments:
+            if not payment or payment.get('is_paid'):
+                continue
+            due_date = payment.get('due_date')
+            if not due_date:
+                continue
+            if isinstance(due_date, datetime):
+                due_date = due_date.date()
+            elif isinstance(due_date, str):
+                try:
+                    due_date = date.fromisoformat(due_date)
+                except ValueError:
+                    continue
+            if due_date < today:
+                scheduled_total_overdue += float(payment.get('expected_amount', 0.0) or 0.0)
+        logger.info(f"Calculated overdue total from schedule: {scheduled_total_overdue}")
     
     # Weekly sales arrays (Monday=0, Tuesday=1, ..., Sunday=6)
     current_week_sales = [0.0] * 7
@@ -453,13 +476,73 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
     if previous_week_avg > 0:
         percentage_change = ((current_week_avg - previous_week_avg) / previous_week_avg) * 100
     
+    def normalize_payment_status(status: Optional[str]) -> str:
+        """Return canonical Russian status even if old English values are stored."""
+        if not status:
+            return 'предстоящий'
+        status_str = str(status).strip().lower()
+        mapping = {
+            'overdue': 'просрочено',
+            'late': 'просрочено',
+            'due': 'к оплате',
+            'due today': 'к оплате',
+            'pending': 'предстоящий',
+            'scheduled': 'предстоящий',
+            'upcoming': 'предстоящий',
+            'paid': 'оплачено',
+            'completed': 'оплачено',
+            'оплачен': 'оплачено',
+        }
+        if status_str in ('просрочено', 'к оплате', 'предстоящий', 'оплачено'):
+            return status_str
+        return mapping.get(status_str, 'предстоящий')
+
+    def derive_installment_status(installment) -> str:
+        """
+        Determine the most accurate status for analytics. We can't rely solely on stored payment_status
+        because many rows never get status updates after creation. Instead we combine payment_status,
+        overdue_count, remaining amounts, and next payment date relative to `today`.
+        """
+        normalized_status = normalize_payment_status(installment.get('payment_status'))
+        overdue_count_val = installment.get('overdue_count', 0) or 0
+        remaining_amount = installment.get('remaining_amount', 0.0) or 0.0
+        paid_amount = installment.get('paid_amount', 0.0) or 0.0
+        installment_price = installment.get('installment_price', 0.0) or 0.0
+        next_payment_date = installment.get('next_payment_date')
+
+        # Completed installments should always fall into the paid bucket
+        if (
+            normalized_status == 'оплачено'
+            or (installment_price > 0 and (paid_amount >= installment_price or remaining_amount <= 0))
+        ):
+            return 'оплачено'
+
+        # Any overdue count recorded in YDB or overdue status wins immediately
+        if overdue_count_val > 0 or normalized_status == 'просрочено':
+            return 'просрочено'
+
+        # Fall back to comparing the next payment date with the date used for analytics
+        if next_payment_date:
+            if isinstance(next_payment_date, datetime):
+                next_payment_date = next_payment_date.date()
+            if next_payment_date < today:
+                return 'просрочено'
+            if next_payment_date == today:
+                return 'к оплате'
+            return 'предстоящий'
+
+        # Without a next payment date we trust whatever status we have (or default to upcoming)
+        if normalized_status in ('к оплате', 'предстоящий'):
+            return normalized_status
+        return 'предстоящий'
+
     # Process installments for portfolio metrics
     for installment in installments:
         installment_price = installment['installment_price']
         cash_price = installment['cash_price']
         paid_amount = installment['paid_amount']
         remaining_amount = installment['remaining_amount']
-        payment_status = installment['payment_status']
+        payment_status = derive_installment_status(installment)
         next_payment_date = installment['next_payment_date']
         next_payment_amount = installment['next_payment_amount']
         created_at = installment['created_at']
@@ -476,7 +559,7 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
         # Count by status
         if payment_status == 'просрочено':
             overdue_count += 1
-            total_overdue += remaining_amount
+            fallback_total_overdue += remaining_amount
         elif payment_status == 'к оплате':
             due_to_pay_count += 1
         elif payment_status == 'предстоящий':
@@ -564,7 +647,7 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
             'active_installments': active_installments,
             'total_portfolio': total_portfolio,
             'total_cash_price': total_cash_price,
-            'total_overdue': total_overdue,
+            'total_overdue': scheduled_total_overdue if scheduled_total_overdue is not None else fallback_total_overdue,
             'average_installment_value': average_installment_value,
             'average_term': average_term,
             'total_installment_value': total_portfolio,
@@ -576,120 +659,172 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
 def calculate_profit_analytics(installments, scheduled_payments, paid_payments, today):
     if not installments:
         return {
-            'profit_next_30_days': 0.0,
-            'profit_next_90_days': 0.0,
-            'profit_next_365_days': 0.0,
-            'profit_earned_to_date': 0.0,
-            'profit_overdue': 0.0,
-            'total_remaining_profit': 0.0,
-            'upcoming_payments': []
+            'months': [],
+            'total_overdue': 0.0,
         }
-    
+
     installment_lookup = {inst['id']: inst for inst in installments}
-    upcoming_payments_raw = []
-    profit_next_30 = 0.0
-    profit_next_90 = 0.0
-    profit_next_365 = 0.0
-    total_remaining_profit = 0.0
-    profit_overdue = 0.0
-    profit_earned_to_date = 0.0
-    
-    horizon_30 = today + timedelta(days=30)
-    horizon_90 = today + timedelta(days=90)
-    horizon_365 = today + timedelta(days=365)
-    
+
+    def profit_ratio(inst):
+        installment_price = inst.get('installment_price', 0.0) or 0.0
+        cash_price = inst.get('cash_price', 0.0) or 0.0
+        if installment_price <= 0:
+            return None
+        ratio = (installment_price - cash_price) / installment_price
+        return ratio if ratio > 0 else None
+
+    def month_key(dt):
+        return date(dt.year, dt.month, 1)
+
+    months = {}
+    total_overdue = 0.0
+    seen_paid_keys = set()
+
+    # Expected schedule (by due date) and paid amounts linked to those payments
     for payment in scheduled_payments or []:
         installment_id = payment.get('installment_id')
-        if not installment_id:
+        inst = installment_lookup.get(installment_id)
+        if not inst:
             continue
-        if payment.get('is_paid'):
-            continue
-        
-        installment = installment_lookup.get(installment_id)
-        if not installment:
-            continue
-        
-        installment_price = installment.get('installment_price', 0.0) or 0.0
-        cash_price = installment.get('cash_price', 0.0) or 0.0
-        if installment_price <= 0:
-            continue
-        
-        profit_ratio = (installment_price - cash_price) / installment_price
-        if profit_ratio <= 0:
-            continue
-        
-        payment_amount = payment.get('expected_amount', 0.0) or 0.0
-        if payment_amount <= 0:
-            continue
-        
-        profit_amount = payment_amount * profit_ratio
-        total_remaining_profit += profit_amount
-        
-        due_date = payment.get('due_date')
-        if due_date:
-            if due_date < today:
-                profit_overdue += profit_amount
-            else:
-                if due_date <= horizon_30:
-                    profit_next_30 += profit_amount
-                if due_date <= horizon_90:
-                    profit_next_90 += profit_amount
-                if due_date <= horizon_365:
-                    profit_next_365 += profit_amount
-        else:
-            # No due date - treat as overdue if installment status is marked overdue
-            if installment.get('payment_status') == 'просрочено':
-                profit_overdue += profit_amount
-        
-        include_in_list = due_date is not None and today <= due_date <= horizon_30
-        if include_in_list:
-            upcoming_payments_raw.append({
-                'installment_id': installment_id,
-                'client_name': installment.get('client_name'),
-                'product_name': installment.get('product_name'),
-                'payment_number': payment.get('payment_number'),
-                'due_date': due_date,
-                'payment_amount': payment_amount,
-                'profit_amount': profit_amount,
-            })
 
+        ratio = profit_ratio(inst)
+        if ratio is None:
+            continue
+
+        expected_amount_raw = payment.get('expected_amount', 0.0) or 0.0
+        if expected_amount_raw <= 0:
+            continue
+
+        due_date = payment.get('due_date')
+        paid_date = payment.get('paid_date')
+        is_paid = payment.get('is_paid', False)
+        paid_amount_raw = payment.get('paid_amount', None)
+
+        profit_expected = expected_amount_raw * ratio
+        profit_paid = 0.0
+        paid_payment_amount = paid_amount_raw if paid_amount_raw is not None else expected_amount_raw
+        if is_paid:
+            profit_paid = (paid_payment_amount or 0.0) * ratio
+
+        if due_date:
+            key = month_key(due_date)
+            bucket = months.setdefault(
+                key,
+                {
+                    'expected_daily': {},
+                    'received_daily': {},
+                    'overdue': 0.0,
+                    'outside_month_paid': 0.0,
+                },
+            )
+            day = due_date.day
+            existing = bucket['expected_daily'].get(day, {
+                'expected_amount': 0.0,
+                'paid_amount': 0.0,
+                'is_overdue': False
+            })
+            existing['expected_amount'] += profit_expected
+            existing['paid_amount'] += profit_paid
+            existing['is_overdue'] = existing['is_overdue'] or (due_date < today and not is_paid)
+            bucket['expected_daily'][day] = existing
+
+            # Overdue calculation: unpaid part past due date
+            if due_date < today and profit_expected > profit_paid:
+                bucket['overdue'] += (profit_expected - profit_paid)
+                total_overdue += (profit_expected - profit_paid)
+
+        # Received amounts (by paid date) tied to schedule
+        if is_paid and paid_date:
+            received_key = (installment_id, paid_date.isoformat(), float(paid_amount_raw or expected_amount_raw))
+            seen_paid_keys.add(received_key)
+
+            paid_month_key = month_key(paid_date)
+            bucket = months.setdefault(
+                paid_month_key,
+                {
+                    'expected_daily': {},
+                    'received_daily': {},
+                    'overdue': 0.0,
+                    'outside_month_paid': 0.0,
+                },
+            )
+            day = paid_date.day
+            bucket['received_daily'][day] = bucket['received_daily'].get(day, {
+                'profit': 0.0,
+            })
+            bucket['received_daily'][day]['profit'] += profit_paid
+
+            if due_date and (paid_date.month != due_date.month or paid_date.year != due_date.year):
+                bucket['outside_month_paid'] += profit_paid
+
+    # Additional paid payments (safety net for any payments not linked above)
     for payment in paid_payments or []:
         installment_id = payment.get('installment_id')
-        if not installment_id:
+        inst = installment_lookup.get(installment_id)
+        if not inst:
             continue
-        installment = installment_lookup.get(installment_id)
-        if not installment:
-            continue
-        installment_price = installment.get('installment_price', 0.0) or 0.0
-        cash_price = installment.get('cash_price', 0.0) or 0.0
-        if installment_price <= 0:
-            continue
-        profit_ratio = (installment_price - cash_price) / installment_price
-        if profit_ratio <= 0:
+        ratio = profit_ratio(inst)
+        if ratio is None:
             continue
         paid_amount = payment.get('paid_amount', 0.0) or 0.0
-        if paid_amount <= 0:
+        paid_date = payment.get('payment_date')
+        if not paid_date or paid_amount <= 0:
             continue
-        profit_earned_to_date += paid_amount * profit_ratio
-    
-    # Sort by due date (soonest first) and include all items within 30 days
-    upcoming_payments_raw.sort(key=lambda item: item['due_date'])
-    upcoming_payments = [{
-        'installment_id': item['installment_id'],
-        'client_name': item['client_name'],
-        'product_name': item['product_name'],
-        'payment_number': item['payment_number'],
-        'due_date': item['due_date'].isoformat(),
-        'payment_amount': item['payment_amount'],
-        'profit_amount': item['profit_amount'],
-    } for item in upcoming_payments_raw]
-    
+
+        key = (installment_id, paid_date.isoformat(), float(paid_amount))
+        if key in seen_paid_keys:
+            continue
+        seen_paid_keys.add(key)
+
+        profit_paid = paid_amount * ratio
+        bucket = months.setdefault(
+            month_key(paid_date),
+            {
+                'expected_daily': {},
+                'received_daily': {},
+                'overdue': 0.0,
+                'outside_month_paid': 0.0,
+            },
+        )
+        day = paid_date.day
+        bucket['received_daily'][day] = bucket['received_daily'].get(day, {
+            'profit': 0.0,
+        })
+        bucket['received_daily'][day]['profit'] += profit_paid
+
+    # Transform month buckets to list payload
+    month_items = []
+    for month_dt, bucket in months.items():
+        expected_daily = [
+            {
+                'day': day,
+                'expected_amount': round(values.get('expected_amount', 0.0), 2),
+                'paid_amount': round(values.get('paid_amount', 0.0), 2),
+                'is_overdue': bool(values.get('is_overdue', False)),
+            }
+            for day, values in sorted(bucket['expected_daily'].items())
+        ]
+
+        received_daily = [
+            {
+                'day': day,
+                'amount': round(values.get('profit', 0.0), 2),
+            }
+            for day, values in sorted(bucket['received_daily'].items())
+        ]
+
+        month_items.append({
+            'month': month_dt.isoformat(),
+            'expected_daily': expected_daily,
+            'received_daily': received_daily,
+            'overdue_amount': round(bucket.get('overdue', 0.0), 2),
+            'outside_month_paid': round(bucket.get('outside_month_paid', 0.0), 2),
+        })
+
+    # Sort months chronologically
+    month_items.sort(key=lambda m: m['month'])
+
     return {
-        'profit_next_30_days': profit_next_30,
-        'profit_next_90_days': profit_next_90,
-        'profit_next_365_days': profit_next_365,
-        'profit_earned_to_date': profit_earned_to_date,
-        'profit_overdue': profit_overdue,
-        'total_remaining_profit': total_remaining_profit,
-        'upcoming_payments': upcoming_payments
+        'months': month_items,
+        'total_overdue': round(total_overdue, 2),
     }

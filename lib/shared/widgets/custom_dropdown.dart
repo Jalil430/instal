@@ -55,13 +55,9 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
             height: widget.height,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: _isHovered 
-                  ? AppTheme.subtleHoverColor
-                  : AppTheme.subtleBackgroundColor,
+              color: _isHovered ? AppTheme.subtleHoverColor : AppTheme.subtleBackgroundColor,
               border: Border.all(
-                color: _isHovered 
-                    ? AppTheme.subtleAccentColor
-                    : AppTheme.subtleBorderColor,
+                color: _isHovered ? AppTheme.subtleAccentColor : AppTheme.subtleBorderColor,
                 width: 1,
               ),
               borderRadius: BorderRadius.circular(12),
@@ -73,11 +69,12 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                 Flexible(
                   child: Text(
                     widget.value != null ? widget.items[widget.value] ?? '' : widget.hint ?? '',
-                    style: widget.textStyle ?? TextStyle(
-                      color: widget.value != null ? AppTheme.textPrimary : AppTheme.textHint,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                    ),
+                    style: widget.textStyle ??
+                        TextStyle(
+                          color: widget.value != null ? AppTheme.textPrimary : AppTheme.textHint,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -289,7 +286,7 @@ class _CustomDropdownItemState<T> extends State<_CustomDropdownItem<T>> {
           child: Text(
             widget.label,
             style: TextStyle(
-              color: widget.isSelected 
+              color: widget.isSelected
                   ? AppTheme.brightPrimaryColor
                   : AppTheme.textPrimary,
               fontSize: 14,
@@ -300,4 +297,4 @@ class _CustomDropdownItemState<T> extends State<_CustomDropdownItem<T>> {
       ),
     );
   }
-} 
+}

@@ -29,16 +29,6 @@ class InstallmentDetailsSection extends StatelessWidget {
 
     return AnalyticsCard(
       title: l10n.portfolioDetails,
-      header:
-          walletLabel != null
-              ? Text(
-                walletLabel!,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.textSecondary,
-                ),
-              )
-              : null,
       child:
           isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -49,6 +39,7 @@ class InstallmentDetailsSection extends StatelessWidget {
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      const SizedBox(height: 1),
                       DetailRow(
                         label: l10n.activeInstallments,
                         value: data.activeInstallments.toString(),

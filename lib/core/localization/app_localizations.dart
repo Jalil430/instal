@@ -895,6 +895,34 @@ class AppLocalizations {
           : 'Upcoming Revenue (30 days)';
   String get profitAnalytics =>
       locale.languageCode == 'ru' ? 'Прибыль' : 'Profit Analytics';
+  String get profitAnalyticsExpected =>
+      locale.languageCode == 'ru'
+          ? 'Прибыль по срокам'
+          : 'Profit by due date';
+  String get profitAnalyticsReceived =>
+      locale.languageCode == 'ru'
+          ? 'Прибыль по оплатам'
+          : 'Profit by paid date';
+  String get paymentsAnalyticsExpected =>
+      locale.languageCode == 'ru'
+          ? 'Платежи по срокам'
+          : 'Payments by due date';
+  String get paymentsAnalyticsReceived =>
+      locale.languageCode == 'ru'
+          ? 'Платежи по оплатам'
+          : 'Payments by paid date';
+  String get metricLabel =>
+      locale.languageCode == 'ru' ? 'Метрика' : 'Metric';
+  String get basisLabel =>
+      locale.languageCode == 'ru' ? 'База' : 'Basis';
+  String get expectedByDueDate =>
+      locale.languageCode == 'ru'
+          ? 'Ожидаемая'
+          : 'Expected';
+  String get receivedByPaidDate =>
+      locale.languageCode == 'ru'
+          ? 'Полученная'
+          : 'Received';
   String get profitNext30Days =>
       locale.languageCode == 'ru'
           ? 'Прибыль за 30 дней'
@@ -917,6 +945,51 @@ class AppLocalizations {
           : 'Total Remaining Profit';
   String get upcomingProfitPayments =>
       locale.languageCode == 'ru' ? 'Ближайшие платежи' : 'Upcoming Payments';
+  String get collected =>
+      locale.languageCode == 'ru' ? 'Получено' : 'Collected';
+  String get toReceive =>
+      locale.languageCode == 'ru' ? 'К получению' : 'To receive';
+  String get paidOutsideMonth =>
+      locale.languageCode == 'ru'
+          ? 'Оплачено за ранние сроки'
+          : 'Paid from earlier dues';
+  String get totalPaymentsLabel =>
+      locale.languageCode == 'ru' ? 'Платежи' : 'Payments';
+  String get paymentsMetricUnavailable =>
+      locale.languageCode == 'ru'
+          ? 'Метрика по сумме платежей появится позже'
+          : 'Payments metric will be available soon';
+  String get graphSettings =>
+      locale.languageCode == 'ru' ? 'Настройки графика' : 'Graph settings';
+  String get yearLabel => locale.languageCode == 'ru' ? 'Год' : 'Year';
+  String get selectMonth =>
+      locale.languageCode == 'ru' ? 'Выбрать месяц' : 'Select month';
+  String get noDataForSelectedMonth =>
+      locale.languageCode == 'ru'
+          ? 'Нет данных за выбранный месяц'
+          : 'No data for selected month';
+  String get howItWorks =>
+      locale.languageCode == 'ru' ? 'Как это работает' : 'How it works';
+  String get profitChartInfoTitle =>
+      locale.languageCode == 'ru'
+          ? 'Как работает этот график'
+          : 'How this chart works';
+  String get profitChartExpectedInfo =>
+      locale.languageCode == 'ru'
+          ? 'Ожидаемая: показывает прибыль по сроку платежей (по due date)'
+          : 'Expected: profit by due dates of payments';
+  String get profitChartReceivedInfo =>
+      locale.languageCode == 'ru'
+          ? 'Полученная: показывает прибыль по дате оплаты (по paid date)'
+          : 'Received: profit by actual paid dates';
+  String get noPaymentsThisMonth =>
+      locale.languageCode == 'ru'
+          ? 'Нет данных за выбранный месяц'
+          : 'No data for this month';
+  String get checkBackSoon =>
+      locale.languageCode == 'ru'
+          ? 'Загляните позже, чтобы увидеть статистику'
+          : 'Check back soon for activity';
   String get paymentAmountLabel =>
       locale.languageCode == 'ru' ? 'Платёж' : 'Payment';
   String get paymentProfitLabel =>

@@ -52,8 +52,8 @@ class AnalyticsCard extends StatelessWidget {
                           Text(
                             title!,
                             style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 8),

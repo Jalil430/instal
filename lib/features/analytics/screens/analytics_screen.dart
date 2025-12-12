@@ -12,6 +12,7 @@ import '../../auth/presentation/widgets/auth_service_provider.dart';
 import '../../wallets/data/datasources/wallet_remote_datasource_impl.dart';
 import '../../wallets/data/repositories/wallet_repository_impl.dart';
 import '../../wallets/domain/entities/wallet.dart';
+import '../../wallets/domain/entities/wallet_balance.dart';
 import '../../wallets/domain/repositories/wallet_repository.dart';
 import 'desktop/analytics_screen_desktop.dart';
 import 'mobile/analytics_screen_mobile.dart';
@@ -36,6 +37,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   bool _isWalletAnalyticsLoading = false;
   List<Wallet> _wallets = [];
   final Map<String, AnalyticsData> _walletAnalyticsCache = {};
+  Map<String, WalletBalance> _walletBalances = {};
   String? _currentUserId;
 
   @override
@@ -111,8 +113,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     try {
       final wallets = await _walletRepository.getAllWallets(userId);
       if (!mounted) return;
+      final balances = await _walletRepository.getAllWalletBalances(userId);
+      if (!mounted) return;
+      final balancesMap = {for (final b in balances) b.walletId: b};
       setState(() {
         _wallets = wallets;
+        _walletBalances = balancesMap;
         _walletsLoaded = true;
         if (_selectedWalletId != null &&
             !_wallets.any((wallet) => wallet.id == _selectedWalletId)) {
@@ -322,6 +328,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final installmentDetailsData =
             selectedWalletAnalytics?.installmentDetails ??
             analyticsData.installmentDetails;
+        final installmentStatusData =
+            selectedWalletAnalytics?.installmentStatus ??
+            analyticsData.installmentStatus;
         final isWalletDataLoading =
             _selectedWalletId != null &&
             _isWalletAnalyticsLoading &&
@@ -338,18 +347,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             onWalletSelected: _onWalletSelected,
             profitAnalyticsData: profitAnalyticsData,
             installmentDetailsData: installmentDetailsData,
+            installmentStatusData: installmentStatusData,
             isWalletDataLoading: isWalletDataLoading,
+            walletBalances: _walletBalances,
           ),
           desktop: AnalyticsScreenDesktop(
             analyticsData: analyticsData,
             isRefreshing: _isRefreshing,
             refreshAnalytics: _refreshAnalytics,
             wallets: _wallets,
+            walletBalances: _walletBalances,
             isWalletsLoading: _isWalletsLoading,
             selectedWalletId: _selectedWalletId,
             onWalletSelected: _onWalletSelected,
             profitAnalyticsData: profitAnalyticsData,
             installmentDetailsData: installmentDetailsData,
+            installmentStatusData: installmentStatusData,
             isWalletDataLoading: isWalletDataLoading,
           ),
         );

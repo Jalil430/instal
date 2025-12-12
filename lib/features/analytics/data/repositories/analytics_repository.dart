@@ -202,31 +202,74 @@ class AnalyticsRepository {
       return _getDefaultProfitAnalytics();
     }
 
-    final upcoming = data['upcoming_payments'] as List<dynamic>? ?? [];
-    final parsedUpcoming =
-        upcoming.map((item) {
-          final map = item as Map<String, dynamic>;
-          final dueDateStr = map['due_date'] as String?;
-          return PaymentProfitItem(
-            installmentId: map['installment_id'] ?? '',
-            clientName: map['client_name'],
-            productName: map['product_name'],
-            paymentNumber: map['payment_number'],
-            dueDate: dueDateStr != null ? DateTime.tryParse(dueDateStr) : null,
-            paymentAmount: (map['payment_amount'] ?? 0.0).toDouble(),
-            profitAmount: (map['profit_amount'] ?? 0.0).toDouble(),
+    final monthsRaw = data['months'] as List<dynamic>? ?? [];
+
+    if (monthsRaw.isNotEmpty) {
+      final months = monthsRaw.map((raw) {
+        final map = raw as Map<String, dynamic>;
+        final monthString = (map['month'] as String?) ?? '';
+        final parsedMonth =
+            monthString.isNotEmpty
+                ? DateTime.tryParse(monthString) ?? DateTime.now()
+                : DateTime.now();
+
+        final expectedDailyRaw =
+            map['expected_daily'] ??
+            (map['expected'] is Map<String, dynamic>
+                ? (map['expected'] as Map<String, dynamic>)['daily']
+                : null) ??
+            [];
+        final receivedDailyRaw =
+            map['received_daily'] ??
+            (map['received'] is Map<String, dynamic>
+                ? (map['received'] as Map<String, dynamic>)['daily']
+                : null) ??
+            [];
+
+        final expectedDaily = (expectedDailyRaw as List<dynamic>? ?? []).map((
+          item,
+        ) {
+          final obj = item as Map<String, dynamic>;
+          return ExpectedProfitPoint(
+            day: (obj['day'] ?? 1) as int,
+            expectedAmount: (obj['expected_amount'] ?? 0.0).toDouble(),
+            paidAmount: (obj['paid_amount'] ?? 0.0).toDouble(),
+            isOverdue: obj['is_overdue'] == true,
           );
         }).toList();
 
-    return ProfitAnalyticsData(
-      profitNext30Days: (data['profit_next_30_days'] ?? 0.0).toDouble(),
-      profitNext90Days: (data['profit_next_90_days'] ?? 0.0).toDouble(),
-      profitNext365Days: (data['profit_next_365_days'] ?? 0.0).toDouble(),
-      profitEarnedToDate: (data['profit_earned_to_date'] ?? 0.0).toDouble(),
-      profitOverdue: (data['profit_overdue'] ?? 0.0).toDouble(),
-      totalRemainingProfit: (data['total_remaining_profit'] ?? 0.0).toDouble(),
-      upcomingPayments: parsedUpcoming,
-    );
+        final receivedDaily = (receivedDailyRaw as List<dynamic>? ?? []).map((
+          item,
+        ) {
+          if (item is num) {
+            return ReceivedProfitPoint(
+              day: 1,
+              amount: (item).toDouble(),
+            );
+          }
+          final obj = item as Map<String, dynamic>;
+          return ReceivedProfitPoint(
+            day: (obj['day'] ?? 1) as int,
+            amount: (obj['amount'] ?? obj['paid_amount'] ?? 0.0).toDouble(),
+          );
+        }).toList();
+
+        return MonthlyProfitData(
+          month: parsedMonth,
+          expectedDaily: expectedDaily,
+          receivedDaily: receivedDaily,
+          overdueAmount: (map['overdue_amount'] ?? 0.0).toDouble(),
+          outsideMonthPaid: (map['outside_month_paid'] ?? 0.0).toDouble(),
+        );
+      }).toList();
+
+      return ProfitAnalyticsData(
+        months: months,
+        totalOverdue: (data['total_overdue'] ?? 0.0).toDouble(),
+      );
+    }
+
+    return _buildLegacyProfitAnalytics(data);
   }
 
   List<FlSpot> _parseChartData(dynamic chartData) {
@@ -308,13 +351,49 @@ class AnalyticsRepository {
 
   ProfitAnalyticsData _getDefaultProfitAnalytics() {
     return ProfitAnalyticsData(
-      profitNext30Days: 0.0,
-      profitNext90Days: 0.0,
-      profitNext365Days: 0.0,
-      profitEarnedToDate: 0.0,
-      profitOverdue: 0.0,
-      totalRemainingProfit: 0.0,
-      upcomingPayments: const <PaymentProfitItem>[],
+      months: const [],
+      totalOverdue: 0.0,
+    );
+  }
+
+  ProfitAnalyticsData _buildLegacyProfitAnalytics(Map<String, dynamic> data) {
+    final overdue = (data['profit_overdue'] ?? 0.0).toDouble();
+    final upcoming = data['upcoming_payments'] as List<dynamic>? ?? [];
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    final expectedMap = <int, ExpectedProfitPoint>{};
+
+    for (final item in upcoming) {
+      final map = item as Map<String, dynamic>;
+      final dueDateStr = map['due_date'] as String?;
+      if (dueDateStr == null) continue;
+      final dueDate = DateTime.tryParse(dueDateStr);
+      if (dueDate == null) continue;
+      if (dueDate.year != monthStart.year || dueDate.month != monthStart.month) {
+        continue;
+      }
+      final profitAmount = (map['profit_amount'] ?? 0.0).toDouble();
+      if (profitAmount <= 0) continue;
+      final day = dueDate.day;
+      expectedMap[day] = ExpectedProfitPoint(
+        day: day,
+        expectedAmount: profitAmount,
+        paidAmount: 0.0,
+        isOverdue: dueDate.isBefore(now),
+      );
+    }
+
+    final monthData = MonthlyProfitData(
+      month: monthStart,
+      expectedDaily: expectedMap.values.toList(),
+      receivedDaily: const [],
+      overdueAmount: overdue,
+      outsideMonthPaid: 0.0,
+    );
+
+    return ProfitAnalyticsData(
+      months: [monthData],
+      totalOverdue: overdue,
     );
   }
 }

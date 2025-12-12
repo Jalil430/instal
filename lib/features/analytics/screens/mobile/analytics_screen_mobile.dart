@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../domain/entities/analytics_data.dart';
-import '../../widgets/total_sales_section.dart';
-import '../../widgets/key_metrics_section.dart';
 import '../../widgets/installment_details_section.dart';
 import '../../widgets/installment_status_section.dart';
 import '../../widgets/profit_analytics_section.dart';
 import '../../../wallets/domain/entities/wallet.dart';
+import '../../../wallets/domain/entities/wallet_balance.dart';
 
 class AnalyticsScreenMobile extends StatelessWidget {
   final AnalyticsData analyticsData;
@@ -20,7 +21,9 @@ class AnalyticsScreenMobile extends StatelessWidget {
   final ValueChanged<String?> onWalletSelected;
   final ProfitAnalyticsData profitAnalyticsData;
   final InstallmentDetailsData installmentDetailsData;
+  final InstallmentStatusData installmentStatusData;
   final bool isWalletDataLoading;
+  final Map<String, WalletBalance> walletBalances;
 
   const AnalyticsScreenMobile({
     Key? key,
@@ -33,7 +36,9 @@ class AnalyticsScreenMobile extends StatelessWidget {
     required this.onWalletSelected,
     required this.profitAnalyticsData,
     required this.installmentDetailsData,
+    required this.installmentStatusData,
     required this.isWalletDataLoading,
+    required this.walletBalances,
   }) : super(key: key);
 
   @override
@@ -108,16 +113,6 @@ class AnalyticsScreenMobile extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            height: 300, // Fixed height for the chart
-            child: TotalSalesSection(data: analyticsData.totalSales),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 250, // Smaller height for metrics
-            child: KeyMetricsSection(data: analyticsData.keyMetrics),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
             height: 250, // Smaller height for details
             child: InstallmentDetailsSection(
               data: installmentDetailsData,
@@ -129,7 +124,8 @@ class AnalyticsScreenMobile extends StatelessWidget {
           SizedBox(
             height: 300, // Fixed height for the status chart
             child: InstallmentStatusSection(
-              data: analyticsData.installmentStatus,
+              data: installmentStatusData,
+              isLoading: isWalletDataLoading,
             ),
           ),
           const SizedBox(height: 16),
@@ -149,27 +145,47 @@ class AnalyticsScreenMobile extends StatelessWidget {
   }
 
   Widget _buildWalletDropdown(AppLocalizations l10n) {
+    final currency = NumberFormat.currency(
+      locale: l10n.locale.languageCode == 'ru' ? 'ru_RU' : 'en_US',
+      symbol: l10n.locale.languageCode == 'ru' ? '₽' : '\$',
+      decimalDigits: 2,
+    );
+
+    final options = <String, String>{
+      'all': l10n.allWallets,
+      'noWallet': l10n.withoutWallet,
+      ...{
+        for (final wallet in wallets)
+          wallet.id:
+              '${wallet.name} (${currency.format(walletBalances[wallet.id]?.balance ?? 0)})',
+      },
+    };
+
     if (isWalletsLoading) {
       return Container(
-        height: 52,
+        height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.subtleBorderColor),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.borderColor),
           color: AppTheme.subtleBackgroundColor,
         ),
         child: Row(
           children: [
             const SizedBox(
-              width: 18,
-              height: 18,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 l10n.loadingWallets,
-                style: const TextStyle(color: AppTheme.textSecondary),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
           ],
@@ -177,29 +193,20 @@ class AnalyticsScreenMobile extends StatelessWidget {
       );
     }
 
-    final dropdownItems = <DropdownMenuItem<String?>>[
-      DropdownMenuItem(value: null, child: Text(l10n.allWallets)),
-      ...wallets.map(
-        (wallet) =>
-            DropdownMenuItem(value: wallet.id, child: Text(wallet.name)),
-      ),
-    ];
-
-    return DropdownButtonFormField<String?>(
-      value: selectedWalletId,
-      items: dropdownItems,
-      onChanged: onWalletSelected,
-      decoration: InputDecoration(
-        labelText: l10n.wallet,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.subtleBorderColor),
-        ),
-      ),
+    return CustomDropdown<String>(
+      value: selectedWalletId ?? 'all',
+      items: options,
+      onChanged: (value) {
+        final v = value ?? 'all';
+        if (v == 'all') {
+          onWalletSelected(null);
+        } else {
+          onWalletSelected(v);
+        }
+      },
+      hint: l10n.allWallets,
+      width: double.infinity,
+      height: 44,
     );
   }
 
