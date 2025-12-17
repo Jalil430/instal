@@ -8,6 +8,7 @@ import 'package:month_picker_dialog/month_picker_dialog.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/analytics_card.dart';
+import '../../../shared/widgets/custom_toggle.dart';
 import '../domain/entities/analytics_data.dart';
 
 enum _ProfitViewMode { expected, received }
@@ -30,34 +31,79 @@ class ProfitAnalyticsSection extends StatefulWidget {
 
 class _ProfitAnalyticsSectionState extends State<ProfitAnalyticsSection> {
   _ProfitViewMode _mode = _ProfitViewMode.expected;
+  ProfitMetric _metric = ProfitMetric.profit;
   int _selectedMonthIndex = 0;
   bool _isMonthPickerOpen = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedMonthIndex = _initialMonthIndex(widget.data.months);
+    _metric = widget.data.defaultMetric;
+    _selectedMonthIndex = _initialMonthIndex(_currentMonths());
   }
 
   @override
   void didUpdateWidget(covariant ProfitAnalyticsSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final monthsChanged = oldWidget.data.months != widget.data.months;
-    if (monthsChanged && widget.data.months.isNotEmpty) {
-      final newIndex = _initialMonthIndex(widget.data.months);
-      final selectedMonth = widget.data.months[_selectedMonthIndex.clamp(
+    final months = _currentMonths();
+    final monthsChanged = oldWidget.data.forMetric(_metric).months != months;
+    if (monthsChanged && months.isNotEmpty) {
+      final newIndex = _initialMonthIndex(months);
+      final selectedMonth = months[_selectedMonthIndex.clamp(
         0,
-        widget.data.months.length - 1,
+        months.length - 1,
       )];
-      final selectedStillExists = widget.data.months.any(
+      final selectedStillExists = months.any(
         (m) =>
             m.month.year == selectedMonth.month.year &&
             m.month.month == selectedMonth.month.month,
       );
-      if (!selectedStillExists || _selectedMonthIndex >= widget.data.months.length) {
+      if (!selectedStillExists || _selectedMonthIndex >= months.length) {
         setState(() => _selectedMonthIndex = newIndex);
       }
     }
+
+    if (months.isEmpty) {
+      final defaultMonths = widget.data.forMetric(widget.data.defaultMetric).months;
+      if (defaultMonths.isNotEmpty && _metric != widget.data.defaultMetric) {
+        setState(() {
+          _metric = widget.data.defaultMetric;
+          _selectedMonthIndex = _initialMonthIndex(defaultMonths);
+        });
+      }
+    }
+  }
+
+  List<MonthlyProfitData> _currentMonths({ProfitMetric? metric}) {
+    final basis = metric ?? _metric;
+    return widget.data.forMetric(basis).months;
+  }
+
+  void _handleMetricChanged(ProfitMetric metric) {
+    if (_metric == metric) return;
+
+    // Try to keep the same calendar month selected when switching basis
+    DateTime? currentMonthDate;
+    final currentMonths = _currentMonths();
+    if (currentMonths.isNotEmpty && _selectedMonthIndex < currentMonths.length) {
+      currentMonthDate = currentMonths[_selectedMonthIndex].month;
+    }
+
+    final months = _currentMonths(metric: metric);
+    int newIndex = _initialMonthIndex(months);
+    if (currentMonthDate != null) {
+      final match = months.indexWhere(
+        (m) => m.month.year == currentMonthDate!.year && m.month.month == currentMonthDate!.month,
+      );
+      if (match != -1) {
+        newIndex = match;
+      }
+    }
+
+    setState(() {
+      _metric = metric;
+      _selectedMonthIndex = newIndex;
+    });
   }
 
   @override
@@ -69,12 +115,14 @@ class _ProfitAnalyticsSectionState extends State<ProfitAnalyticsSection> {
       decimalDigits: 0,
     );
 
-    final months = widget.data.months;
+    final metricData = widget.data.forMetric(_metric);
+    final months = metricData.months;
     final hasData = months.isNotEmpty;
     final selectedMonth =
         hasData ? months[_selectedMonthIndex.clamp(0, months.length - 1)] : null;
 
-    const title = 'Динамика прибыли';
+    final title =
+        _metric == ProfitMetric.revenue ? l10n.revenueDynamics : l10n.profitDynamics;
     Widget content;
     if (widget.isLoading) {
       content = const Center(child: CircularProgressIndicator());
@@ -83,6 +131,9 @@ class _ProfitAnalyticsSectionState extends State<ProfitAnalyticsSection> {
     } else {
       final expectedMetrics = _ExpectedMetrics.fromMonth(selectedMonth);
       final receivedMetrics = _ReceivedMetrics.fromMonth(selectedMonth);
+      final chartKey = ValueKey(
+        '${_metric.name}-${_mode.name}-${selectedMonth.month.toIso8601String()}',
+      );
 
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +141,9 @@ class _ProfitAnalyticsSectionState extends State<ProfitAnalyticsSection> {
           _HeaderRow(
             title: title,
             mode: _mode,
+            metric: _metric,
             onModeChanged: (mode) => setState(() => _mode = mode),
+            onMetricChanged: _handleMetricChanged,
             l10n: l10n,
             onPickMonth: () {
               if (_isMonthPickerOpen) return;
@@ -257,7 +310,9 @@ class _ProfitAnalyticsSectionState extends State<ProfitAnalyticsSection> {
 class _HeaderRow extends StatelessWidget {
   final String title;
   final _ProfitViewMode mode;
+  final ProfitMetric metric;
   final ValueChanged<_ProfitViewMode> onModeChanged;
+  final ValueChanged<ProfitMetric> onMetricChanged;
   final AppLocalizations l10n;
   final VoidCallback onPickMonth;
   final String selectedMonthLabel;
@@ -265,7 +320,9 @@ class _HeaderRow extends StatelessWidget {
   const _HeaderRow({
     required this.title,
     required this.mode,
+    required this.metric,
     required this.onModeChanged,
+    required this.onMetricChanged,
     required this.l10n,
     required this.onPickMonth,
     required this.selectedMonthLabel,
@@ -300,19 +357,35 @@ class _HeaderRow extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final controls = [
-                  _TabControl<_ProfitViewMode>(
+                  CustomToggle<ProfitMetric>(
+                    value: metric,
+                    onChanged: onMetricChanged,
                     options: [
-                      _TabOption(
+                      CustomToggleOption(
+                        value: ProfitMetric.revenue,
+                        label: l10n.revenueLabel,
+                      ),
+                      CustomToggleOption(
+                        value: ProfitMetric.profit,
+                        label: l10n.profitLabel,
+                      ),
+                    ],
+                    height: 32,
+                  ),
+                  CustomToggle<_ProfitViewMode>(
+                    value: mode,
+                    onChanged: onModeChanged,
+                    options: [
+                      CustomToggleOption(
                         value: _ProfitViewMode.expected,
                         label: l10n.expectedByDueDate,
                       ),
-                      _TabOption(
+                      CustomToggleOption(
                         value: _ProfitViewMode.received,
                         label: l10n.receivedByPaidDate,
                       ),
                     ],
-                    value: mode,
-                    onChanged: onModeChanged,
+                    height: 32,
                   ),
                   _MonthPickerButton(
                     label: selectedMonthLabel,
@@ -350,14 +423,15 @@ class _MonthPickerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 34,
       child: OutlinedButton.icon(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           side: BorderSide(color: AppTheme.subtleBorderColor),
           backgroundColor: AppTheme.subtleBackgroundColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          overlayColor: AppTheme.subtleHoverColor,
         ),
         icon: const Icon(Icons.calendar_month, size: 16, color: AppTheme.textSecondary),
         label: Text(
@@ -373,81 +447,6 @@ class _MonthPickerButton extends StatelessWidget {
   }
 }
 
-class _TabOption<T> {
-  final T value;
-  final String label;
-
-  _TabOption({
-    required this.value,
-    required this.label,
-  });
-}
-
-class _TabControl<T> extends StatelessWidget {
-  final List<_TabOption<T>> options;
-  final T value;
-  final ValueChanged<T> onChanged;
-
-  const _TabControl({
-    required this.options,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const double optionWidth = 120;
-
-    return Container(
-      padding: EdgeInsets.zero,
-      decoration: BoxDecoration(
-        color: AppTheme.subtleBackgroundColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.subtleBorderColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: options.asMap().entries.map((entry) {
-          final index = entry.key;
-          final opt = entry.value;
-          final isSelected = opt.value == value;
-          final radius = BorderRadius.horizontal(
-            left: index == 0 ? const Radius.circular(12) : Radius.zero,
-            right: index == options.length - 1 ? const Radius.circular(12) : Radius.zero,
-          );
-
-          return SizedBox(
-            width: optionWidth,
-            height: 40,
-            child: TextButton(
-              onPressed: () => onChanged(opt.value),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                backgroundColor:
-                    isSelected ? AppTheme.subtleAccentColor : Colors.transparent,
-                foregroundColor: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
-                overlayColor: Colors.transparent,
-                textStyle: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                  letterSpacing: 0.05,
-                ),
-                shape: RoundedRectangleBorder(borderRadius: radius, side: BorderSide.none),
-              ),
-              child: Center(
-                child: Text(
-                  opt.label,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
 
 class _SummaryRow extends StatelessWidget {
   final _ProfitViewMode mode;
@@ -478,12 +477,6 @@ class _SummaryRow extends StatelessWidget {
               _SummaryTile(
                 label: l10n.collected,
                 value: currencyFormatter.format(receivedMetrics.total),
-              ),
-              _SummaryTile(
-                label: l10n.toReceive,
-                value: currencyFormatter.format(
-                  max(0.0, expectedMetrics.total - receivedMetrics.total),
-                ),
               ),
               _SummaryTile(
                 label: l10n.overdue,
@@ -594,6 +587,7 @@ class _ProfitBarChart extends StatelessWidget {
   final AppLocalizations l10n;
 
   const _ProfitBarChart({
+    super.key,
     required this.mode,
     required this.monthData,
     required this.expectedMetrics,
@@ -606,9 +600,10 @@ class _ProfitBarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final isExpected = mode == _ProfitViewMode.expected;
     final daysInMonth = DateTime(monthData.month.year, monthData.month.month + 1, 0).day;
+    const totalDaySlots = 31; // keep groups length stable to avoid touch OOB
     final barGroups = isExpected
-        ? _buildExpectedGroups(monthData, daysInMonth)
-        : _buildReceivedGroups(monthData, daysInMonth);
+        ? _buildExpectedGroups(monthData, daysInMonth, totalDaySlots)
+        : _buildReceivedGroups(monthData, daysInMonth, totalDaySlots);
 
     double maxY = 0;
     for (final group in barGroups) {
@@ -619,15 +614,23 @@ class _ProfitBarChart extends StatelessWidget {
     if (maxY <= 0) {
       maxY = 100;
     } else {
-      maxY *= 1.25;
+      maxY *= 1.1; // smaller headroom to keep top label closer
     }
 
-    final double gridInterval = _gridInterval(maxY);
+    final _GridConfig grid = _gridConfig(maxY);
+    maxY = grid.maxY;
+    final double gridInterval = grid.interval;
+
+    final topLine = HorizontalLine(
+      y: maxY,
+      color: AppTheme.subtleBorderColor,
+      strokeWidth: 1,
+    );
 
     return BarChart(
       BarChartData(
         maxY: maxY,
-        extraLinesData: const ExtraLinesData(),
+        extraLinesData: ExtraLinesData(horizontalLines: [topLine]),
         alignment: BarChartAlignment.spaceAround,
         borderData: FlBorderData(show: false),
         gridData: FlGridData(
@@ -636,6 +639,7 @@ class _ProfitBarChart extends StatelessWidget {
           horizontalInterval: gridInterval,
           checkToShowHorizontalLine: (value) {
             if (value == 0) return true;
+            if ((maxY - value).abs() < 0.01) return true;
             if (value < 1000) return false;
             return (value % gridInterval).abs() < 0.01;
           },
@@ -644,24 +648,108 @@ class _ProfitBarChart extends StatelessWidget {
             strokeWidth: 1,
           ),
         ),
-        titlesData: _titlesData(daysInMonth, l10n),
-        barTouchData: _barTouchData(),
+        titlesData: _titlesData(daysInMonth, l10n, gridInterval),
+        barTouchData: _barTouchData(barGroups, currencyFormatter),
         barGroups: barGroups,
       ),
+      swapAnimationDuration: const Duration(milliseconds: 350),
+      swapAnimationCurve: Curves.easeOutCubic,
     );
   }
 
-  double _gridInterval(double maxY) {
-    if (maxY <= 2000) return 500;
-    if (maxY <= 5000) return 1000;
-    if (maxY <= 10000) return 2000;
-    if (maxY <= 20000) return 5000;
-    return 10000;
+  _GridConfig _gridConfig(double maxY) {
+    const minLines = 5;
+    const maxLines = 7; // aim for 5–7 labels to allow tighter top
+    const candidates = [
+      50.0,
+      100.0,
+      200.0,
+      250.0,
+      500.0,
+      750.0,
+      1000.0,
+      1500.0,
+      2000.0,
+      2500.0,
+      3000.0,
+      3500.0,
+      4000.0,
+      5000.0,
+      7500.0,
+      10000.0,
+      15000.0,
+      20000.0,
+      25000.0,
+      50000.0,
+      100000.0,
+    ];
+
+    double bestInterval = candidates.last;
+    double bestTop = double.infinity;
+
+    // First pass: only consider intervals that give 5–6 lines and minimize top
+    for (final c in candidates) {
+      final lines = (maxY / c).ceil();
+      if (lines < minLines || lines > maxLines) continue;
+      final top = lines * c;
+      if (top < bestTop || (top == bestTop && c < bestInterval)) {
+        bestTop = top;
+        bestInterval = c;
+      }
+    }
+
+    // Fallback: if none in range, pick the smallest top that still covers maxY
+    if (bestTop == double.infinity) {
+      for (final c in candidates) {
+        final lines = (maxY / c).ceil();
+        final top = lines * c;
+        if (top < bestTop || (top == bestTop && c < bestInterval)) {
+          bestTop = top;
+          bestInterval = c;
+        }
+      }
+    }
+
+    final lines = (maxY / bestInterval).ceil();
+    final adjustedMax = bestInterval * lines;
+    return _GridConfig(bestInterval, adjustedMax);
   }
 
-  BarTouchData _barTouchData() => BarTouchData(enabled: false);
+  BarTouchData _barTouchData(
+    List<BarChartGroupData> barGroups,
+    NumberFormat currencyFormatter,
+  ) =>
+      BarTouchData(
+        enabled: true,
+        handleBuiltInTouches: true,
+        touchTooltipData: BarTouchTooltipData(
+          getTooltipColor: (_) => AppTheme.sidebarBackground,
+          tooltipRoundedRadius: 8,
+          tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          tooltipMargin: 8,
+          getTooltipItem: (_, __, rod, ___) => BarTooltipItem(
+            currencyFormatter.format(rod.toY),
+            const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        touchCallback: (event, response) {
+          final spot = response?.spot;
+          if (spot == null) return;
+          final idx = spot.touchedBarGroupIndex;
+          if (idx < 0 || idx >= barGroups.length) return;
+        },
+      );
 
-  FlTitlesData _titlesData(int daysInMonth, AppLocalizations l10n) {
+  FlTitlesData _titlesData(
+    int daysInMonth,
+    AppLocalizations l10n,
+    double gridInterval,
+  ) {
     return FlTitlesData(
       show: true,
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -670,6 +758,7 @@ class _ProfitBarChart extends StatelessWidget {
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 40,
+          interval: gridInterval,
           getTitlesWidget: (value, meta) => _leftTitles(value, meta, l10n),
         ),
       ),
@@ -697,7 +786,6 @@ class _ProfitBarChart extends StatelessWidget {
         ),
       );
     }
-    if (value == meta.max) return Container();
 
     final isRussian = l10n.locale.languageCode == 'ru';
     final thousandsSuffix = isRussian ? 'т' : 'k';
@@ -706,7 +794,7 @@ class _ProfitBarChart extends StatelessWidget {
     if (value >= 1000) {
       text = '${(value / 1000).toStringAsFixed(0)}$thousandsSuffix';
     } else {
-      return Container();
+      text = value.toStringAsFixed(0);
     }
 
     return SideTitleWidget(
@@ -723,7 +811,7 @@ class _ProfitBarChart extends StatelessWidget {
   }
 
   Widget _bottomTitles(double value, TitleMeta meta, int daysInMonth) {
-    final day = value.toInt();
+    final day = value.toInt() + 1;
     if (day <= 0 || day > daysInMonth) return const SizedBox.shrink();
     return SideTitleWidget(
       axisSide: meta.axisSide,
@@ -742,18 +830,19 @@ class _ProfitBarChart extends StatelessWidget {
   List<BarChartGroupData> _buildExpectedGroups(
     MonthlyProfitData monthData,
     int daysInMonth,
+    int totalDaySlots,
   ) {
     final expectedByDay = {
       for (final item in monthData.expectedDaily) item.day: item,
     };
 
-    return List.generate(daysInMonth, (index) {
+    return List.generate(totalDaySlots, (index) {
       final day = index + 1;
-      final point = expectedByDay[day];
-      final amount = point?.expectedAmount ?? 0.0;
+      final point = day <= daysInMonth ? expectedByDay[day] : null;
+      final amount = day <= daysInMonth ? (point?.expectedAmount ?? 0.0) : 0.0;
 
       return BarChartGroupData(
-        x: day,
+        x: index,
         barRods: [
           BarChartRodData(
             toY: amount,
@@ -769,18 +858,19 @@ class _ProfitBarChart extends StatelessWidget {
   List<BarChartGroupData> _buildReceivedGroups(
     MonthlyProfitData monthData,
     int daysInMonth,
+    int totalDaySlots,
   ) {
     final receivedByDay = {
       for (final item in monthData.receivedDaily) item.day: item,
     };
 
-    return List.generate(daysInMonth, (index) {
+    return List.generate(totalDaySlots, (index) {
       final day = index + 1;
-      final point = receivedByDay[day];
-      final amount = point?.amount ?? 0.0;
+      final point = day <= daysInMonth ? receivedByDay[day] : null;
+      final amount = day <= daysInMonth ? (point?.amount ?? 0.0) : 0.0;
 
       return BarChartGroupData(
-        x: day,
+        x: index,
         barRods: [
           BarChartRodData(
             toY: amount,
@@ -907,6 +997,13 @@ class _ReceivedMetrics {
       averagePerDay: average,
     );
   }
+}
+
+class _GridConfig {
+  final double interval;
+  final double maxY;
+
+  const _GridConfig(this.interval, this.maxY);
 }
 class _WheelColumn extends StatelessWidget {
   final FixedExtentScrollController controller;

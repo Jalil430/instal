@@ -94,11 +94,29 @@ class InstallmentDetailsData {
   });
 }
 
+enum ProfitMetric { profit, revenue }
+
 class ProfitAnalyticsData {
+  final ProfitMetricData profit;
+  final ProfitMetricData revenue;
+  final ProfitMetric defaultMetric;
+
+  ProfitAnalyticsData({
+    required this.profit,
+    required this.revenue,
+    this.defaultMetric = ProfitMetric.revenue,
+  });
+
+  ProfitMetricData forMetric(ProfitMetric metric) {
+    return metric == ProfitMetric.revenue ? revenue : profit;
+  }
+}
+
+class ProfitMetricData {
   final List<MonthlyProfitData> months;
   final double totalOverdue;
 
-  ProfitAnalyticsData({
+  const ProfitMetricData({
     required this.months,
     required this.totalOverdue,
   });

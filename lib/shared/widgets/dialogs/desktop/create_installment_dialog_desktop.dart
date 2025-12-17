@@ -8,6 +8,7 @@ import '../../../../features/wallets/domain/entities/wallet_balance.dart';
 import '../../../widgets/wallet_selector.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/keyboard_navigable_dropdown.dart';
+import '../../../widgets/custom_date_input.dart';
 
 class CreateInstallmentDialogDesktop extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -43,11 +44,14 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
   final VoidCallback onCreateClient;
   final VoidCallback onCreateWallet;
   final VoidCallback onSave;
-  final Function(DateTime) onBuyingDateChanged;
-  final Function(DateTime) onInstallmentStartDateChanged;
+  final ValueChanged<DateTime?> onBuyingDateChanged;
+  final ValueChanged<DateTime?> onInstallmentStartDateChanged;
+  final ValueChanged<bool> onBuyingDateValidityChanged;
+  final ValueChanged<bool> onInstallmentStartDateValidityChanged;
   final GlobalKey<KeyboardNavigableDropdownState<Client>> clientDropdownKey;
   final GlobalKey<KeyboardNavigableDropdownState<Wallet?>> walletDropdownKey;
   final bool isEditMode;
+  final bool datesValid;
   const CreateInstallmentDialogDesktop({
     Key? key,
     required this.formKey,
@@ -85,9 +89,12 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
     required this.onSave,
     required this.onBuyingDateChanged,
     required this.onInstallmentStartDateChanged,
+    required this.onBuyingDateValidityChanged,
+    required this.onInstallmentStartDateValidityChanged,
     required this.clientDropdownKey,
     required this.walletDropdownKey,
     required this.isEditMode,
+    required this.datesValid,
   }) : super(key: key);
 
   @override
@@ -260,23 +267,29 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: _buildDateField(
-                              context: context,
-                              label: l10n?.buyingDate ?? 'Buying Date',
-                              value: buyingDate,
-                              onChanged: onBuyingDateChanged,
-                              readOnly: isEditMode, // RESTRICTED - date field
-                            ),
+                        child: CustomDateInput(
+                          label: l10n?.buyingDate ?? 'Buying Date',
+                          value: buyingDate,
+                          onChanged: onBuyingDateChanged,
+                          onValidityChanged: onBuyingDateValidityChanged,
+                          enabled: !isEditMode, // RESTRICTED - date field
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                          locale: l10n?.locale,
+                        ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: _buildDateField(
-                              context: context,
-                              label: l10n?.installmentStartDate ?? 'Installment Start Date',
-                              value: installmentStartDate,
-                              onChanged: onInstallmentStartDateChanged,
-                              readOnly: isEditMode, // RESTRICTED - date field
-                            ),
+                        child: CustomDateInput(
+                          label: l10n?.installmentStartDate ?? 'Installment Start Date',
+                          value: installmentStartDate,
+                          onChanged: onInstallmentStartDateChanged,
+                          onValidityChanged: onInstallmentStartDateValidityChanged,
+                          enabled: !isEditMode, // RESTRICTED - date field
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                          locale: l10n?.locale,
+                        ),
                           ),
                         ],
                       ),
@@ -301,7 +314,7 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
                   const SizedBox(width: 12),
                   CustomButton(
                     text: l10n?.save ?? 'Save',
-                    onPressed: isSaving ? null : onSave,
+                    onPressed: (isSaving || !datesValid) ? null : onSave,
                     showIcon: false,
                     width: 120,
                     height: 40,
@@ -465,73 +478,6 @@ class CreateInstallmentDialogDesktop extends StatelessWidget {
       inputFormatters: keyboardType == TextInputType.number
           ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))]
           : null,
-    );
-  }
-
-  Widget _buildDateField({
-    required BuildContext context,
-    required String label,
-    required DateTime? value,
-    required Function(DateTime) onChanged,
-    bool readOnly = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: readOnly ? null : () async {
-            final date = await showDatePicker(
-              context: context,
-              initialDate: value ?? DateTime.now(),
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2030),
-            );
-            if (date != null) {
-              onChanged(date);
-            }
-          },
-          child: Container(
-            width: double.infinity,
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: readOnly ? AppTheme.subtleBackgroundColor : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    value != null
-                        ? '${value.day.toString().padLeft(2, '0')}.${value.month.toString().padLeft(2, '0')}.${value.year}'
-                        : AppLocalizations.of(context)?.selectDate ?? 'Select date',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: value != null ? AppTheme.textPrimary : AppTheme.textHint,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.calendar_today,
-                  color: AppTheme.textSecondary,
-                  size: 18,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 

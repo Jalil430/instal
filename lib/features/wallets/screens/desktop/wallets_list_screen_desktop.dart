@@ -8,6 +8,8 @@ import '../../domain/entities/wallet_balance.dart';
 import '../wallets_list_screen.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../shared/widgets/custom_toggle.dart';
 
 class WalletsListScreenDesktop extends StatelessWidget {
   final WalletsListScreenState state;
@@ -137,8 +139,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                       CustomSearchBar(
                         value: state.searchQuery,
                         onChanged: state.setSearchQuery,
-                        hintText:
-                            '${l10n?.search ?? 'Поиск'} ${(l10n?.wallets ?? 'кошельки').toLowerCase()}...',
+                        hintText: '${l10n?.search ?? 'Поиск'}...',
                         width: 280,
                       ),
                       const SizedBox(width: 16),
@@ -224,7 +225,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        flex: 2,
+                                        flex: 3,
                                         child: Text(
                                           (l10n?.walletName ?? 'Название')
                                               .toUpperCase(),
@@ -240,6 +241,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                         ),
                                       ),
                                       Expanded(
+                                        flex: 2,
                                         child: Text(
                                           (l10n?.walletType ?? 'Тип')
                                               .toUpperCase(),
@@ -255,21 +257,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                         ),
                                       ),
                                       Expanded(
-                                        child: Text(
-                                          (l10n?.statusHeader ?? 'Статус')
-                                              .toUpperCase(),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelMedium
-                                              ?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                      Expanded(
+                                        flex: 2,
                                         child: Text(
                                           (l10n?.walletBalance ?? 'Баланс')
                                               .toUpperCase(),
@@ -285,23 +273,9 @@ class WalletsListScreenDesktop extends StatelessWidget {
                                         ),
                                       ),
                                       Expanded(
+                                        flex: 2,
                                         child: Text(
-                                          (l10n?.givenForInstallmentDetail ?? 'Выдано')
-                                              .toUpperCase(),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelMedium
-                                              ?.copyWith(
-                                                color: AppTheme.textSecondary,
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12,
-                                                letterSpacing: 0.5,
-                                              ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Text(
-                                          (l10n?.dueToGet ?? 'К получению')
+                                          (l10n?.statusHeader ?? 'Статус')
                                               .toUpperCase(),
                                           style: Theme.of(context)
                                               .textTheme
@@ -359,7 +333,7 @@ class WalletsListScreenDesktop extends StatelessWidget {
   }
 }
 
-class _WalletRow extends StatelessWidget {
+class _WalletRow extends StatefulWidget {
   final Wallet wallet;
   final WalletBalance? balance;
   final NumberFormat currencyFormat;
@@ -381,82 +355,121 @@ class _WalletRow extends StatelessWidget {
   });
 
   @override
+  State<_WalletRow> createState() => _WalletRowState();
+}
+
+class _WalletRowState extends State<_WalletRow> with TickerProviderStateMixin {
+  late AnimationController _hoverController;
+  late Animation<double> _hoverAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _hoverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final typeLabel = wallet.isPersonalWallet
-        ? (l10n?.personal ?? 'Personal')
-        : (l10n?.investor ?? 'Investor');
-    final statusLabel = wallet.status == WalletStatus.archived
-        ? (l10n?.statusArchived ?? 'Archived')
-        : (l10n?.statusActive ?? 'Active');
-    final statusColor = wallet.status == WalletStatus.archived
+    final typeLabel = widget.wallet.isPersonalWallet
+        ? (widget.l10n?.personal ?? 'Personal')
+        : (widget.l10n?.investor ?? 'Investor');
+    final statusLabel = widget.wallet.status == WalletStatus.archived
+        ? (widget.l10n?.statusArchived ?? 'Archived')
+        : (widget.l10n?.statusActive ?? 'Active');
+    final statusColor = widget.wallet.status == WalletStatus.archived
         ? AppTheme.errorColor
         : AppTheme.successColor;
 
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onToggleSelection,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.primaryColor.withOpacity(0.08)
-              : Colors.transparent,
-          border: Border(
-            bottom: BorderSide(
-              color: AppTheme.borderColor.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                wallet.name,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
+    return MouseRegion(
+      onEnter: (_) => _hoverController.forward(),
+      onExit: (_) => _hoverController.reverse(),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPress: widget.onToggleSelection,
+        child: AnimatedBuilder(
+          animation: _hoverAnimation,
+          builder: (context, child) {
+            return Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? AppTheme.primaryColor.withOpacity(0.1)
+                    : Color.lerp(
+                        AppTheme.surfaceColor,
+                        AppTheme.backgroundColor,
+                        _hoverAnimation.value * 0.6,
+                      ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppTheme.borderColor.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      widget.wallet.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                typeLabel,
-                style: Theme.of(context).textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                statusLabel,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.w500,
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      typeLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                overflow: TextOverflow.ellipsis,
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      widget.currencyFormat
+                          .format(widget.balance?.balance ?? 0),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      statusLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            Expanded(
-              child: Text(
-                currencyFormat.format(balance?.balance ?? 0),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                currencyFormat.format(balance?.totalAllocated ?? 0),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                currencyFormat.format(balance?.dueToGet ?? 0),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -475,7 +488,6 @@ class _WalletsFilterSheet extends StatefulWidget {
 class _WalletsFilterSheetState extends State<_WalletsFilterSheet> {
   late String _status;
   late String _type;
-  late String _balance;
   late String _sortBy;
   late bool _ascending;
 
@@ -486,7 +498,6 @@ class _WalletsFilterSheetState extends State<_WalletsFilterSheet> {
     super.initState();
     _status = state.statusFilter;
     _type = state.typeFilter;
-    _balance = state.balanceFilter;
     _sortBy = state.sortBy;
     _ascending = state.sortAscending;
   }
@@ -524,63 +535,58 @@ class _WalletsFilterSheetState extends State<_WalletsFilterSheet> {
                 label: l10n?.status ?? 'Status',
                 value: _status,
                 items: state.getStatusFilterOptions(),
-                onChanged: (value) => setState(() => _status = value ?? _status),
+                onChanged: (value) {
+                  setState(() => _status = value ?? _status);
+                  state.setStatusFilter(_status);
+                },
               ),
               const SizedBox(height: 16),
               _buildDropdown(
                 label: l10n?.walletType ?? 'Type',
                 value: _type,
                 items: state.getTypeFilterOptions(),
-                onChanged: (value) => setState(() => _type = value ?? _type),
-              ),
-              const SizedBox(height: 16),
-              _buildDropdown(
-                label: l10n?.amount ?? 'Balance',
-                value: _balance,
-                items: state.getBalanceFilterOptions(),
-                onChanged: (value) => setState(() => _balance = value ?? _balance),
+                onChanged: (value) {
+                  setState(() => _type = value ?? _type);
+                  state.setTypeFilter(_type);
+                },
               ),
               const SizedBox(height: 16),
               _buildDropdown(
                 label: l10n?.sortBy ?? 'Sort by',
                 value: _sortBy,
                 items: state.getSortOptions(),
-                onChanged: (value) => setState(() => _sortBy = value ?? _sortBy),
+                onChanged: (value) {
+                  setState(() => _sortBy = value ?? _sortBy);
+                  state.setSortBy(_sortBy);
+                },
               ),
               const SizedBox(height: 12),
-              SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment<bool>(
+              CustomToggle<bool>(
+                value: _ascending,
+                onChanged: (value) {
+                  setState(() => _ascending = value);
+                  state.setSortAscending(_ascending);
+                },
+                options: [
+                  CustomToggleOption<bool>(
                     value: true,
-                    icon: const Icon(Icons.arrow_upward),
-                    label: Text(l10n?.ascending ?? 'Ascending'),
+                    label: l10n?.ascending ?? 'Ascending',
+                    icon: Icons.arrow_upward,
                   ),
-                  ButtonSegment<bool>(
+                  CustomToggleOption<bool>(
                     value: false,
-                    icon: const Icon(Icons.arrow_downward),
-                    label: Text(l10n?.descending ?? 'Descending'),
+                    label: l10n?.descending ?? 'Descending',
+                    icon: Icons.arrow_downward,
                   ),
                 ],
-                selected: {_ascending},
-                onSelectionChanged: (value) =>
-                    setState(() => _ascending = value.first),
               ),
               const Spacer(),
-              Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      state.resetFilters();
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(l10n?.resetFilters ?? 'Reset filters'),
-                  ),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: _apply,
-                    child: Text(l10n?.apply ?? 'Apply'),
-                  ),
-                ],
+              OutlinedButton(
+                onPressed: () {
+                  state.resetFilters();
+                  Navigator.of(context).pop();
+                },
+                child: Text(l10n?.resetFilters ?? 'Reset filters'),
               ),
             ],
           ),
@@ -595,38 +601,26 @@ class _WalletsFilterSheetState extends State<_WalletsFilterSheet> {
     required Map<String, String> items,
     required ValueChanged<String?> onChanged,
   }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: InputDecoration(labelText: label),
-      items: items.entries
-          .map(
-            (entry) => DropdownMenuItem<String>(
-              value: entry.key,
-              child: Text(entry.value),
-            ),
-          )
-          .toList(),
-      onChanged: onChanged,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        CustomDropdown<String>(
+          value: items.containsKey(value) ? value : items.keys.first,
+          items: items,
+          onChanged: onChanged,
+          width: double.infinity,
+        ),
+      ],
     );
-  }
-
-  void _apply() {
-    if (state.statusFilter != _status) {
-      state.setStatusFilter(_status);
-    }
-    if (state.typeFilter != _type) {
-      state.setTypeFilter(_type);
-    }
-    if (state.balanceFilter != _balance) {
-      state.setBalanceFilter(_balance);
-    }
-    if (state.sortBy != _sortBy) {
-      state.setSortBy(_sortBy);
-    }
-    if (state.sortAscending != _ascending) {
-      state.setSortAscending(_ascending);
-    }
-    Navigator.of(context).pop();
   }
 }
 
@@ -644,7 +638,7 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height: 36,
       decoration: BoxDecoration(
         color: hasActiveFilters 
             ? AppTheme.primaryColor.withOpacity(0.1)
@@ -663,7 +657,7 @@ class _FilterButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

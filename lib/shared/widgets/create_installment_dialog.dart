@@ -77,6 +77,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   Map<String, WalletBalance> _walletBalances = {};
   bool _isLoadingData = true;
   bool _isSaving = false;
+  bool _isBuyingDateValid = true;
+  bool _isStartDateValid = true;
   
   // Navigation state
   int _currentStep = 0; // 0: client, 1: wallet, 2: product name, etc.
@@ -538,9 +540,12 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onSave: _saveInstallment,
         onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
         onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
+        onBuyingDateValidityChanged: (isValid) => setState(() => _isBuyingDateValid = isValid),
+        onInstallmentStartDateValidityChanged: (isValid) => setState(() => _isStartDateValid = isValid),
         clientDropdownKey: _clientDropdownKey,
         walletDropdownKey: _walletDropdownKey,
         isEditMode: isEditMode,
+        datesValid: _isBuyingDateValid && _isStartDateValid,
       ),
       desktop: CreateInstallmentDialogDesktop(
         formKey: _formKey,
@@ -586,9 +591,12 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onSave: _saveInstallment,
         onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
         onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
+        onBuyingDateValidityChanged: (isValid) => setState(() => _isBuyingDateValid = isValid),
+        onInstallmentStartDateValidityChanged: (isValid) => setState(() => _isStartDateValid = isValid),
         clientDropdownKey: _clientDropdownKey,
         walletDropdownKey: _walletDropdownKey,
         isEditMode: isEditMode,
+        datesValid: _isBuyingDateValid && _isStartDateValid,
       ),
     );
   }

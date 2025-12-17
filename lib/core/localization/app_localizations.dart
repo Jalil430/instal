@@ -895,6 +895,16 @@ class AppLocalizations {
           : 'Upcoming Revenue (30 days)';
   String get profitAnalytics =>
       locale.languageCode == 'ru' ? 'Прибыль' : 'Profit Analytics';
+  String get revenueAnalytics =>
+      locale.languageCode == 'ru' ? 'Выручка' : 'Revenue Analytics';
+  String get profitDynamics =>
+      locale.languageCode == 'ru' ? 'Динамика прибыли' : 'Profit Dynamics';
+  String get revenueDynamics =>
+      locale.languageCode == 'ru' ? 'Динамика выручки' : 'Revenue Dynamics';
+  String get profitLabel =>
+      locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';
+  String get revenueLabel =>
+      locale.languageCode == 'ru' ? 'Выручка' : 'Revenue';
   String get profitAnalyticsExpected =>
       locale.languageCode == 'ru'
           ? 'Прибыль по срокам'

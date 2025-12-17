@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../shared/widgets/custom_contextual_dialog.dart';
+import '../../../shared/widgets/custom_date_input.dart';
 import '../domain/entities/installment.dart';
 import '../domain/entities/installment_payment.dart';
 import '../domain/repositories/installment_repository.dart';
@@ -76,6 +77,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
   late InstallmentRepository _repository;
   late DateTime _selectedDate;
   bool _isLoading = false;
+  bool _isDateValid = true;
   // Add focus node
   final FocusNode _focusNode = FocusNode();
   final TextEditingController _amountController = TextEditingController();
@@ -86,7 +88,8 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
     _repository = InstallmentRepositoryImpl(
       InstallmentRemoteDataSourceImpl(),
     );
-    _selectedDate = DateTime.now();
+    final dueDate = widget.payment.dueDate;
+    _selectedDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
     // Pre-fill amount with expected amount
     _amountController.text = widget.payment.expectedAmount.toStringAsFixed(0);
     // Request focus when dialog is shown
@@ -110,8 +113,12 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
       symbol: l10n?.locale.languageCode == 'ru' ? '₽' : '\$',
       decimalDigits: 0,
     );
-    final dateFormat = DateFormat('dd.MM.yyyy');
     final isDesktop = MediaQuery.of(context).size.width >= 650;
+    final firstDate = DateTime(2020);
+    final now = DateTime.now();
+    final defaultLastDate = now.add(const Duration(days: 365));
+    final safeSelectedDate = _selectedDate.isBefore(firstDate) ? firstDate : _selectedDate;
+    final lastDate = safeSelectedDate.isAfter(defaultLastDate) ? safeSelectedDate : defaultLastDate;
     
     // For desktop view, add a keyboard listener specifically for Enter key
     Widget content = Column(
@@ -146,54 +153,22 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
         
         SizedBox(height: isDesktop ? 12 : 16),
         
-        // Date picker
-        InkWell(
-          onTap: () async {
-            final date = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate,
-              firstDate: DateTime(2020),
-              lastDate: DateTime.now().add(const Duration(days: 365)),
-              locale: l10n?.locale ?? const Locale('ru'),
-            );
+        // Date input with picker
+        CustomDateInput(
+          value: _selectedDate,
+          onChanged: (date) {
             if (date != null) {
               setState(() => _selectedDate = date);
             }
           },
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 12 : 16, 
-              vertical: isDesktop ? 8 : 12
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTheme.borderColor),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: isDesktop ? 14 : 18,
-                  color: AppTheme.textSecondary,
-                ),
-                SizedBox(width: isDesktop ? 6 : 10),
-                Text(
-                  dateFormat.format(_selectedDate),
-                  style: TextStyle(
-                    fontSize: isDesktop ? 13 : 16,
-                    fontWeight: FontWeight.w400,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.arrow_drop_down,
-                  size: isDesktop ? 16 : 20,
-                  color: AppTheme.textSecondary,
-                ),
-              ],
-            ),
-          ),
+          onValidityChanged: (isValid) {
+            if (_isDateValid != isValid) {
+              setState(() => _isDateValid = isValid);
+            }
+          },
+          firstDate: firstDate,
+          lastDate: lastDate,
+          locale: l10n?.locale,
         ),
         
         SizedBox(height: isDesktop ? 12 : 20),
@@ -269,7 +244,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
                     )
                   : isDesktop 
                     ? CustomButton(
-                        onPressed: _isLoading ? null : _handlePayment,
+                        onPressed: (_isLoading || !_isDateValid) ? null : _handlePayment,
                         text: l10n?.confirm ?? 'Подтвердить',
                         icon: Icons.keyboard_return_rounded,
                         iconRight: true,
@@ -283,7 +258,7 @@ class _PaymentRegistrationStateState extends State<_PaymentRegistrationState> {
                     : SizedBox(
                         height: 45,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handlePayment,
+                          onPressed: _isLoading || !_isDateValid ? null : _handlePayment,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryColor,
                             foregroundColor: Colors.white,

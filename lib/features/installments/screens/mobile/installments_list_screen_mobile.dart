@@ -11,6 +11,7 @@ import 'package:instal_app/features/installments/widgets/payment_registration_di
 import 'package:instal_app/shared/widgets/custom_button.dart';
 import 'package:instal_app/shared/widgets/custom_search_bar.dart';
 import 'package:instal_app/shared/widgets/custom_dropdown.dart';
+import 'package:instal_app/shared/widgets/custom_toggle.dart';
 import 'package:instal_app/features/wallets/widgets/wallet_selector.dart';
 import 'package:instal_app/features/wallets/domain/entities/wallet.dart';
 import 'package:instal_app/features/wallets/domain/entities/wallet_balance.dart';
@@ -53,14 +54,13 @@ class InstallmentsListScreenMobile extends StatelessWidget {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: CustomSearchBar(
-                        value: state.searchQuery,
-                        onChanged: state.setSearchQuery,
-                        hintText:
-                            '${l10n?.search ?? 'Поиск'} ${state.getItemsText(0)}...',
-                        height: 36,
-                      ),
+                    child: CustomSearchBar(
+                      value: state.searchQuery,
+                      onChanged: state.setSearchQuery,
+                      hintText: '${l10n?.search ?? 'Поиск'}...',
+                      height: 36,
                     ),
+                  ),
                   ],
                 ),
         backgroundColor: AppTheme.surfaceColor,
@@ -827,225 +827,122 @@ class _MobileFilterSheetState extends State<_MobileFilterSheet> {
             const SizedBox(height: 16),
 
             // Wallet Filter (moved to top)
-            Text(
-              l10n?.wallet ?? 'Кошелек',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+            if (_isLoadingWallets) ...[
+              Text(
+                l10n?.wallet ?? 'Кошелек',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            _isLoadingWallets
-                ? Container(
-                    width: double.infinity,
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.subtleBackgroundColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.borderColor),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppTheme.subtleBackgroundColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n?.loadingWallets ?? 'Загрузка кошельков...',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n?.loadingWallets ?? 'Загрузка кошельков...',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                  )
-                : Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppTheme.subtleBorderColor),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _wallet,
-                      isExpanded: true,
-                      underline: const SizedBox(),
-                      items: _getWalletFilterOptions().entries.map((entry) {
-                        return DropdownMenuItem<String>(
-                          value: entry.key,
-                          child: Text(entry.value),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _wallet = value ?? 'all';
-                          if (_wallet == 'all') {
-                            _selectedWallet = null;
-                          } else if (_wallet == 'noWallet') {
-                            _selectedWallet = null;
-                          } else {
-                            _selectedWallet = _wallets.cast<Wallet?>().firstWhere(
-                              (w) => w?.id == _wallet,
-                              orElse: () => null,
-                            );
-                          }
-                        });
-                      },
-                    ),
-                  ),
-            const SizedBox(height: 16),
-
-            // Status Filter
-            Text(
-              l10n?.status ?? 'Статус',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppTheme.subtleBorderColor),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButton<String>(
-                value: _status,
-                isExpanded: true,
-                underline: const SizedBox(),
-                items: _getStatusFilterOptions().entries.map((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  );
-                }).toList(),
+            ] else
+              _buildDropdown(
+                label: l10n?.wallet ?? 'Кошелек',
+                value: _wallet,
+                options: _getWalletFilterOptions(),
                 onChanged: (value) {
-                  setState(() {
-                    _status = value ?? 'all';
-                  });
+                  _wallet = value;
+                  if (_wallet == 'all' || _wallet == 'noWallet') {
+                    _selectedWallet = null;
+                  } else {
+                    _selectedWallet = _wallets.cast<Wallet?>().firstWhere(
+                      (w) => w?.id == _wallet,
+                      orElse: () => null,
+                    );
+                  }
+                  state.setWalletFilter(_wallet);
                 },
               ),
+            const SizedBox(height: 16),
+
+            const SizedBox(height: 16),
+
+            _buildDropdown(
+              label: l10n?.status ?? 'Статус',
+              value: _status,
+              options: _getStatusFilterOptions(),
+              onChanged: (value) {
+                _status = value;
+                state.setStatusFilter(_status);
+              },
             ),
             const SizedBox(height: 16),
 
-            // Created Date Filter
-            Text(
-              'Дата создания',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppTheme.subtleBorderColor),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButton<String>(
-                value: _createdDateFilter,
-                isExpanded: true,
-                underline: const SizedBox(),
-                items: _getDateFilterOptions().entries.map((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _createdDateFilter = value ?? 'all';
-                  });
-                },
-              ),
+            _buildDropdown(
+              label: 'Дата создания',
+              value: _createdDateFilter,
+              options: _getDateFilterOptions(),
+              onChanged: (value) {
+                _createdDateFilter = value;
+                state.setCreatedDateFilter(_createdDateFilter);
+              },
             ),
             const SizedBox(height: 16),
 
-            // Sort By
-            Text(
-              'Сортировать по',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppTheme.subtleBorderColor),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButton<String>(
-                value: _sortBy,
-                isExpanded: true,
-                underline: const SizedBox(),
-                items: _getSortOptions().entries.map((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _sortBy = value ?? _sortBy;
-                  });
-                },
-              ),
+            _buildDropdown(
+              label: 'Сортировать по',
+              value: _sortBy,
+              options: _getSortOptions(),
+              onChanged: (value) {
+                _sortBy = value;
+                state.setSortBy(_sortBy);
+              },
             ),
             const SizedBox(height: 12),
             
             // Sort Direction
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment<bool>(
+            CustomToggle<bool>(
+              value: _ascending,
+              onChanged: (value) {
+                _ascending = value;
+                state.setSortAscending(_ascending);
+                setState(() {});
+              },
+              options: [
+                CustomToggleOption<bool>(
                   value: true,
-                  icon: const Icon(Icons.arrow_upward),
-                  label: Text(l10n?.ascending ?? 'По возрастанию'),
+                  label: l10n?.ascending ?? 'По возрастанию',
+                  icon: Icons.arrow_upward,
                 ),
-                ButtonSegment<bool>(
+                CustomToggleOption<bool>(
                   value: false,
-                  icon: const Icon(Icons.arrow_downward),
-                  label: Text(l10n?.descending ?? 'По убыванию'),
+                  label: l10n?.descending ?? 'По убыванию',
+                  icon: Icons.arrow_downward,
                 ),
               ],
-              selected: {_ascending},
-              onSelectionChanged: (value) =>
-                  setState(() => _ascending = value.first),
-            ),
-            const SizedBox(height: 24),
-
-            // Apply Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _apply,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Text(
-                  l10n?.apply ?? 'Применить',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
             ),
           ],
         ),
@@ -1053,15 +950,43 @@ class _MobileFilterSheetState extends State<_MobileFilterSheet> {
     );
   }
 
-  Map<String, String> _getStatusFilterOptions() {
-    return state.getTranslatedStatusFilters();
+  Widget _buildDropdown({
+    required String label,
+    required String value,
+    required Map<String, String> options,
+    required ValueChanged<String> onChanged,
+  }) {
+    final currentValue = options.containsKey(value) ? value : options.keys.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        CustomDropdown<String>(
+          value: currentValue,
+          items: options,
+          onChanged: (selected) {
+            if (selected != null) {
+              setState(() {
+                onChanged(selected);
+              });
+            }
+          },
+          width: double.infinity,
+        ),
+      ],
+    );
   }
 
-  Map<String, String> _getStatusFilterOptionsWithoutAll() {
-    final statusOptions = state.getTranslatedStatusFilters();
-    final Map<String, String> result = Map.from(statusOptions);
-    result.remove('all');
-    return result;
+  Map<String, String> _getStatusFilterOptions() {
+    return state.getTranslatedStatusFilters();
   }
 
   Map<String, String> _getWalletFilterOptions() {
@@ -1115,22 +1040,4 @@ class _MobileFilterSheetState extends State<_MobileFilterSheet> {
     };
   }
 
-  void _apply() {
-    if (state.statusFilter != _status) {
-      state.setStatusFilter(_status);
-    }
-    if (state.walletFilter != _wallet) {
-      state.setWalletFilter(_wallet);
-    }
-    if (state.sortBy != _sortBy) {
-      state.setSortBy(_sortBy);
-    }
-    if (state.sortAscending != _ascending) {
-      state.setSortAscending(_ascending);
-    }
-    if (state.createdDateFilter != _createdDateFilter) {
-      state.setCreatedDateFilter(_createdDateFilter);
-    }
-    Navigator.of(context).pop();
-  }
 }

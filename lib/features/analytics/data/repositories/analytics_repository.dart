@@ -202,34 +202,61 @@ class AnalyticsRepository {
       return _getDefaultProfitAnalytics();
     }
 
-    final monthsRaw = data['months'] as List<dynamic>? ?? [];
+    final hasNewShape = data.containsKey('profit') || data.containsKey('revenue');
+    if (hasNewShape) {
+      final profitData = _parseProfitMetric(data['profit'] as Map<String, dynamic>?);
+      final revenueData =
+          _parseProfitMetric((data['revenue'] as Map<String, dynamic>?) ?? data['profit'] as Map<String, dynamic>?);
+      final basisRaw = (data['default_basis'] as String?) ?? 'revenue';
+      final basis =
+          basisRaw.toLowerCase() == 'revenue' ? ProfitMetric.revenue : ProfitMetric.profit;
+      return ProfitAnalyticsData(
+        profit: profitData,
+        revenue: revenueData,
+        defaultMetric: basis,
+      );
+    }
+
+    // Legacy single-series payload
+    final legacyMetric = _parseProfitMetric(data);
+    return ProfitAnalyticsData(
+      profit: legacyMetric,
+      revenue: legacyMetric,
+      defaultMetric: ProfitMetric.revenue,
+    );
+  }
+
+  ProfitMetricData _parseProfitMetric(Map<String, dynamic>? map) {
+    if (map == null) return _getDefaultProfitMetric();
+
+    final monthsRaw = map['months'] as List<dynamic>? ?? [];
 
     if (monthsRaw.isNotEmpty) {
       final months = monthsRaw.map((raw) {
-        final map = raw as Map<String, dynamic>;
-        final monthString = (map['month'] as String?) ?? '';
+        final item = raw as Map<String, dynamic>;
+        final monthString = (item['month'] as String?) ?? '';
         final parsedMonth =
             monthString.isNotEmpty
                 ? DateTime.tryParse(monthString) ?? DateTime.now()
                 : DateTime.now();
 
         final expectedDailyRaw =
-            map['expected_daily'] ??
-            (map['expected'] is Map<String, dynamic>
-                ? (map['expected'] as Map<String, dynamic>)['daily']
+            item['expected_daily'] ??
+            (item['expected'] is Map<String, dynamic>
+                ? (item['expected'] as Map<String, dynamic>)['daily']
                 : null) ??
             [];
         final receivedDailyRaw =
-            map['received_daily'] ??
-            (map['received'] is Map<String, dynamic>
-                ? (map['received'] as Map<String, dynamic>)['daily']
+            item['received_daily'] ??
+            (item['received'] is Map<String, dynamic>
+                ? (item['received'] as Map<String, dynamic>)['daily']
                 : null) ??
             [];
 
         final expectedDaily = (expectedDailyRaw as List<dynamic>? ?? []).map((
-          item,
+          value,
         ) {
-          final obj = item as Map<String, dynamic>;
+          final obj = value as Map<String, dynamic>;
           return ExpectedProfitPoint(
             day: (obj['day'] ?? 1) as int,
             expectedAmount: (obj['expected_amount'] ?? 0.0).toDouble(),
@@ -239,15 +266,15 @@ class AnalyticsRepository {
         }).toList();
 
         final receivedDaily = (receivedDailyRaw as List<dynamic>? ?? []).map((
-          item,
+          value,
         ) {
-          if (item is num) {
+          if (value is num) {
             return ReceivedProfitPoint(
               day: 1,
-              amount: (item).toDouble(),
+              amount: (value).toDouble(),
             );
           }
-          final obj = item as Map<String, dynamic>;
+          final obj = value as Map<String, dynamic>;
           return ReceivedProfitPoint(
             day: (obj['day'] ?? 1) as int,
             amount: (obj['amount'] ?? obj['paid_amount'] ?? 0.0).toDouble(),
@@ -258,18 +285,25 @@ class AnalyticsRepository {
           month: parsedMonth,
           expectedDaily: expectedDaily,
           receivedDaily: receivedDaily,
-          overdueAmount: (map['overdue_amount'] ?? 0.0).toDouble(),
-          outsideMonthPaid: (map['outside_month_paid'] ?? 0.0).toDouble(),
+          overdueAmount: (item['overdue_amount'] ?? 0.0).toDouble(),
+          outsideMonthPaid: (item['outside_month_paid'] ?? 0.0).toDouble(),
         );
       }).toList();
 
-      return ProfitAnalyticsData(
+      return ProfitMetricData(
         months: months,
-        totalOverdue: (data['total_overdue'] ?? 0.0).toDouble(),
+        totalOverdue: (map['total_overdue'] ?? 0.0).toDouble(),
       );
     }
 
-    return _buildLegacyProfitAnalytics(data);
+    if (map.containsKey('months')) {
+      return ProfitMetricData(
+        months: const [],
+        totalOverdue: (map['total_overdue'] ?? 0.0).toDouble(),
+      );
+    }
+
+    return _buildLegacyProfitMetric(map);
   }
 
   List<FlSpot> _parseChartData(dynamic chartData) {
@@ -350,13 +384,22 @@ class AnalyticsRepository {
   }
 
   ProfitAnalyticsData _getDefaultProfitAnalytics() {
+    final defaultMetric = _getDefaultProfitMetric();
     return ProfitAnalyticsData(
-      months: const [],
+      profit: defaultMetric,
+      revenue: defaultMetric,
+      defaultMetric: ProfitMetric.revenue,
+    );
+  }
+
+  ProfitMetricData _getDefaultProfitMetric() {
+    return const ProfitMetricData(
+      months: [],
       totalOverdue: 0.0,
     );
   }
 
-  ProfitAnalyticsData _buildLegacyProfitAnalytics(Map<String, dynamic> data) {
+  ProfitMetricData _buildLegacyProfitMetric(Map<String, dynamic> data) {
     final overdue = (data['profit_overdue'] ?? 0.0).toDouble();
     final upcoming = data['upcoming_payments'] as List<dynamic>? ?? [];
     final now = DateTime.now();
@@ -391,7 +434,7 @@ class AnalyticsRepository {
       outsideMonthPaid: 0.0,
     );
 
-    return ProfitAnalyticsData(
+    return ProfitMetricData(
       months: [monthData],
       totalOverdue: overdue,
     );

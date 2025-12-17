@@ -16,7 +16,7 @@ class CustomSearchBar extends StatefulWidget {
     required this.onChanged,
     required this.hintText,
     this.width,
-    this.height = 40,
+    this.height = 36,
     this.icon,
     this.controller,
   });
@@ -70,14 +70,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
           decoration: InputDecoration(
             hintText: widget.hintText,
             hintStyle: TextStyle(color: AppTheme.textHint, fontSize: 14),
-            prefixIcon: Container(
-              padding: const EdgeInsets.all(12),
-              child: Icon(
-                widget.icon ?? Icons.search_rounded,
-                size: 18,
-                color: AppTheme.textHint,
-              ),
-            ),
+            isDense: true,
             filled: true,
             fillColor:
                 _isHovered
@@ -109,8 +102,8 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
               borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
+              horizontal: 12,
+              vertical: 10,
             ),
           ),
         ),

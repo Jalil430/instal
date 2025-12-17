@@ -7,7 +7,6 @@ import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../domain/entities/analytics_data.dart';
 import '../../widgets/installment_details_section.dart';
 import '../../widgets/installment_status_section.dart';
-import '../../widgets/profit_analytics_section.dart';
 import '../../../wallets/domain/entities/wallet.dart';
 import '../../../wallets/domain/entities/wallet_balance.dart';
 
@@ -77,7 +76,14 @@ class AnalyticsScreenMobile extends StatelessWidget {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 36,
+                        child: _buildWalletDropdown(l10n),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     // Refresh button
                     CustomIconButton(
                       icon: Icons.refresh_rounded,
@@ -90,8 +96,6 @@ class AnalyticsScreenMobile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildWalletDropdown(l10n),
               ],
             ),
           ),
@@ -129,14 +133,6 @@ class AnalyticsScreenMobile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 500,
-            child: ProfitAnalyticsSection(
-              data: profitAnalyticsData,
-              walletLabel: _currentWalletLabel(l10n),
-              isLoading: isWalletDataLoading,
-            ),
-          ),
           // Add padding at the bottom to ensure content isn't hidden behind bottom nav bar
           SizedBox(height: 16),
         ],

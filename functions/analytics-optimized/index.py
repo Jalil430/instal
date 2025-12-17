@@ -255,13 +255,9 @@ def handler(event, context):
                         'installment_status': {'overdue_count': 0, 'due_to_pay_count': 0, 'upcoming_count': 0, 'paid_count': 0},
                         'installment_details': {'active_installments': 0, 'total_portfolio': 0, 'total_cash_price': 0, 'total_overdue': 0, 'average_installment_value': 0},
                         'profit_analytics': {
-                            'profit_next_30_days': 0,
-                            'profit_next_90_days': 0,
-                            'profit_next_365_days': 0,
-                            'profit_earned_to_date': 0,
-                            'profit_overdue': 0,
-                            'total_remaining_profit': 0,
-                            'upcoming_payments': []
+                            'profit': {'months': [], 'total_overdue': 0.0},
+                            'revenue': {'months': [], 'total_overdue': 0.0},
+                            'default_basis': 'profit'
                         }
                     })}
                 
@@ -657,11 +653,14 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
     }
 
 def calculate_profit_analytics(installments, scheduled_payments, paid_payments, today):
+    empty_payload = {
+        'profit': {'months': [], 'total_overdue': 0.0},
+        'revenue': {'months': [], 'total_overdue': 0.0},
+        'default_basis': 'profit',
+    }
+
     if not installments:
-        return {
-            'months': [],
-            'total_overdue': 0.0,
-        }
+        return empty_payload
 
     installment_lookup = {inst['id']: inst for inst in installments}
 
@@ -676,155 +675,192 @@ def calculate_profit_analytics(installments, scheduled_payments, paid_payments, 
     def month_key(dt):
         return date(dt.year, dt.month, 1)
 
-    months = {}
-    total_overdue = 0.0
-    seen_paid_keys = set()
+    def normalize_to_date(val):
+        if val is None:
+            return None
+        if isinstance(val, datetime):
+            return val.date()
+        if isinstance(val, date):
+            return val
+        if isinstance(val, str):
+            try:
+                return date.fromisoformat(val)
+            except ValueError:
+                return None
+        return None
 
-    # Expected schedule (by due date) and paid amounts linked to those payments
+    def empty_bucket():
+        return {
+            'expected_daily': {},
+            'received_daily': {},
+            'overdue': 0.0,
+            'outside_month_paid': 0.0,
+        }
+
+    metrics = {
+        'profit': {'months': {}, 'total_overdue': 0.0, 'seen_paid_keys': set()},
+        'revenue': {'months': {}, 'total_overdue': 0.0, 'seen_paid_keys': set()},
+    }
+
+    def get_bucket(metric_name, dt):
+        normalized = normalize_to_date(dt)
+        if not normalized:
+            return None
+        key = month_key(normalized)
+        metric = metrics[metric_name]
+        bucket = metric['months'].setdefault(key, empty_bucket())
+        return bucket, normalized
+
     for payment in scheduled_payments or []:
         installment_id = payment.get('installment_id')
         inst = installment_lookup.get(installment_id)
         if not inst:
             continue
 
-        ratio = profit_ratio(inst)
-        if ratio is None:
-            continue
-
         expected_amount_raw = payment.get('expected_amount', 0.0) or 0.0
         if expected_amount_raw <= 0:
             continue
 
-        due_date = payment.get('due_date')
-        paid_date = payment.get('paid_date')
+        due_date = normalize_to_date(payment.get('due_date'))
+        paid_date = normalize_to_date(payment.get('paid_date'))
         is_paid = payment.get('is_paid', False)
         paid_amount_raw = payment.get('paid_amount', None)
 
-        profit_expected = expected_amount_raw * ratio
-        profit_paid = 0.0
-        paid_payment_amount = paid_amount_raw if paid_amount_raw is not None else expected_amount_raw
-        if is_paid:
-            profit_paid = (paid_payment_amount or 0.0) * ratio
+        for metric_name in ('profit', 'revenue'):
+            ratio = profit_ratio(inst) if metric_name == 'profit' else 1.0
+            if ratio is None:
+                continue
 
-        if due_date:
-            key = month_key(due_date)
-            bucket = months.setdefault(
-                key,
-                {
-                    'expected_daily': {},
-                    'received_daily': {},
-                    'overdue': 0.0,
-                    'outside_month_paid': 0.0,
-                },
-            )
-            day = due_date.day
-            existing = bucket['expected_daily'].get(day, {
-                'expected_amount': 0.0,
-                'paid_amount': 0.0,
-                'is_overdue': False
-            })
-            existing['expected_amount'] += profit_expected
-            existing['paid_amount'] += profit_paid
-            existing['is_overdue'] = existing['is_overdue'] or (due_date < today and not is_paid)
-            bucket['expected_daily'][day] = existing
+            expected_amount = expected_amount_raw * ratio
+            paid_base_amount = paid_amount_raw if paid_amount_raw is not None else expected_amount_raw
+            paid_amount = (paid_base_amount or 0.0) * ratio if is_paid else 0.0
 
-            # Overdue calculation: unpaid part past due date
-            if due_date < today and profit_expected > profit_paid:
-                bucket['overdue'] += (profit_expected - profit_paid)
-                total_overdue += (profit_expected - profit_paid)
+            if due_date:
+                bucket_tuple = get_bucket(metric_name, due_date)
+                if bucket_tuple:
+                    bucket, normalized_due = bucket_tuple
+                    day = normalized_due.day
+                    existing = bucket['expected_daily'].get(day, {
+                        'expected_amount': 0.0,
+                        'paid_amount': 0.0,
+                        'is_overdue': False
+                    })
+                    existing['expected_amount'] += expected_amount
+                    existing['paid_amount'] += paid_amount
+                    existing['is_overdue'] = existing['is_overdue'] or (normalized_due < today and not is_paid)
+                    bucket['expected_daily'][day] = existing
 
-        # Received amounts (by paid date) tied to schedule
-        if is_paid and paid_date:
-            received_key = (installment_id, paid_date.isoformat(), float(paid_amount_raw or expected_amount_raw))
-            seen_paid_keys.add(received_key)
+                    if normalized_due < today and expected_amount > paid_amount:
+                        overdue_diff = (expected_amount - paid_amount)
+                        bucket['overdue'] += overdue_diff
+                        metrics[metric_name]['total_overdue'] += overdue_diff
 
-            paid_month_key = month_key(paid_date)
-            bucket = months.setdefault(
-                paid_month_key,
-                {
-                    'expected_daily': {},
-                    'received_daily': {},
-                    'overdue': 0.0,
-                    'outside_month_paid': 0.0,
-                },
-            )
-            day = paid_date.day
-            bucket['received_daily'][day] = bucket['received_daily'].get(day, {
-                'profit': 0.0,
-            })
-            bucket['received_daily'][day]['profit'] += profit_paid
+            if is_paid and paid_date:
+                bucket_tuple = get_bucket(metric_name, paid_date)
+                if bucket_tuple:
+                    bucket, normalized_paid = bucket_tuple
+                    paid_amount_normalized = (paid_base_amount or 0.0) * ratio
+                    key = (installment_id, normalized_paid.isoformat(), float(paid_amount_normalized))
+                    seen_paid_keys = metrics[metric_name]['seen_paid_keys']
+                    if key in seen_paid_keys:
+                        continue
+                    seen_paid_keys.add(key)
 
-            if due_date and (paid_date.month != due_date.month or paid_date.year != due_date.year):
-                bucket['outside_month_paid'] += profit_paid
+                    day_paid = normalized_paid.day
+                    bucket['received_daily'][day_paid] = bucket['received_daily'].get(day_paid, {
+                        'amount': 0.0,
+                    })
+                    bucket['received_daily'][day_paid]['amount'] += paid_amount
 
-    # Additional paid payments (safety net for any payments not linked above)
+                    if due_date and (normalized_paid.month != due_date.month or normalized_paid.year != due_date.year):
+                        bucket['outside_month_paid'] += paid_amount
+
     for payment in paid_payments or []:
         installment_id = payment.get('installment_id')
         inst = installment_lookup.get(installment_id)
         if not inst:
             continue
-        ratio = profit_ratio(inst)
-        if ratio is None:
-            continue
-        paid_amount = payment.get('paid_amount', 0.0) or 0.0
-        paid_date = payment.get('payment_date')
-        if not paid_date or paid_amount <= 0:
+        paid_amount_raw = payment.get('paid_amount', 0.0) or 0.0
+        paid_date = normalize_to_date(payment.get('payment_date'))
+        if not paid_date or paid_amount_raw <= 0:
             continue
 
-        key = (installment_id, paid_date.isoformat(), float(paid_amount))
-        if key in seen_paid_keys:
-            continue
-        seen_paid_keys.add(key)
+        for metric_name in ('profit', 'revenue'):
+            ratio = profit_ratio(inst) if metric_name == 'profit' else 1.0
+            if ratio is None:
+                continue
+            paid_amount = paid_amount_raw * ratio
 
-        profit_paid = paid_amount * ratio
-        bucket = months.setdefault(
-            month_key(paid_date),
-            {
-                'expected_daily': {},
-                'received_daily': {},
-                'overdue': 0.0,
-                'outside_month_paid': 0.0,
-            },
-        )
-        day = paid_date.day
-        bucket['received_daily'][day] = bucket['received_daily'].get(day, {
-            'profit': 0.0,
-        })
-        bucket['received_daily'][day]['profit'] += profit_paid
+            bucket_tuple = get_bucket(metric_name, paid_date)
+            if not bucket_tuple:
+                continue
+            bucket, normalized_paid = bucket_tuple
 
-    # Transform month buckets to list payload
-    month_items = []
-    for month_dt, bucket in months.items():
-        expected_daily = [
-            {
-                'day': day,
-                'expected_amount': round(values.get('expected_amount', 0.0), 2),
-                'paid_amount': round(values.get('paid_amount', 0.0), 2),
-                'is_overdue': bool(values.get('is_overdue', False)),
-            }
-            for day, values in sorted(bucket['expected_daily'].items())
-        ]
+            key = (installment_id, normalized_paid.isoformat(), float(paid_amount))
+            seen_paid_keys = metrics[metric_name]['seen_paid_keys']
+            if key in seen_paid_keys:
+                continue
+            seen_paid_keys.add(key)
 
-        received_daily = [
-            {
-                'day': day,
-                'amount': round(values.get('profit', 0.0), 2),
-            }
-            for day, values in sorted(bucket['received_daily'].items())
-        ]
+            day = normalized_paid.day
+            bucket['received_daily'][day] = bucket['received_daily'].get(day, {
+                'amount': 0.0,
+            })
+            bucket['received_daily'][day]['amount'] += paid_amount
 
-        month_items.append({
-            'month': month_dt.isoformat(),
-            'expected_daily': expected_daily,
-            'received_daily': received_daily,
-            'overdue_amount': round(bucket.get('overdue', 0.0), 2),
-            'outside_month_paid': round(bucket.get('outside_month_paid', 0.0), 2),
-        })
+            # If we lack an expected entry for this day (common when schedules store only unpaid),
+            # mirror the paid amount into expected so the expected view reflects paid installments too.
+            if day not in bucket['expected_daily']:
+                bucket['expected_daily'][day] = {
+                    'expected_amount': paid_amount,
+                    'paid_amount': paid_amount,
+                    'is_overdue': False,
+                }
 
-    # Sort months chronologically
-    month_items.sort(key=lambda m: m['month'])
+    def transform_metric(metric_name):
+        metric = metrics[metric_name]
+        month_items = []
+        for month_dt, bucket in metric['months'].items():
+            expected_daily = [
+                {
+                    'day': day,
+                    'expected_amount': round(values.get('expected_amount', 0.0), 2),
+                    'paid_amount': round(values.get('paid_amount', 0.0), 2),
+                    'is_overdue': bool(values.get('is_overdue', False)),
+                }
+                for day, values in sorted(bucket['expected_daily'].items())
+            ]
 
-    return {
-        'months': month_items,
-        'total_overdue': round(total_overdue, 2),
+            received_daily = [
+                {
+                    'day': day,
+                    'amount': round(values.get('amount', 0.0), 2),
+                }
+                for day, values in sorted(bucket['received_daily'].items())
+            ]
+
+            month_items.append({
+                'month': month_dt.isoformat(),
+                'expected_daily': expected_daily,
+                'received_daily': received_daily,
+                'overdue_amount': round(bucket.get('overdue', 0.0), 2),
+                'outside_month_paid': round(bucket.get('outside_month_paid', 0.0), 2),
+            })
+
+        month_items.sort(key=lambda m: m['month'])
+        return {
+            'months': month_items,
+            'total_overdue': round(metric['total_overdue'], 2),
+        }
+
+    default_basis = 'revenue'
+    if metrics['profit']['months'] and not metrics['revenue']['months']:
+        default_basis = 'profit'
+
+    payload = {
+        'profit': transform_metric('profit'),
+        'revenue': transform_metric('revenue'),
+        'default_basis': default_basis,
     }
+
+    return payload

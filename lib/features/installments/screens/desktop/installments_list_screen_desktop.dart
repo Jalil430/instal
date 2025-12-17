@@ -10,6 +10,7 @@ import 'package:instal_app/features/installments/widgets/installment_list_item.d
 import 'package:instal_app/shared/widgets/custom_button.dart';
 import 'package:instal_app/shared/widgets/custom_search_bar.dart';
 import 'package:instal_app/shared/widgets/custom_dropdown.dart';
+import 'package:instal_app/shared/widgets/custom_toggle.dart';
 import 'package:instal_app/features/wallets/widgets/wallet_selector.dart';
 import 'package:instal_app/features/wallets/domain/entities/wallet.dart';
 import 'package:instal_app/features/wallets/domain/entities/wallet_balance.dart';
@@ -176,8 +177,7 @@ class InstallmentsListScreenDesktop extends StatelessWidget {
                       CustomSearchBar(
                         value: state.searchQuery,
                         onChanged: state.setSearchQuery,
-                        hintText:
-                            '${l10n?.search ?? 'Поиск'} ${state.getItemsText(0)}...',
+                        hintText: '${l10n?.search ?? 'Поиск'}...',
                         width: 320,
                       ),
                       const SizedBox(width: 16),
@@ -906,7 +906,10 @@ class _InstallmentsFilterSheetState extends State<_InstallmentsFilterSheet> {
               CustomDropdown<String>(
                 value: _status,
                 items: _getStatusFilterOptions(),
-                onChanged: (value) => setState(() => _status = value ?? 'all'),
+                onChanged: (value) {
+                  setState(() => _status = value ?? 'all');
+                  _apply(autoClose: false);
+                },
                 hint: 'Все',
                 width: double.infinity,
               ),
@@ -925,7 +928,10 @@ class _InstallmentsFilterSheetState extends State<_InstallmentsFilterSheet> {
               CustomDropdown<String>(
                 value: _createdDateFilter,
                 items: _getDateFilterOptions(),
-                onChanged: (value) => setState(() => _createdDateFilter = value ?? 'all'),
+                onChanged: (value) {
+                  setState(() => _createdDateFilter = value ?? 'all');
+                  _apply(autoClose: false);
+                },
                 hint: 'Все',
                 width: double.infinity,
               ),
@@ -944,49 +950,44 @@ class _InstallmentsFilterSheetState extends State<_InstallmentsFilterSheet> {
               CustomDropdown<String>(
                 value: _sortBy,
                 items: _getSortOptions(),
-                onChanged: (value) => setState(() => _sortBy = value ?? _sortBy),
+                onChanged: (value) {
+                  setState(() => _sortBy = value ?? _sortBy);
+                  _apply(autoClose: false);
+                },
                 hint: 'Статус',
                 width: double.infinity,
               ),
               const SizedBox(height: 12),
               
               // Sort Direction
-              SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment<bool>(
+              CustomToggle<bool>(
+                value: _ascending,
+                onChanged: (value) {
+                  setState(() => _ascending = value);
+                  _apply(autoClose: false);
+                },
+                options: [
+                  CustomToggleOption<bool>(
                     value: true,
-                    icon: const Icon(Icons.arrow_upward),
-                    label: Text(l10n?.ascending ?? 'По возрастанию'),
+                    label: l10n?.ascending ?? 'По возрастанию',
+                    icon: Icons.arrow_upward,
                   ),
-                  ButtonSegment<bool>(
+                  CustomToggleOption<bool>(
                     value: false,
-                    icon: const Icon(Icons.arrow_downward),
-                    label: Text(l10n?.descending ?? 'По убыванию'),
+                    label: l10n?.descending ?? 'По убыванию',
+                    icon: Icons.arrow_downward,
                   ),
                 ],
-                selected: {_ascending},
-                onSelectionChanged: (value) =>
-                    setState(() => _ascending = value.first),
               ),
               
               const Spacer(),
               
-              // Action Buttons
-              Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      state.resetFilters();
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(l10n?.resetFilters ?? 'Сбросить фильтры'),
-                  ),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: _apply,
-                    child: Text(l10n?.apply ?? 'Применить'),
-                  ),
-                ],
+              OutlinedButton(
+                onPressed: () {
+                  state.resetFilters();
+                  Navigator.of(context).pop();
+                },
+                child: Text(l10n?.resetFilters ?? 'Сбросить фильтры'),
               ),
             ],
           ),
@@ -1050,7 +1051,7 @@ class _InstallmentsFilterSheetState extends State<_InstallmentsFilterSheet> {
     };
   }
 
-  void _apply() {
+  void _apply({bool autoClose = false}) {
     if (state.statusFilter != _status) {
       state.setStatusFilter(_status);
     }
@@ -1066,7 +1067,9 @@ class _InstallmentsFilterSheetState extends State<_InstallmentsFilterSheet> {
     if (state.createdDateFilter != _createdDateFilter) {
       state.setCreatedDateFilter(_createdDateFilter);
     }
-    Navigator.of(context).pop();
+    if (autoClose) {
+      Navigator.of(context).pop();
+    }
   }
 }
 
@@ -1084,7 +1087,7 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height: 36,
       decoration: BoxDecoration(
         color: hasActiveFilters 
             ? AppTheme.primaryColor.withOpacity(0.1)
@@ -1103,7 +1106,7 @@ class _FilterButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

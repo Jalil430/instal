@@ -75,13 +75,6 @@ class InstallmentDetailsSection extends StatelessWidget {
                             '${data.averageTerm.toStringAsFixed(1)} ${l10n.months}',
                         isCompact: isSmallScreen,
                       ),
-                      DetailRow(
-                        label: l10n.upcomingRevenue30Days,
-                        value: currencyFormatter.format(
-                          data.upcomingRevenue30Days,
-                        ),
-                        isCompact: isSmallScreen,
-                      ),
                     ],
                   );
                 },

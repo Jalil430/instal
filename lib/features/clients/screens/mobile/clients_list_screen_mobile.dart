@@ -6,6 +6,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../domain/entities/client.dart';
 import '../clients_list_screen.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../shared/widgets/custom_toggle.dart';
 
 class ClientsListScreenMobile extends StatelessWidget {
   final ClientsListScreenState state;
@@ -44,8 +46,7 @@ class ClientsListScreenMobile extends StatelessWidget {
                       child: CustomSearchBar(
                         value: state.searchQuery,
                         onChanged: state.setSearchQuery,
-                        hintText:
-                            '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
+                        hintText: '${l10n?.search ?? 'Поиск'}...',
                         height: 36,
                       ),
                     ),
@@ -159,39 +160,38 @@ class ClientsListScreenMobile extends StatelessWidget {
             final creationOptions = state.getCreationFilterOptions();
             final sortOptions = state.getSortOptions();
 
-            DropdownButtonFormField<String> buildDropdown({
+            Widget buildDropdown({
               required String label,
               required String value,
               required Map<String, String> options,
               required ValueChanged<String> onChanged,
             }) {
-              return DropdownButtonFormField<String>(
-                value: options.containsKey(value) ? value : options.keys.first,
-                decoration: InputDecoration(
-                  labelText: label,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              final currentValue =
+                  options.containsKey(value) ? value : options.keys.first;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  const SizedBox(height: 8),
+                  CustomDropdown<String>(
+                    value: currentValue,
+                    items: options,
+                    onChanged: (selected) {
+                      if (selected != null) {
+                        onChanged(selected);
+                        setModalState(() {});
+                      }
+                    },
+                    width: double.infinity,
                   ),
-                ),
-                items:
-                    options.entries
-                        .map(
-                          (entry) => DropdownMenuItem<String>(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (selected) {
-                  if (selected != null) {
-                    onChanged(selected);
-                    setModalState(() {});
-                  }
-                },
+                ],
               );
             }
 
@@ -227,27 +227,11 @@ class ClientsListScreenMobile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      l10n?.withGuarantor ?? 'С поручителем',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          guarantorOptions.entries.map((entry) {
-                            final isSelected =
-                                state.guarantorFilter == entry.key;
-                            return ChoiceChip(
-                              label: Text(entry.value),
-                              selected: isSelected,
-                              onSelected: (_) {
-                                state.setGuarantorFilter(entry.key);
-                                setModalState(() {});
-                              },
-                            );
-                          }).toList(),
+                    buildDropdown(
+                      label: l10n?.withGuarantor ?? 'С поручителем',
+                      value: state.guarantorFilter,
+                      options: guarantorOptions,
+                      onChanged: state.setGuarantorFilter,
                     ),
                     const SizedBox(height: 16),
                     buildDropdown(
@@ -257,46 +241,29 @@ class ClientsListScreenMobile extends StatelessWidget {
                       onChanged: state.setCreationFilter,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: buildDropdown(
-                            label: l10n?.sortBy ?? 'Sort by',
-                            value: state.sortBy,
-                            options: sortOptions,
-                            onChanged: state.setSortBy,
-                          ),
+                    buildDropdown(
+                      label: l10n?.sortBy ?? 'Sort by',
+                      value: state.sortBy,
+                      options: sortOptions,
+                      onChanged: state.setSortBy,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomToggle<bool>(
+                      value: state.sortAscending,
+                      onChanged: (value) {
+                        state.setSortAscending(value);
+                        setModalState(() {});
+                      },
+                      options: [
+                        CustomToggleOption<bool>(
+                          value: true,
+                          label: l10n?.ascending ?? 'Ascending',
+                          icon: Icons.arrow_upward,
                         ),
-                        const SizedBox(width: 12),
-                        Tooltip(
-                          message:
-                              state.sortAscending
-                                  ? l10n?.ascending ?? 'Ascending'
-                                  : l10n?.descending ?? 'Descending',
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () {
-                                state.setSortBy(state.sortBy);
-                                setModalState(() {});
-                              },
-                              child: Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: AppTheme.subtleBackgroundColor,
-                                ),
-                                child: Icon(
-                                  state.sortAscending
-                                      ? Icons.arrow_upward
-                                      : Icons.arrow_downward,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
+                        CustomToggleOption<bool>(
+                          value: false,
+                          label: l10n?.descending ?? 'Descending',
+                          icon: Icons.arrow_downward,
                         ),
                       ],
                     ),

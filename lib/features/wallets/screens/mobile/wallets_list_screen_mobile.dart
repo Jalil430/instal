@@ -5,6 +5,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../shared/widgets/custom_toggle.dart';
 import '../../domain/entities/wallet.dart';
 import '../../domain/entities/wallet_balance.dart';
 import '../wallets_list_screen.dart';
@@ -24,10 +26,29 @@ class WalletsListScreenMobile extends StatelessWidget {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         titleSpacing: 16,
-        title: Text(
-          l10n?.wallets ?? 'Кошельки',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        title:
+            state.isSelectionMode
+                ? Text(
+                    l10n?.wallets ?? 'Кошельки',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  )
+                : Row(
+                    children: [
+                      Text(
+                        l10n?.wallets ?? 'Кошельки',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: CustomSearchBar(
+                          value: state.searchQuery,
+                          onChanged: state.setSearchQuery,
+                          hintText: '${l10n?.search ?? 'Поиск'}...',
+                          height: 36,
+                        ),
+                      ),
+                    ],
+                  ),
         backgroundColor: AppTheme.surfaceColor,
         elevation: 1,
         actions: [
@@ -48,11 +69,6 @@ class WalletsListScreenMobile extends StatelessWidget {
               tooltip: l10n?.cancelSelection ?? 'Отменить выбор',
             ),
           ] else ...[
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () => state.forceRefresh(),
-              tooltip: l10n?.refresh ?? 'Обновить',
-            ),
             if (state.hasActiveFilters)
               IconButton(
                 icon: const Icon(Icons.filter_alt_off),
@@ -118,19 +134,6 @@ class WalletsListScreenMobile extends StatelessWidget {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: CustomSearchBar(
-              value: state.searchQuery,
-              onChanged:
-                  (value) =>
-                      state.setSearchQuery,
-              hintText:
-                  '${l10n?.search ?? 'Поиск'} ${(l10n?.wallets ?? 'кошельки').toLowerCase()}...',
-              height: 40,
-            ),
-          ),
-          const SizedBox(height: 8),
           // Wallets list
           Expanded(
             child:
@@ -212,42 +215,40 @@ class WalletsListScreenMobile extends StatelessWidget {
           builder: (context, setModalState) {
             final statusOptions = state.getStatusFilterOptions();
             final typeOptions = state.getTypeFilterOptions();
-            final balanceOptions = state.getBalanceFilterOptions();
             final sortOptions = state.getSortOptions();
 
-            DropdownButtonFormField<String> buildDropdown({
+            Widget buildDropdown({
               required String label,
               required String value,
               required Map<String, String> options,
               required ValueChanged<String> onChanged,
             }) {
-              return DropdownButtonFormField<String>(
-                value: options.containsKey(value) ? value : options.keys.first,
-                decoration: InputDecoration(
-                  labelText: label,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              final currentValue =
+                  options.containsKey(value) ? value : options.keys.first;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  const SizedBox(height: 8),
+                  CustomDropdown<String>(
+                    value: currentValue,
+                    items: options,
+                    onChanged: (selected) {
+                      if (selected != null) {
+                        onChanged(selected);
+                        setModalState(() {});
+                      }
+                    },
+                    width: double.infinity,
                   ),
-                ),
-                items:
-                    options.entries
-                        .map(
-                          (entry) => DropdownMenuItem<String>(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (selected) {
-                  if (selected != null) {
-                    onChanged(selected);
-                    setModalState(() {});
-                  }
-                },
+                ],
               );
             }
 
@@ -284,7 +285,7 @@ class WalletsListScreenMobile extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     buildDropdown(
-                      label: l10n?.statusHeader ?? 'Статус',
+                      label: l10n?.status ?? 'Статус',
                       value: state.statusFilter,
                       options: statusOptions,
                       onChanged: state.setStatusFilter,
@@ -298,52 +299,28 @@ class WalletsListScreenMobile extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     buildDropdown(
-                      label: l10n?.walletBalance ?? 'Баланс кошелька',
-                      value: state.balanceFilter,
-                      options: balanceOptions,
-                      onChanged: state.setBalanceFilter,
+                      label: l10n?.sortBy ?? 'Sort by',
+                      value: state.sortBy,
+                      options: sortOptions,
+                      onChanged: state.setSortBy,
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: buildDropdown(
-                            label: l10n?.sortBy ?? 'Sort by',
-                            value: state.sortBy,
-                            options: sortOptions,
-                            onChanged: state.setSortBy,
-                          ),
+                    const SizedBox(height: 12),
+                    CustomToggle<bool>(
+                      value: state.sortAscending,
+                      onChanged: (value) {
+                        state.setSortAscending(value);
+                        setModalState(() {});
+                      },
+                      options: [
+                        CustomToggleOption<bool>(
+                          value: true,
+                          label: l10n?.ascending ?? 'Ascending',
+                          icon: Icons.arrow_upward,
                         ),
-                        const SizedBox(width: 12),
-                        Tooltip(
-                          message:
-                              state.sortAscending
-                                  ? l10n?.ascending ?? 'Ascending'
-                                  : l10n?.descending ?? 'Descending',
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () {
-                                state.setSortBy(state.sortBy);
-                                setModalState(() {});
-                              },
-                              child: Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: AppTheme.subtleBackgroundColor,
-                                ),
-                                child: Icon(
-                                  state.sortAscending
-                                      ? Icons.arrow_upward
-                                      : Icons.arrow_downward,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
+                        CustomToggleOption<bool>(
+                          value: false,
+                          label: l10n?.descending ?? 'Descending',
+                          icon: Icons.arrow_downward,
                         ),
                       ],
                     ),

@@ -82,13 +82,17 @@ class _AnalyticsScreenDesktopState extends State<AnalyticsScreenDesktop> {
                   ],
                 ),
                 const Spacer(),
-                SizedBox(width: 260, child: _buildWalletDropdown(l10n)),
+                SizedBox(
+                  width: 260,
+                  height: 36,
+                  child: _buildWalletDropdown(l10n),
+                ),
                 const SizedBox(width: 16),
                 // Refresh button
                 CustomIconButton(
                   icon: Icons.refresh_rounded,
                   onPressed: widget.refreshAnalytics,
-                  size: 40,
+                  size: 36,
                   animate: widget.isRefreshing,
                   rotation: widget.isRefreshing ? 1.0 : 0.0,
                   animationDuration: const Duration(milliseconds: 1000),

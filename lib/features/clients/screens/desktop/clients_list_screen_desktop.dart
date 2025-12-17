@@ -5,6 +5,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../clients_list_screen.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../shared/widgets/custom_toggle.dart';
 import '../../widgets/client_list_item.dart';
 
 class ClientsListScreenDesktop extends StatelessWidget {
@@ -134,7 +136,7 @@ class ClientsListScreenDesktop extends StatelessWidget {
                       CustomSearchBar(
                         value: state.searchQuery,
                         onChanged: state.setSearchQuery,
-                        hintText: '${l10n?.search ?? 'Поиск'} ${(l10n?.clients ?? 'клиенты').toLowerCase()}...',
+                        hintText: '${l10n?.search ?? 'Поиск'}...',
                         width: 320,
                       ),
                       const SizedBox(width: 16),
@@ -377,56 +379,58 @@ class _ClientsFilterSheetState extends State<_ClientsFilterSheet> {
                 label: l10n?.withGuarantor ?? 'Guarantor',
                 value: _guarantor,
                 items: state.getGuarantorFilterOptions(),
-                onChanged: (value) => setState(() => _guarantor = value ?? _guarantor),
+                onChanged: (value) {
+                  setState(() => _guarantor = value ?? _guarantor);
+                  state.setGuarantorFilter(_guarantor);
+                },
               ),
               const SizedBox(height: 16),
               _buildDropdown(
                 label: l10n?.creationDate ?? 'Creation date',
                 value: _creation,
                 items: state.getCreationFilterOptions(),
-                onChanged: (value) => setState(() => _creation = value ?? _creation),
+                onChanged: (value) {
+                  setState(() => _creation = value ?? _creation);
+                  state.setCreationFilter(_creation);
+                },
               ),
               const SizedBox(height: 16),
               _buildDropdown(
                 label: l10n?.sortBy ?? 'Sort by',
                 value: _sortBy,
                 items: state.getSortOptions(),
-                onChanged: (value) => setState(() => _sortBy = value ?? _sortBy),
+                onChanged: (value) {
+                  setState(() => _sortBy = value ?? _sortBy);
+                  state.setSortBy(_sortBy);
+                },
               ),
               const SizedBox(height: 12),
-              SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment<bool>(
+              CustomToggle<bool>(
+                value: _ascending,
+                onChanged: (value) {
+                  setState(() => _ascending = value);
+                  state.setSortAscending(_ascending);
+                },
+                options: [
+                  CustomToggleOption<bool>(
                     value: true,
-                    icon: const Icon(Icons.arrow_upward),
-                    label: Text(l10n?.ascending ?? 'Ascending'),
+                    label: l10n?.ascending ?? 'Ascending',
+                    icon: Icons.arrow_upward,
                   ),
-                  ButtonSegment<bool>(
+                  CustomToggleOption<bool>(
                     value: false,
-                    icon: const Icon(Icons.arrow_downward),
-                    label: Text(l10n?.descending ?? 'Descending'),
+                    label: l10n?.descending ?? 'Descending',
+                    icon: Icons.arrow_downward,
                   ),
                 ],
-                selected: {_ascending},
-                onSelectionChanged: (value) =>
-                    setState(() => _ascending = value.first),
               ),
               const Spacer(),
-              Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      state.resetFilters();
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(l10n?.resetFilters ?? 'Reset filters'),
-                  ),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: _apply,
-                    child: Text(l10n?.apply ?? 'Apply'),
-                  ),
-                ],
+              OutlinedButton(
+                onPressed: () {
+                  state.resetFilters();
+                  Navigator.of(context).pop();
+                },
+                child: Text(l10n?.resetFilters ?? 'Reset filters'),
               ),
             ],
           ),
@@ -441,36 +445,28 @@ class _ClientsFilterSheetState extends State<_ClientsFilterSheet> {
     required Map<String, String> items,
     required ValueChanged<String?> onChanged,
   }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: InputDecoration(labelText: label),
-      items: items.entries
-          .map(
-            (entry) => DropdownMenuItem<String>(
-              value: entry.key,
-              child: Text(entry.value),
-            ),
-          )
-          .toList(),
-      onChanged: onChanged,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        CustomDropdown<String>(
+          value: items.containsKey(value) ? value : items.keys.first,
+          items: items,
+          onChanged: onChanged,
+          width: double.infinity,
+        ),
+      ],
     );
   }
 
-  void _apply() {
-    if (state.guarantorFilter != _guarantor) {
-      state.setGuarantorFilter(_guarantor);
-    }
-    if (state.creationFilter != _creation) {
-      state.setCreationFilter(_creation);
-    }
-    if (state.sortBy != _sortBy) {
-      state.setSortBy(_sortBy);
-    }
-    if (state.sortAscending != _ascending) {
-      state.setSortAscending(_ascending);
-    }
-    Navigator.of(context).pop();
-  }
 }
 
 class _FilterButton extends StatelessWidget {
@@ -487,7 +483,7 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height: 36,
       decoration: BoxDecoration(
         color: hasActiveFilters 
             ? AppTheme.primaryColor.withOpacity(0.1)
@@ -506,7 +502,7 @@ class _FilterButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

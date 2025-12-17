@@ -133,6 +133,10 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     final l10n = AppLocalizations.of(context);
     final renderBox = _dropdownKey.currentContext!.findRenderObject() as RenderBox;
     final size = renderBox.size;
+    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final targetGlobal = renderBox.localToGlobal(Offset.zero);
+    final spaceBelow = overlayBox.size.height - (targetGlobal.dy + size.height);
+    final spaceAbove = targetGlobal.dy;
 
     // Calculate content height
     const double itemHeight = 44.0; // Height of each dropdown item
@@ -144,10 +148,15 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     final int itemCount = _filteredItems.length;
     final double contentHeight = itemHeight * itemCount;
     final double dropdownHeight = contentHeight.clamp(0.0, maxDropdownHeight);
-    
-    final double totalHeight = widget.showSearch 
-        ? dropdownHeight + searchBarHeight 
+    final double preferredTotalHeight = widget.showSearch
+        ? dropdownHeight + searchBarHeight
         : dropdownHeight;
+
+    final bool showAbove = spaceBelow < preferredTotalHeight && spaceAbove > spaceBelow;
+    final double availableSpace = (showAbove ? spaceAbove : spaceBelow) - 8;
+    final double totalHeight = availableSpace > 0
+        ? preferredTotalHeight.clamp(0.0, availableSpace)
+        : preferredTotalHeight;
 
     return OverlayEntry(
       builder: (context) => Stack(
@@ -166,7 +175,10 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
             child: CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
-              offset: Offset(0, size.height + 4),
+              offset: Offset(
+                0,
+                showAbove ? -(totalHeight + 4) : size.height + 4,
+              ),
               child: Material(
                 elevation: 8,
                 borderRadius: BorderRadius.circular(12),
