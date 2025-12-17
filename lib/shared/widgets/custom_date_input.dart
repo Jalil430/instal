@@ -42,6 +42,7 @@ class _CustomDateInputState extends State<CustomDateInput> {
   bool _isFormatting = false;
   bool _hasError = false;
   String? _errorMessage;
+  bool _selectedOnFocus = false;
 
   @override
   void initState() {
@@ -114,6 +115,9 @@ class _CustomDateInputState extends State<CustomDateInput> {
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
       _selectAll();
+      _selectedOnFocus = true;
+    } else {
+      _selectedOnFocus = false;
     }
   }
 
@@ -286,7 +290,13 @@ class _CustomDateInputState extends State<CustomDateInput> {
           onFieldSubmitted: (_) {
             _handleTextChange();
           },
-          onTap: _selectAll,
+          onTap: () {
+            if (_selectedOnFocus) {
+              // First tap after focus: clear the select-all flag and let the tap place the cursor
+              _selectedOnFocus = false;
+            }
+            // Subsequent taps behave normally (no forced select-all)
+          },
         ),
       ],
     );

@@ -538,8 +538,12 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onCreateClient: _showCreateClientDialog,
         onCreateWallet: _showCreateWalletDialog,
         onSave: _saveInstallment,
-        onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
-        onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
+        onBuyingDateChanged: (date) {
+          if (date != null) setState(() => _buyingDate = date);
+        },
+        onInstallmentStartDateChanged: (date) {
+          if (date != null) setState(() => _installmentStartDate = date);
+        },
         onBuyingDateValidityChanged: (isValid) => setState(() => _isBuyingDateValid = isValid),
         onInstallmentStartDateValidityChanged: (isValid) => setState(() => _isStartDateValid = isValid),
         clientDropdownKey: _clientDropdownKey,
@@ -589,8 +593,12 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         onCreateClient: _showCreateClientDialog,
         onCreateWallet: _showCreateWalletDialog,
         onSave: _saveInstallment,
-        onBuyingDateChanged: (date) => setState(() => _buyingDate = date),
-        onInstallmentStartDateChanged: (date) => setState(() => _installmentStartDate = date),
+        onBuyingDateChanged: (date) {
+          if (date != null) setState(() => _buyingDate = date);
+        },
+        onInstallmentStartDateChanged: (date) {
+          if (date != null) setState(() => _installmentStartDate = date);
+        },
         onBuyingDateValidityChanged: (isValid) => setState(() => _isBuyingDateValid = isValid),
         onInstallmentStartDateValidityChanged: (isValid) => setState(() => _isStartDateValid = isValid),
         clientDropdownKey: _clientDropdownKey,
