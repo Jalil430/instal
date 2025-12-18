@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../localization/app_localizations.dart';
 import '../../features/auth/presentation/widgets/auth_service_provider.dart';
 import '../../features/subscription/presentation/providers/subscription_provider.dart';
 import '../../features/subscription/presentation/screens/subscription_screen.dart';
@@ -66,7 +65,7 @@ class _SubscriptionGuardState extends State<SubscriptionGuard> {
       
       if (user != null && mounted) {
         // Check subscription status
-        final state = await _subscriptionProvider.checkStatus(user.id);
+        final state = await _subscriptionProvider.checkStatus(user.id, silent: true);
         
         if (mounted) {
           setState(() {
@@ -102,34 +101,9 @@ class _SubscriptionGuardState extends State<SubscriptionGuard> {
 
   @override
   Widget build(BuildContext context) {
-    return _buildBody();
-  }
-
-  Widget _buildBody() {
-    if (_isChecking) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(strokeWidth: 3),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                AppLocalizations.of(context)?.subscriptionCheckingStatus ?? 'Checking subscription...',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // If user has active subscription, show the main app
-    if (_hasActiveSubscription) {
+    // While checking, optimistically show the app. If the check fails, we'll
+    // swap to the subscription screen once the result arrives.
+    if (_isChecking || _hasActiveSubscription) {
       return widget.child;
     }
 
