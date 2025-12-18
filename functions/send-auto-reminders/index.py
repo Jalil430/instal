@@ -12,6 +12,17 @@ from typing import Dict, Any, List, Optional, Tuple
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,X-API-Key,Authorization'
+}
+
+def _cors(resp):
+    headers = resp.get('headers', {})
+    return {**resp, 'headers': {**DEFAULT_CORS_HEADERS, **headers}}
+
+
 class WhatsAppError(Exception):
     """Custom exception for WhatsApp-related errors"""
     def __init__(self, message: str, error_code: Optional[str] = None, retryable: bool = False):
@@ -607,6 +618,9 @@ def handler(event, context):
     Yandex Cloud Function handler for automatic WhatsApp reminders
     This function is triggered by a timer (cron job) to send automatic reminders
     """
+    if event.get('httpMethod') == 'OPTIONS':
+        return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
+
     try:
         logger.info("Starting automatic WhatsApp reminders processing")
         

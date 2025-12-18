@@ -11,6 +11,17 @@ from datetime import datetime, date
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,X-API-Key,Authorization'
+}
+
+def _cors(resp):
+    headers = resp.get('headers', {})
+    return {**resp, 'headers': {**DEFAULT_CORS_HEADERS, **headers}}
+
+
 class JWTAuth:
     """Handles JWT token authentication and validation"""
     
@@ -83,6 +94,9 @@ class JWTAuth:
             return None, "Authentication error"
 
 def handler(event, context):
+    if event.get('httpMethod') == 'OPTIONS':
+        return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
+
     try:
         # Handle CORS preflight requests
         if event.get('httpMethod') == 'OPTIONS':

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/cache_service.dart';
 import '../models/client_model.dart';
@@ -17,11 +19,13 @@ class ClientRemoteDataSourceImpl implements ClientRemoteDataSource {
 
   @override
   Future<List<ClientModel>> getAllClients(String userId) async {
-    // Check cache first
+    // Check cache first (skip on web to avoid stale in-memory cache across reloads)
     final cacheKey = CacheService.clientsKey(userId);
-    final cachedClients = _cache.get<List<ClientModel>>(cacheKey);
-    if (cachedClients != null) {
-      return cachedClients;
+    if (!kIsWeb) {
+      final cachedClients = _cache.get<List<ClientModel>>(cacheKey);
+      if (cachedClients != null) {
+        return cachedClients;
+      }
     }
 
     final response = await ApiClient.get('/clients?user_id=$userId&limit=50000&offset=0',

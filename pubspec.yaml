@@ -39,10 +39,12 @@ dependencies:
 
   # UI and Design
   flutter_svg: ^2.0.9
+  google_fonts: ^6.2.1
   
   # Database
   sqflite: ^2.4.2
   sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi_web: ^0.4.5
   path: ^1.9.1
   
   # State Management
@@ -124,19 +126,6 @@ flutter:
   # Assets
   assets:
     - assets/icons/
-
-  # Fonts
-  fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Inter-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Inter-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Inter-Bold.ttf
-          weight: 700
 
 # App icons generator configuration
 icons_launcher:

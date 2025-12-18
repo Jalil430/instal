@@ -1,7 +1,8 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:path/path.dart';
-import 'dart:io' show Platform;
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -16,7 +17,20 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    if (Platform.isWindows) {
+    if (kIsWeb) {
+      // Web: use sqflite_common_ffi_web with a simple file name
+      databaseFactory = databaseFactoryFfiWeb;
+      return databaseFactory.openDatabase(
+        filePath,
+        options: OpenDatabaseOptions(
+          version: 5, // Bump: remove investors + investor_id
+          onCreate: _createDB,
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.windows) {
       // Initialize FFI for Windows desktop
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;

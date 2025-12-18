@@ -6,12 +6,38 @@ info:
 security:
   - bearerAuth: []
 x-yc-apigateway-cors:
-  allowOrigin: "*"
-  allowMethods: "GET,POST,PUT,DELETE,OPTIONS"
-  allowHeaders: "Content-Type,Authorization,X-API-Key"
-  maxAge: "600"
+  origin:
+    - http://localhost:59222
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://localhost:4200
+    - https://jalil430.github.io
+    - https://qistpay.app
+  methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  headers:
+    - Content-Type
+    - X-API-Key
+    - Authorization
+  maxAge: "86400"
 paths:
   /clients:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e607k429lt9lqo0dkj
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Create a new client
       operationId: create-client
@@ -30,6 +56,18 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         timeout: 30
   /clients/search:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e46icm3kuqf5mshnbq
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     get:
       summary: Search for clients
       operationId: search-clients
@@ -40,6 +78,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /clients/{id}:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8b3od95f0h2fiernq
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -74,6 +124,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /investors:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ej2auh8nuqd4ug07b4
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Create a new investor
       operationId: create-investor
@@ -90,6 +152,18 @@ paths:
         function_id: d4e30o3lml4ur152tei1
         service_account_id: ajevsnimu8g62t29vlad
   /investors/search:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4edkrcgp4spbhlhoirn
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     get:
       summary: Search for investors
       operationId: search-investors
@@ -99,6 +173,18 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /investors/{id}:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8b3od95f0h2fiernq
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -114,6 +200,18 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /wallets:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4es4rs5t9appi6q5p0d
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Create a new wallet
       operationId: create-wallet
@@ -141,6 +239,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e91fateph6r1msg096
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -175,6 +285,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/balance:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e14cmjjbkaah5f00mm
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -191,6 +313,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/balances:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ekhnheg9jntl1go6gg
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     get:
       summary: List wallet balances for current user
       operationId: list-wallet-balances
@@ -201,6 +335,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/top-up:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eacss6qhh0o9etq3kc
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -217,6 +363,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/withdraw:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ekafudn8iu0jmll4v6
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -233,6 +391,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/archive:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eh92ksggk6b1hj8rlt
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -249,6 +419,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /wallets/{id}/ledger:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e9uc7dn0rk9lcbu6a0
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -296,6 +478,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /installments:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ejin4kah34cvt6mbt8
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Create a new installment
       operationId: create-installment
@@ -346,6 +540,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /installments/{id}:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4etn874nnro96omhmdk
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -380,6 +586,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /installment-payments/{id}:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ec86pvqoqla7ck2qv7
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     parameters:
       - name: id
         in: path
@@ -396,6 +614,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /analytics-optimized:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8s7pip0ssrbj54dcm
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     get:
       summary: Get optimized analytics data
       operationId: analytics-optimized
@@ -408,6 +638,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /auth/register:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e4t4mv875gkg24at8a
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Register a new user
       operationId: auth-register
@@ -420,6 +662,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /auth/login:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8jcns4qe2bkvh7rvv
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Login user
       operationId: auth-login
@@ -432,6 +686,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /auth/refresh:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4evah37mne0rubchbl8
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Refresh access token
       operationId: auth-refresh
@@ -444,6 +710,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /auth/verify:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ebrg3ucrog7lqe4egr
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Verify JWT token
       operationId: auth-verify
@@ -456,6 +734,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /auth/user:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eni47g77jfmhonbhde
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     get:
       summary: Get current user information
       operationId: auth-get-user
@@ -479,6 +769,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /whatsapp/settings:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eu4h1irj55no6jt4jn
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     get:
       summary: Get WhatsApp reminder settings
       description: Retrieve current WhatsApp reminder settings for the authenticated user
@@ -534,6 +836,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /whatsapp/test-connection:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e9f146f73o17mdfg5k
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Test WhatsApp API connection
       description: Test connection to Green API with provided or stored credentials
@@ -566,6 +880,18 @@ paths:
         timeout: 30
         payload_format_version: '1.0'
   /whatsapp/send-manual-reminder:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea495odfsc1cvltug4
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Send manual WhatsApp reminders
       description: Send WhatsApp reminders to specific installments manually
@@ -597,6 +923,18 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /subscription/validate-code:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eut8n056onak8o4uit
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Validate and activate subscription code
       description: Validates a subscription code and activates it for the user
@@ -632,6 +970,18 @@ paths:
         service_account_id: ajevsnimu8g62t29vlad
         payload_format_version: '1.0'
   /subscription/status:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e8pkgusps8fmc76klv
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
     post:
       summary: Check subscription status
       description: Check the current subscription status for a user

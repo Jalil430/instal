@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Colors
@@ -129,6 +130,7 @@ class AppTheme {
   
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
+    fontFamily: GoogleFonts.inter().fontFamily,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryColor,
       primary: primaryColor,
@@ -138,16 +140,15 @@ class AppTheme {
       error: errorColor,
     ),
     scaffoldBackgroundColor: backgroundColor,
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: surfaceColor,
       elevation: 0,
       centerTitle: false,
-      iconTheme: IconThemeData(color: textPrimary),
-      titleTextStyle: TextStyle(
+      iconTheme: const IconThemeData(color: textPrimary),
+      titleTextStyle: GoogleFonts.inter(
         color: textPrimary,
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        fontFamily: 'Inter',
       ),
     ),
     cardTheme: CardThemeData(
@@ -167,10 +168,9 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadiusMedium),
         ),
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.inter(
           fontSize: fontSizeLarge,
           fontWeight: fontWeightMedium,
-          fontFamily: 'Inter',
         ),
       ),
     ),
@@ -182,10 +182,9 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadiusMedium),
         ),
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.inter(
           fontSize: fontSizeLarge,
           fontWeight: fontWeightMedium,
-          fontFamily: 'Inter',
         ),
       ),
     ),
@@ -215,79 +214,69 @@ class AppTheme {
       color: dividerColor,
       thickness: 1,
     ),
-    textTheme: const TextTheme(
-      headlineLarge: TextStyle(
-        fontSize: 32,
-        fontWeight: fontWeightSemiBold,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: fontWeightSemiBold,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      headlineSmall: TextStyle(
-        fontSize: 20,
-        fontWeight: fontWeightSemiBold,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      titleLarge: TextStyle(
-        fontSize: 18,
-        fontWeight: fontWeightSemiBold,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      titleMedium: TextStyle(
-        fontSize: fontSizeLarge,
-        fontWeight: fontWeightMedium,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      titleSmall: TextStyle(
-        fontSize: fontSizeMedium,
-        fontWeight: fontWeightMedium,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      bodyLarge: TextStyle(
-        fontSize: fontSizeLarge,
-        fontWeight: fontWeightRegular,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      bodyMedium: TextStyle(
-        fontSize: fontSizeMedium,
-        fontWeight: fontWeightRegular,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      bodySmall: TextStyle(
-        fontSize: fontSizeSmall,
-        fontWeight: fontWeightRegular,
-        color: textSecondary,
-        fontFamily: 'Inter',
-      ),
-      labelLarge: TextStyle(
-        fontSize: fontSizeMedium,
-        fontWeight: fontWeightMedium,
-        color: textPrimary,
-        fontFamily: 'Inter',
-      ),
-      labelMedium: TextStyle(
-        fontSize: fontSizeSmall,
-        fontWeight: fontWeightMedium,
-        color: textSecondary,
-        fontFamily: 'Inter',
-      ),
-      labelSmall: TextStyle(
-        fontSize: 11,
-        fontWeight: fontWeightMedium,
-        color: textSecondary,
-        fontFamily: 'Inter',
+    textTheme: GoogleFonts.interTextTheme(
+      const TextTheme(
+        headlineLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: fontWeightSemiBold,
+          color: textPrimary,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: fontWeightSemiBold,
+          color: textPrimary,
+        ),
+        headlineSmall: TextStyle(
+          fontSize: 20,
+          fontWeight: fontWeightSemiBold,
+          color: textPrimary,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 18,
+          fontWeight: fontWeightSemiBold,
+          color: textPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: fontSizeLarge,
+          fontWeight: fontWeightMedium,
+          color: textPrimary,
+        ),
+        titleSmall: TextStyle(
+          fontSize: fontSizeMedium,
+          fontWeight: fontWeightMedium,
+          color: textPrimary,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: fontSizeLarge,
+          fontWeight: fontWeightRegular,
+          color: textPrimary,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: fontSizeMedium,
+          fontWeight: fontWeightRegular,
+          color: textPrimary,
+        ),
+        bodySmall: TextStyle(
+          fontSize: fontSizeSmall,
+          fontWeight: fontWeightRegular,
+          color: textSecondary,
+        ),
+        labelLarge: TextStyle(
+          fontSize: fontSizeMedium,
+          fontWeight: fontWeightMedium,
+          color: textPrimary,
+        ),
+        labelMedium: TextStyle(
+          fontSize: fontSizeSmall,
+          fontWeight: fontWeightMedium,
+          color: textSecondary,
+        ),
+        labelSmall: TextStyle(
+          fontSize: 11,
+          fontWeight: fontWeightMedium,
+          color: textSecondary,
+        ),
       ),
     ),
   );
-} 
+}

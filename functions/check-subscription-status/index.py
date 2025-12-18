@@ -10,6 +10,17 @@ from typing import Optional, Tuple
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,X-API-Key,Authorization'
+}
+
+def _cors(resp):
+    headers = resp.get('headers', {})
+    return {**resp, 'headers': {**DEFAULT_CORS_HEADERS, **headers}}
+
+
 # YDB connection configuration
 YDB_ENDPOINT = os.environ.get('YDB_ENDPOINT')
 YDB_DATABASE = os.environ.get('YDB_DATABASE')
@@ -123,6 +134,9 @@ def handler(event, context):
     }
     """
     
+    if event.get('httpMethod') == 'OPTIONS':
+        return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
+
     try:
         # Authenticate request using JWTAuth class
         user_id_from_token, auth_error = JWTAuth.authenticate_request(event)

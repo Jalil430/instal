@@ -12,6 +12,17 @@ from typing import Optional
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,X-API-Key,Authorization'
+}
+
+def _cors(resp):
+    headers = resp.get('headers', {})
+    return {**resp, 'headers': {**DEFAULT_CORS_HEADERS, **headers}}
+
+
 class JWTAuth:
     """Handles JWT token authentication and validation"""
     
@@ -104,6 +115,9 @@ def handler(event, context):
     """
     Yandex Cloud Function to retrieve an investor by ID.
     """
+    if event.get('httpMethod') == 'OPTIONS':
+        return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
+
     try:
         logger.info(f"Received GET request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")
         

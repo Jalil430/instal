@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 /// Service to monitor network connectivity
 class ConnectivityService {
@@ -60,10 +60,10 @@ class ConnectivityService {
     }
 
     try {
-      final result = await InternetAddress.lookup('google.com');
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
-      return false;
+      final response = await http
+          .get(Uri.parse('https://www.google.com'))
+          .timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
     } catch (_) {
       return false;
     }

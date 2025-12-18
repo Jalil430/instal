@@ -1,6 +1,6 @@
-import 'dart:io' show Platform;
-
 import 'package:auto_updater/auto_updater.dart' as au;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
 class UpdateService {
   static bool _initialized = false;
@@ -14,12 +14,19 @@ class UpdateService {
   }) async {
     if (_initialized) return;
 
-    // Only support macOS and Windows for now
-    if (!Platform.isMacOS && !Platform.isWindows) {
+    if (kIsWeb) {
+      // Auto-updater not available on web
       return;
     }
 
-    final String feedUrl = Platform.isMacOS ? macOsFeedUrl : windowsFeedUrl;
+    // Only support macOS and Windows for now
+    final isMac = defaultTargetPlatform == TargetPlatform.macOS;
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
+    if (!isMac && !isWindows) {
+      return;
+    }
+
+    final String feedUrl = isMac ? macOsFeedUrl : windowsFeedUrl;
 
     if (feedUrl.isEmpty) return;
 
@@ -41,5 +48,4 @@ class UpdateService {
   }
 
 }
-
 

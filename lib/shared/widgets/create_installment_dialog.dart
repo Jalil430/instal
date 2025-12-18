@@ -26,6 +26,8 @@ import 'custom_button.dart';
 import 'custom_dropdown.dart';
 import 'keyboard_navigable_dropdown.dart';
 import 'create_edit_client_dialog.dart';
+import '../../core/api/cache_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class CreateInstallmentDialog extends StatefulWidget {
   final VoidCallback? onSuccess;
@@ -164,6 +166,10 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     setState(() => _isLoadingData = true);
     
     try {
+      // On web, clear any stale in-memory cache to force fresh fetches
+      if (kIsWeb) {
+        CacheService().clear();
+      }
       print('🔐 Getting auth service...');
       final authService = AuthServiceProvider.of(context);
       final currentUser = await authService.getCurrentUser();
@@ -240,7 +246,15 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     } catch (e) {
       print('❌ Error loading data: $e');
       setState(() => _isLoadingData = false);
-      // Note: Can't show SnackBar here as context might not be ready
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)?.unexpectedError ?? 'Failed to load clients/wallets. Please refresh.'),
+            backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

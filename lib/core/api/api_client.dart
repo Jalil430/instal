@@ -32,7 +32,6 @@ class ApiClient {
     
     final headers = <String, String>{
       'Content-Type': 'application/json',
-      'Connection': 'keep-alive',
     };
     
     if (isApiKeyEndpoint) {

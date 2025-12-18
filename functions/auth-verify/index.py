@@ -10,6 +10,17 @@ from typing import Dict, Any, Optional
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,X-API-Key,Authorization'
+}
+
+def _cors(resp):
+    headers = resp.get('headers', {})
+    return {**resp, 'headers': {**DEFAULT_CORS_HEADERS, **headers}}
+
+
 class ApiKeyAuth:
     """Handles API key authentication"""
     
@@ -64,6 +75,9 @@ def handler(event, context):
     Yandex Cloud Function handler to verify JWT tokens.
     This function is used by other services to validate user authentication.
     """
+    if event.get('httpMethod') == 'OPTIONS':
+        return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
+
     try:
         # Log request (without sensitive data)
         logger.info(f"Token verification request from IP: {event.get('headers', {}).get('x-forwarded-for', 'unknown')}")

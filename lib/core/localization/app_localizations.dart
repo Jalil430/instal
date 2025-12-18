@@ -70,6 +70,10 @@ class AppLocalizations {
   String get noData => locale.languageCode == 'ru' ? 'Нет данных' : 'No data';
   String get selectDate =>
       locale.languageCode == 'ru' ? 'Выберите дату' : 'Select Date';
+  String get unexpectedError =>
+      locale.languageCode == 'ru'
+          ? 'Произошла ошибка. Пожалуйста, повторите попытку.'
+          : 'An error occurred. Please try again.';
   String pressEnterToCreate(String name) =>
       locale.languageCode == 'ru'
           ? 'Нажмите Enter, чтобы создать "$name"'

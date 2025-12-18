@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../../../core/api/api_client.dart' as api;
 import '../../../../core/api/cache_service.dart';
 import '../../domain/entities/wallet.dart';
@@ -20,9 +22,11 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
   Future<List<WalletModel>> getAllWallets(String userId) async {
     try {
       final cacheKey = CacheService.walletsKey(userId);
-      final cached = _cache.get<List<WalletModel>>(cacheKey);
-      if (cached != null) {
-        return cached;
+      if (!kIsWeb) {
+        final cached = _cache.get<List<WalletModel>>(cacheKey);
+        if (cached != null) {
+          return cached;
+        }
       }
 
       final response = await api.ApiClient.get('/wallets');
@@ -218,9 +222,11 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
   Future<List<WalletBalanceModel>> getAllWalletBalances(String userId) async {
     try {
       final cacheKey = CacheService.walletBalancesKey(userId);
-      final cached = _cache.get<List<WalletBalanceModel>>(cacheKey);
-      if (cached != null) {
-        return cached;
+      if (!kIsWeb) {
+        final cached = _cache.get<List<WalletBalanceModel>>(cacheKey);
+        if (cached != null) {
+          return cached;
+        }
       }
 
       // Try dedicated balances endpoint first
