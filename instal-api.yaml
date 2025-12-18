@@ -12,7 +12,8 @@ x-yc-apigateway-cors:
     - http://localhost:5173
     - http://localhost:4200
     - https://jalil430.github.io
-    - https://qistpay.app
+    - https://finpay-crm.site
+    - https://web.finpay-crm.site
   methods:
     - GET
     - POST
