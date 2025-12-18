@@ -776,7 +776,7 @@ class WalletDetailsScreenMobile extends StatelessWidget {
 
   Widget _buildMobileInstallmentItem(BuildContext context, Installment installment) {
     return InkWell(
-      onTap: () => context.go('/installments/details', extra: installment.id),
+      onTap: () => context.go('/installments/${installment.id}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
         padding: const EdgeInsets.all(AppTheme.spacingMd),

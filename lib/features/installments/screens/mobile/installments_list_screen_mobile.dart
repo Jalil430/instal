@@ -317,7 +317,7 @@ class InstallmentsListScreenMobile extends StatelessWidget {
             () =>
                 state.isSelectionMode
                     ? state.toggleSelection(installment.id)
-                    : context.go('/installments/details', extra: installment.id),
+                    : context.go('/installments/${installment.id}'),
         onLongPress: () => state.toggleSelection(installment.id),
         borderRadius: BorderRadius.circular(12),
         child: Padding(

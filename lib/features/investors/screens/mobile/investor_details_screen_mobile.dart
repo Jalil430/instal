@@ -199,7 +199,7 @@ class InvestorDetailsScreenMobile extends StatelessWidget {
   Widget _buildMobileInstallmentItem(BuildContext context, Installment installment) {
     // In mobile, we show installment details in a card with a vertical layout
     return InkWell(
-      onTap: () => context.go('/installments/details', extra: installment.id),
+      onTap: () => context.go('/installments/${installment.id}'),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
