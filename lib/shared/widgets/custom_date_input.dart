@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -292,10 +293,12 @@ class _CustomDateInputState extends State<CustomDateInput> {
           },
           onTap: () {
             if (_selectedOnFocus) {
-              // First tap after focus: clear the select-all flag and let the tap place the cursor
               _selectedOnFocus = false;
+              if (kIsWeb) {
+                // On web, the native input moves the caret after focus; reapply select-all post-tap.
+                Future.microtask(_selectAll);
+              }
             }
-            // Subsequent taps behave normally (no forced select-all)
           },
         ),
       ],
