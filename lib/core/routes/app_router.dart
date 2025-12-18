@@ -61,10 +61,17 @@ class AppRouter {
         ),
       ),
       GoRoute(
-        path: '/installments/:id',
+        path: '/installments/details',
         name: 'installment-details',
+        redirect: (context, state) {
+          final id = state.extra as String?;
+          if (id == null || id.isEmpty) {
+            return '/installments';
+          }
+          return null;
+        },
         pageBuilder: (context, state) {
-          final id = state.pathParameters['id']!;
+          final id = state.extra as String;
           return MaterialPage(
             child: AuthGuard(
               child: SubscriptionGuard(

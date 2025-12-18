@@ -10,9 +10,12 @@ import 'features/auth/presentation/widgets/auth_service_provider.dart';
 import 'features/subscription/presentation/widgets/subscription_service_provider.dart';
 import 'features/subscription/presentation/providers/subscription_provider.dart';
 import 'core/services/update_service.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Use clean URLs on web (no # fragments)
+  setUrlStrategy(PathUrlStrategy());
   
   // Initialize database
   await DatabaseHelper.instance.database;

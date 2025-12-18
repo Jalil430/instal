@@ -246,7 +246,7 @@ class InvestorDetailsScreenDesktop extends StatelessWidget {
 
   Widget _buildInstallmentListItem(BuildContext context, Installment installment) {
     return InkWell(
-      onTap: () => context.go('/installments/${installment.id}'),
+      onTap: () => context.go('/installments/details', extra: installment.id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
