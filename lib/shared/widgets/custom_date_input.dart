@@ -17,6 +17,10 @@ class CustomDateInput extends StatefulWidget {
   final Locale? locale;
   final String placeholder;
   final ValueChanged<bool>? onValidityChanged;
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
+  final TextInputAction? textInputAction;
+  final VoidCallback? onSubmitted;
 
   CustomDateInput({
     super.key,
@@ -29,6 +33,10 @@ class CustomDateInput extends StatefulWidget {
     this.locale,
     this.placeholder = '',
     this.onValidityChanged,
+    this.focusNode,
+    this.nextFocusNode,
+    this.textInputAction,
+    this.onSubmitted,
   })  : firstDate = firstDate ?? DateTime(2020),
         lastDate = lastDate ?? DateTime(2030);
 
@@ -39,6 +47,7 @@ class CustomDateInput extends StatefulWidget {
 class _CustomDateInputState extends State<CustomDateInput> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
+  late final bool _ownsFocusNode;
   final DateFormat _format = DateFormat('dd.MM.yyyy');
   bool _isFormatting = false;
   bool _hasError = false;
@@ -49,7 +58,8 @@ class _CustomDateInputState extends State<CustomDateInput> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: _formatValue(widget.value));
-    _focusNode = FocusNode();
+    _ownsFocusNode = widget.focusNode == null;
+    _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_handleFocusChange);
     _controller.addListener(_handleTextChange);
   }
@@ -71,7 +81,9 @@ class _CustomDateInputState extends State<CustomDateInput> {
     _controller.removeListener(_handleTextChange);
     _focusNode.removeListener(_handleFocusChange);
     _controller.dispose();
-    _focusNode.dispose();
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
     super.dispose();
   }
 
@@ -161,8 +173,8 @@ class _CustomDateInputState extends State<CustomDateInput> {
 
   String? _validateInput(String input) {
     final digits = input.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return null; // blank allowed
-    if (digits.length < 8) return null; // allow partial typing
+    if (digits.isEmpty) return _localizedError(); // empty not allowed
+    if (digits.length < 8) return _localizedError(); // require full date
 
     final date = _buildDate(digits);
     if (date == null) return _localizedError();
@@ -242,6 +254,11 @@ class _CustomDateInputState extends State<CustomDateInput> {
           focusNode: _focusNode,
           enabled: widget.enabled,
           keyboardType: TextInputType.datetime,
+          textInputAction:
+              widget.textInputAction ??
+              (widget.nextFocusNode != null
+                  ? TextInputAction.next
+                  : TextInputAction.done),
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           style: const TextStyle(fontSize: 16),
           decoration: InputDecoration(
@@ -290,6 +307,11 @@ class _CustomDateInputState extends State<CustomDateInput> {
           },
           onFieldSubmitted: (_) {
             _handleTextChange();
+            if (widget.onSubmitted != null) {
+              widget.onSubmitted!.call();
+            } else {
+              widget.nextFocusNode?.requestFocus();
+            }
           },
           onTap: () {
             if (_selectedOnFocus) {

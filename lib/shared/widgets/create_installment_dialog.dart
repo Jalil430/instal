@@ -66,6 +66,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   final _downPaymentFocus = FocusNode();
   final _monthlyPaymentFocus = FocusNode();
   final _installmentNumberFocus = FocusNode();
+  final _buyingDateFocus = FocusNode();
+  final _installmentStartDateFocus = FocusNode();
 
   // Form values
   Client? _selectedClient;
@@ -81,6 +83,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   bool _isSaving = false;
   bool _isBuyingDateValid = true;
   bool _isStartDateValid = true;
+  bool _isUpdatingMonthlyPayment = false;
+  bool _isUpdatingInstallmentPrice = false;
   
   // Navigation state
   int _currentStep = 0; // 0: client, 1: wallet, 2: product name, etc.
@@ -109,6 +113,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       _installmentPriceController.addListener(_calculateMonthlyPayment);
       _termController.addListener(_calculateMonthlyPayment);
       _downPaymentController.addListener(_calculateMonthlyPayment);
+      _monthlyPaymentController.addListener(_updateInstallmentPriceFromMonthly);
     }
   }
 
@@ -303,6 +308,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   }
 
   void _calculateMonthlyPayment() {
+    if (_isUpdatingInstallmentPrice) return;
     final installmentPrice = double.tryParse(_installmentPriceController.text) ?? 0;
     final downPayment = double.tryParse(_downPaymentController.text) ?? 0;
     final term = int.tryParse(_termController.text) ?? 1;
@@ -315,13 +321,37 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       
       // Avoid division by zero if term is 1 and there's a down payment
       if (effectiveMonthlyPaymentCount <= 0) {
+        _isUpdatingMonthlyPayment = true;
         _monthlyPaymentController.text = '0';
+        _isUpdatingMonthlyPayment = false;
         return;
       }
       
       final monthlyPayment = remainingAmount / effectiveMonthlyPaymentCount;
+      _isUpdatingMonthlyPayment = true;
       _monthlyPaymentController.text = monthlyPayment.toStringAsFixed(0);
+      _isUpdatingMonthlyPayment = false;
     }
+  }
+
+  void _updateInstallmentPriceFromMonthly() {
+    if (_isUpdatingMonthlyPayment) return;
+    final monthlyPayment = double.tryParse(_monthlyPaymentController.text) ?? 0;
+    final downPayment = double.tryParse(_downPaymentController.text) ?? 0;
+    final term = int.tryParse(_termController.text) ?? 1;
+
+    if (monthlyPayment <= 0 || term <= 0) return;
+
+    final paymentCount = downPayment > 0 ? term - 1 : term;
+    if (paymentCount < 0) return;
+
+    final installmentPrice =
+        paymentCount == 0
+            ? downPayment
+            : (monthlyPayment * paymentCount) + (downPayment > 0 ? downPayment : 0);
+    _isUpdatingInstallmentPrice = true;
+    _installmentPriceController.text = installmentPrice.toStringAsFixed(0);
+    _isUpdatingInstallmentPrice = false;
   }
 
   @override
@@ -340,6 +370,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     _downPaymentFocus.dispose();
     _monthlyPaymentFocus.dispose();
     _installmentNumberFocus.dispose();
+    _buyingDateFocus.dispose();
+    _installmentStartDateFocus.dispose();
     super.dispose();
   }
 
@@ -531,6 +563,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         downPaymentFocus: _downPaymentFocus,
         monthlyPaymentFocus: _monthlyPaymentFocus,
         installmentNumberFocus: _installmentNumberFocus,
+        buyingDateFocus: _buyingDateFocus,
+        installmentStartDateFocus: _installmentStartDateFocus,
         buyingDate: _buyingDate,
         installmentStartDate: _installmentStartDate,
         isLoadingData: _isLoadingData,
@@ -586,6 +620,8 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         downPaymentFocus: _downPaymentFocus,
         monthlyPaymentFocus: _monthlyPaymentFocus,
         installmentNumberFocus: _installmentNumberFocus,
+        buyingDateFocus: _buyingDateFocus,
+        installmentStartDateFocus: _installmentStartDateFocus,
         buyingDate: _buyingDate,
         installmentStartDate: _installmentStartDate,
         isLoadingData: _isLoadingData,

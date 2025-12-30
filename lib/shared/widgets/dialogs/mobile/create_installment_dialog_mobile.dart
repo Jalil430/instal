@@ -31,6 +31,8 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
   final FocusNode monthlyPaymentFocus;
   final TextEditingController? installmentNumberController;
   final FocusNode? installmentNumberFocus;
+  final FocusNode buyingDateFocus;
+  final FocusNode installmentStartDateFocus;
   final DateTime? buyingDate;
   final DateTime? installmentStartDate;
   final bool isLoadingData;
@@ -74,6 +76,8 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
     required this.monthlyPaymentFocus,
     this.installmentNumberController,
     this.installmentNumberFocus,
+    required this.buyingDateFocus,
+    required this.installmentStartDateFocus,
     required this.buyingDate,
     required this.installmentStartDate,
     required this.isLoadingData,
@@ -225,27 +229,27 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         context: context,
                         controller: downPaymentController,
                         focusNode: downPaymentFocus,
+                        nextFocusNode: buyingDateFocus,
                         label: l10n?.downPaymentFull ?? 'Down Payment',
                         keyboardType: TextInputType.number,
                         suffix: '₽',
                         validator: (value) => _validateNumber(context, value, l10n?.enterValidDownPayment ?? 'Enter valid down payment', allowZero: true),
-                        isLast: true,
-                        onSubmit: onSave,
                         readOnly: isEditMode, // RESTRICTED - financial field
                       ),
                       const SizedBox(height: 16),
                       
                       // Monthly Payment (calculated)
-                      _buildTextField(
-                        context: context,
-                        controller: monthlyPaymentController,
-                        focusNode: monthlyPaymentFocus,
-                        label: l10n?.monthlyPayment ?? 'Monthly Payment',
-                        keyboardType: TextInputType.number,
-                        suffix: '₽',
-                        readOnly: true,
-                        validator: (value) => _validateNumber(context, value, l10n?.validateMonthlyPayment ?? 'Monthly payment must be greater than 0'),
-                      ),
+                    _buildTextField(
+                      context: context,
+                      controller: monthlyPaymentController,
+                      focusNode: monthlyPaymentFocus,
+                      nextFocusNode: buyingDateFocus,
+                      label: l10n?.monthlyPayment ?? 'Monthly Payment',
+                      keyboardType: TextInputType.number,
+                      suffix: '₽',
+                      readOnly: isEditMode,
+                      validator: (value) => _validateNumber(context, value, l10n?.validateMonthlyPayment ?? 'Monthly payment must be greater than 0'),
+                    ),
                       const SizedBox(height: 16),
                       
                       // Dates - stacked vertically on mobile - RESTRICTED in edit mode
@@ -254,6 +258,8 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         value: buyingDate,
                         onChanged: onBuyingDateChanged,
                         onValidityChanged: onBuyingDateValidityChanged,
+                        focusNode: buyingDateFocus,
+                        nextFocusNode: installmentStartDateFocus,
                         enabled: !isEditMode, // RESTRICTED - date field
                         firstDate: DateTime(2020),
                         lastDate: DateTime(2030),
@@ -266,6 +272,9 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         value: installmentStartDate,
                         onChanged: onInstallmentStartDateChanged,
                         onValidityChanged: onInstallmentStartDateValidityChanged,
+                        focusNode: installmentStartDateFocus,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: onSave,
                         enabled: !isEditMode, // RESTRICTED - date field
                         firstDate: DateTime(2020),
                         lastDate: DateTime(2030),
