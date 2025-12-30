@@ -22,12 +22,12 @@ class AppRouter {
       GoRoute(
         path: '/auth/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const SelectionArea(child: LoginScreen()),
       ),
       GoRoute(
         path: '/auth/register',
         name: 'register',
-        builder: (context, state) => const RegisterScreen(),
+        builder: (context, state) => const SelectionArea(child: RegisterScreen()),
       ),
       
       // Home route - redirect to installments

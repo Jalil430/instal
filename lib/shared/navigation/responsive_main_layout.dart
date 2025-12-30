@@ -20,9 +20,11 @@ class ResponsiveMainLayout extends StatefulWidget {
 class _ResponsiveMainLayoutState extends State<ResponsiveMainLayout> {
   @override
   Widget build(BuildContext context) {
-    return ResponsiveLayout(
-      mobile: _MobileMainLayout(child: widget.child),
-      desktop: MainLayout(child: widget.child),
+    return SelectionArea(
+      child: ResponsiveLayout(
+        mobile: _MobileMainLayout(child: widget.child),
+        desktop: MainLayout(child: widget.child),
+      ),
     );
   }
 }

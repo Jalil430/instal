@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/localization/app_localizations.dart';
+import 'core/utils/context_menu_blocker.dart';
 
 import 'shared/database/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  disableBrowserContextMenu();
   // Use clean URLs on web (no # fragments)
   setUrlStrategy(PathUrlStrategy());
   
@@ -93,13 +95,10 @@ class _InstalAppState extends State<InstalApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          builder: (context, child) {
-            // Pass setLocale down via InheritedWidget or directly if needed
-            return LocaleSetter(
-              setLocale: setLocale,
-              child: child!,
-            );
-          },
+          builder: (context, child) => LocaleSetter(
+            setLocale: setLocale,
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
       ),
     );

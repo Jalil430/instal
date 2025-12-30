@@ -64,6 +64,9 @@ class AnalyticsRepository {
         print(
           '--- ANALYTICS DEBUG: Total cash price value: ${data['installment_details']['total_cash_price']} ---',
         );
+        print(
+          '--- ANALYTICS DEBUG: Total overdue raw value: ${data['installment_details']['total_overdue']} ---',
+        );
       }
 
       final analyticsData = AnalyticsData(

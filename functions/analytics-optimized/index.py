@@ -280,6 +280,7 @@ def handler(event, context):
                 DECLARE $installment_ids AS List<Utf8>;
                 
                 SELECT 
+                    id,
                     installment_id,
                     expected_amount,
                     paid_date,
@@ -310,6 +311,7 @@ def handler(event, context):
                     for i, row in enumerate(rows):
                         try:
                             # Access fields safely
+                            payment_id = getattr(row, 'id', None)
                             installment_id = getattr(row, 'installment_id', None)
                             expected_amount = getattr(row, 'expected_amount', 0.0) or 0.0
                             paid_amount = getattr(row, 'paid_amount', None)
@@ -328,6 +330,7 @@ def handler(event, context):
                             due_date = convert_date(due_date_raw)
                             
                             scheduled_payments.append({
+                                'payment_id': payment_id,
                                 'installment_id': installment_id,
                                 'expected_amount': float(expected_amount),
                                 'due_date': due_date,
@@ -339,9 +342,11 @@ def handler(event, context):
                             
                             if paid_date and installment_id and is_paid:
                                 payment = {
+                                    'payment_id': payment_id,
                                     'installment_id': installment_id,
                                     'paid_amount': float(paid_amount) if paid_amount is not None else float(expected_amount),
-                                    'payment_date': paid_date
+                                    'payment_date': paid_date,
+                                    'payment_number': payment_number
                                 }
                                 paid_payments.append(payment)
                                 logger.info(f"Processed payment: {payment['paid_amount']} on {payment['payment_date']}")
@@ -447,6 +452,8 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
             if due_date < today:
                 scheduled_total_overdue += float(payment.get('expected_amount', 0.0) or 0.0)
         logger.info(f"Calculated overdue total from schedule: {scheduled_total_overdue}")
+    else:
+        logger.info("No scheduled_payments provided for overdue calculation")
     
     # Weekly sales arrays (Monday=0, Tuesday=1, ..., Sunday=6)
     current_week_sales = [0.0] * 7
@@ -626,7 +633,14 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
         formatted_percentage_change = percentage_change
     
     profit_analytics = calculate_profit_analytics(installments, scheduled_payments, paid_payments, today)
-    
+
+    logger.info(
+        "Overdue totals: scheduled_total_overdue=%s fallback_total_overdue=%s final_total_overdue=%s",
+        scheduled_total_overdue,
+        fallback_total_overdue,
+        scheduled_total_overdue if scheduled_total_overdue is not None else fallback_total_overdue,
+    )
+
     return {
         'key_metrics': {
             'total_revenue': total_revenue,
@@ -725,6 +739,23 @@ def calculate_profit_analytics(installments, scheduled_payments, paid_payments, 
         bucket = metric['months'].setdefault(key, empty_bucket())
         return bucket, normalized
 
+    def paid_dedupe_key(payment, normalized_paid, amount):
+        payment_id = payment.get('payment_id')
+        if payment_id:
+            return (payment_id,)
+        payment_number = payment.get('payment_number')
+        if payment_number is not None:
+            return (
+                payment.get('installment_id'),
+                payment_number,
+                normalized_paid.isoformat(),
+            )
+        return (
+            payment.get('installment_id'),
+            normalized_paid.isoformat(),
+            float(amount),
+        )
+
     for payment in scheduled_payments or []:
         installment_id = payment.get('installment_id')
         inst = installment_lookup.get(installment_id)
@@ -774,7 +805,7 @@ def calculate_profit_analytics(installments, scheduled_payments, paid_payments, 
                 if bucket_tuple:
                     bucket, normalized_paid = bucket_tuple
                     paid_amount_normalized = (paid_base_amount or 0.0) * ratio
-                    key = (installment_id, normalized_paid.isoformat(), float(paid_amount_normalized))
+                    key = paid_dedupe_key(payment, normalized_paid, paid_amount_normalized)
                     seen_paid_keys = metrics[metric_name]['seen_paid_keys']
                     if key in seen_paid_keys:
                         continue
@@ -810,7 +841,7 @@ def calculate_profit_analytics(installments, scheduled_payments, paid_payments, 
                 continue
             bucket, normalized_paid = bucket_tuple
 
-            key = (installment_id, normalized_paid.isoformat(), float(paid_amount))
+            key = paid_dedupe_key(payment, normalized_paid, paid_amount)
             seen_paid_keys = metrics[metric_name]['seen_paid_keys']
             if key in seen_paid_keys:
                 continue

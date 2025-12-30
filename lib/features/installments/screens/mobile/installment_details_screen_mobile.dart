@@ -370,7 +370,9 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            currencyFormat.format(installment.monthlyPayment),
+                                            currencyFormat.format(
+                                              isPaid ? payment.paidAmount : payment.expectedAmount,
+                                            ),
                                             style: TextStyle(
                                               fontWeight: FontWeight.w500,
                                               fontSize: 16,
@@ -604,7 +606,9 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          currencyFormat.format(installment.monthlyPayment),
+                          currencyFormat.format(
+                            futurePlaceholderPayment.expectedAmount,
+                          ),
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                             fontSize: 16,

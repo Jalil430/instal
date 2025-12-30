@@ -215,167 +215,24 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    // Skip installment number column to align with client name
-                    SizedBox(width: 54),
+                    // Keep the same structure used originally for both contexts
+                    const SizedBox(width: 54), // installment number placeholder
                     const SizedBox(width: 16),
-                    
-                    // Payment name - matches client name column
-                    Expanded(
-                      flex: 5,
-                      child: Text(
-                        widget.payment.paymentNumber == 0
-                            ? l10n?.downPayment ?? 'Первоначальный взнос'
-                            : '${l10n?.month ?? 'Месяц'} ${widget.payment.paymentNumber}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                    _buildPaymentCell(context, l10n), // payment name
                     const SizedBox(width: 16),
-                    
-                    // Dates - matches product name column
-                    Expanded(
-                      flex: 3,
-                      child: Row(
-                        children: [
-                          // Due date
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                dateFormat.format(widget.payment.dueDate),
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.textPrimary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                              ),
-                              Text(
-                                l10n?.dueDate ?? 'Срок оплаты',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 10,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          
-                          // Show paid date if available
-                          if (widget.payment.isPaid && widget.payment.paidDate != null) ...[
-                            Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              width: 1,
-                              height: 30,
-                              color: AppTheme.borderColor.withOpacity(0.3),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  dateFormat.format(widget.payment.paidDate!),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.successColor,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                ),
-                                Text(
-                                  l10n?.paid ?? 'Оплачено',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.successColor.withOpacity(0.7),
-                                        fontSize: 10,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    _buildDatesCell(context, l10n, dateFormat), // due/paid dates
                     const SizedBox(width: 16),
-                    
-                    // Empty space - matches total price column
-                    Expanded(
-                      flex: 2,
-                      child: Container(),
-                    ),
+                    _buildEmptySlot(flex: 2), // total price placeholder
                     const SizedBox(width: 16),
-                    
-                    // Empty space - matches paid amount column
-                    Expanded(
-                      flex: 2,
-                      child: Container(),
-                    ),
+                    _buildEmptySlot(flex: 2), // paid amount placeholder
                     const SizedBox(width: 16),
-                    
-                    // Empty space - matches left amount column
-                    Expanded(
-                      flex: 2,
-                      child: Container(),
-                    ),
+                    _buildEmptySlot(flex: 2), // remaining amount placeholder
                     const SizedBox(width: 16),
-                    
-                    // Amount - shows expected if not paid, paid if paid (matches due date column)
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        currencyFormat.format(
-                          widget.payment.isPaid 
-                              ? widget.payment.paidAmount 
-                              : widget.payment.expectedAmount
-                        ),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 14,
-                            ),
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
+                    _buildAmountCell(context, currencyFormat), // payment amount
                     const SizedBox(width: 16),
-                    
-                    // Status badge - matches status column (at the right)
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        alignment: Alignment.centerLeft,
-                        child: CustomStatusBadge(
-                          status: widget.payment.status,
-                        ),
-                      ),
-                    ),
-                    
-                    // Amount and action - matches expand arrow column
-                    Container(
-                      width: 44,
-                      child: Row(
-                        children: [
-                          const Spacer(),
-                          
-                          // Action indicator using CustomIconButton
-                          CustomIconButton(
-                            size: 28,
-                            icon: widget.payment.isPaid ? Icons.close_rounded : Icons.add_rounded,
-                            interactive: false, // Make it non-tappable
-                            forceHover: _isHovered, // Control hover from parent
-                            backgroundColor: AppTheme.backgroundColor,
-                            // Colors for hover state are still needed
-                            hoverBackgroundColor: widget.payment.isPaid 
-                                ? AppTheme.errorColor.withOpacity(0.1)
-                                : AppTheme.primaryColor.withOpacity(0.1),
-                            iconColor: AppTheme.textSecondary,
-                            hoverIconColor: widget.payment.isPaid 
-                                ? AppTheme.errorColor
-                                : AppTheme.primaryColor,
-                            borderColor: AppTheme.borderColor.withOpacity(0.5),
-                            hoverBorderColor: widget.payment.isPaid 
-                                ? AppTheme.errorColor.withOpacity(0.3)
-                                : AppTheme.primaryColor.withOpacity(0.3),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildStatusCell(),
+                    const SizedBox(width: 16),
+                    _buildActionCell(),
                   ],
                 ),
               ),
@@ -385,4 +242,140 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
       ),
     );
   }
-} 
+
+  Widget _buildPaymentCell(BuildContext context, AppLocalizations? l10n) {
+    return Expanded(
+      flex: 5,
+      child: Text(
+        widget.payment.paymentNumber == 0
+            ? l10n?.downPayment ?? 'Первоначальный взнос'
+            : '${l10n?.month ?? 'Месяц'} ${widget.payment.paymentNumber}',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _buildEmptySlot({required int flex}) => Expanded(flex: flex, child: const SizedBox());
+
+  Widget _buildDatesCell(
+    BuildContext context,
+    AppLocalizations? l10n,
+    DateFormat dateFormat, {
+    int flex = 3,
+    bool textAlignEnd = false,
+  }) {
+    return Expanded(
+      flex: flex,
+      child: Row(
+        mainAxisAlignment: textAlignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                dateFormat.format(widget.payment.dueDate),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+              ),
+              Text(
+                l10n?.dueDate ?? 'Срок оплаты',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontSize: 10,
+                    ),
+              ),
+            ],
+          ),
+          if (widget.payment.isPaid && widget.payment.paidDate != null) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              width: 1,
+              height: 30,
+              color: AppTheme.borderColor.withOpacity(0.3),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dateFormat.format(widget.payment.paidDate!),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.successColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                ),
+                Text(
+                  l10n?.paid ?? 'Оплачено',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.successColor.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountCell(BuildContext context, NumberFormat currencyFormat) {
+    return Expanded(
+      flex: 2,
+      child: Text(
+        currencyFormat.format(
+          widget.payment.isPaid ? widget.payment.paidAmount : widget.payment.expectedAmount,
+        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w400,
+              fontSize: 14,
+            ),
+        textAlign: TextAlign.start,
+      ),
+    );
+  }
+
+  Widget _buildStatusCell() {
+    return Expanded(
+      flex: 2,
+      child: Container(
+        alignment: Alignment.centerLeft,
+        child: CustomStatusBadge(
+          status: widget.payment.status,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionCell() {
+    return SizedBox(
+      width: 44,
+      child: Row(
+        children: [
+          const Spacer(),
+          CustomIconButton(
+            size: 28,
+            icon: widget.payment.isPaid ? Icons.close_rounded : Icons.add_rounded,
+            interactive: false,
+            forceHover: _isHovered,
+            backgroundColor: AppTheme.backgroundColor,
+            hoverBackgroundColor:
+                widget.payment.isPaid ? AppTheme.errorColor.withOpacity(0.1) : AppTheme.primaryColor.withOpacity(0.1),
+            iconColor: AppTheme.textSecondary,
+            hoverIconColor: widget.payment.isPaid ? AppTheme.errorColor : AppTheme.primaryColor,
+            borderColor: AppTheme.borderColor.withOpacity(0.5),
+            hoverBorderColor:
+                widget.payment.isPaid ? AppTheme.errorColor.withOpacity(0.3) : AppTheme.primaryColor.withOpacity(0.3),
+          ),
+        ],
+      ),
+    );
+  }
+}
