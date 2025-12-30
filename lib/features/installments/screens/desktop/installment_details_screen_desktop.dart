@@ -287,7 +287,6 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
             ),
           ),
-          const SizedBox(width: 16),
           const SizedBox(width: 44),
         ],
       ),
@@ -327,8 +326,10 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
           ),
           child: Row(
             children: [
+              const SizedBox(width: 54),
+              const SizedBox(width: 16),
               Expanded(
-                flex: 2,
+                flex: 5,
                 child: Text(
                   '${l10n?.paymentHeader ?? 'Платеж'} ${payments.length + i + 1}',
                   style: const TextStyle(
@@ -336,8 +337,9 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 16),
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: Text(
                   dateFormat.format(expectedDate),
                   style: const TextStyle(
@@ -345,6 +347,13 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 16),
+              const Expanded(flex: 2, child: SizedBox()),
+              const SizedBox(width: 16),
+              const Expanded(flex: 2, child: SizedBox()),
+              const SizedBox(width: 16),
+              const Expanded(flex: 2, child: SizedBox()),
+              const SizedBox(width: 16),
               Expanded(
                 flex: 2,
                 child: Text(
@@ -354,6 +363,7 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 16),
               Expanded(
                 flex: 2,
                 child: Row(
@@ -377,7 +387,7 @@ class InstallmentDetailsScreenDesktop extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 40), // Space for action button
+              const SizedBox(width: 44), // Space for action button
             ],
           ),
         ),

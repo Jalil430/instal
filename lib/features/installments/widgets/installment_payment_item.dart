@@ -231,7 +231,6 @@ class _InstallmentPaymentItemState extends State<InstallmentPaymentItem> with Si
                     _buildAmountCell(context, currencyFormat), // payment amount
                     const SizedBox(width: 16),
                     _buildStatusCell(),
-                    const SizedBox(width: 16),
                     _buildActionCell(),
                   ],
                 ),
