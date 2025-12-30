@@ -9,6 +9,7 @@ import 'presentation/widgets/whatsapp_setup_dialog.dart';
 import 'presentation/widgets/whatsapp_credentials_dialog.dart';
 import 'presentation/widgets/whatsapp_templates_dialog.dart';
 import '../../main.dart';
+import '../../core/services/term_mode_preferences.dart';
 import '../../core/localization/app_localizations.dart';
 import 'screens/desktop/settings_screen_desktop.dart';
 import 'screens/mobile/settings_screen_mobile.dart';
@@ -35,11 +36,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _template7Days = '';
   String _templateDueToday = '';
   String _templateManual = '';
+  bool _termIncludesDownPayment = false;
 
   @override
   void initState() {
     super.initState();
     _loadWhatsAppSettings();
+    _loadTermModeSetting();
   }
 
   @override
@@ -95,6 +98,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isWhatsAppEnabled = false;
         _isWhatsAppConfigured = false;
       });
+    }
+  }
+
+  Future<void> _loadTermModeSetting() async {
+    final storedValue =
+        await TermModePreferences.getTermIncludesDownPayment();
+    if (mounted) {
+      setState(() {
+        _termIncludesDownPayment = storedValue;
+      });
+    }
+  }
+
+  Future<void> _updateTermMode(bool includesDownPayment) async {
+    await TermModePreferences.setTermIncludesDownPayment(includesDownPayment);
+    if (mounted) {
+      setState(() {
+        _termIncludesDownPayment = includesDownPayment;
+      });
+      _showSuccessSnackBar(
+        includesDownPayment
+            ? (AppLocalizations.of(context)?.termModeIncludesDownPaymentSaved ??
+                'Term now includes down payment')
+            : (AppLocalizations.of(context)?.termModeExcludesDownPaymentSaved ??
+                'Term now excludes down payment'),
+      );
     }
   }
 
@@ -250,12 +279,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         selectedLanguage: _selectedLanguage,
         isWhatsAppConfigured: _isWhatsAppConfigured,
         isWhatsAppLoading: _isWhatsAppLoading,
+        termIncludesDownPayment: _termIncludesDownPayment,
         onEditProfilePressed: _showEditProfileDialog,
         onLogoutPressed: _logout,
         onLanguageChanged: _changeLanguage,
         onSetupPressed: _showSetupDialog,
         onCredentialsPressed: _showCredentialsDialog,
         onTemplatesPressed: _showTemplatesDialog,
+        onTermModeChanged: _updateTermMode,
       ),
       desktop: SettingsScreenDesktop(
         currentUser: _currentUser,
@@ -263,12 +294,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         selectedLanguage: _selectedLanguage,
         isWhatsAppConfigured: _isWhatsAppConfigured,
         isWhatsAppLoading: _isWhatsAppLoading,
+        termIncludesDownPayment: _termIncludesDownPayment,
         onEditProfilePressed: _showEditProfileDialog,
         onLogoutPressed: _logout,
         onLanguageChanged: _changeLanguage,
         onSetupPressed: _showSetupDialog,
         onCredentialsPressed: _showCredentialsDialog,
         onTemplatesPressed: _showTemplatesDialog,
+        onTermModeChanged: _updateTermMode,
       ),
     );
   }

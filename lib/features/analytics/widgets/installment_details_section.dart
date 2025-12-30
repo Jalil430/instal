@@ -46,14 +46,14 @@ class InstallmentDetailsSection extends StatelessWidget {
                         isCompact: isSmallScreen,
                       ),
                       DetailRow(
-                        label: l10n.totalInstallmentValue,
+                        label: 'Объём рассрочек',
                         value: currencyFormatter.format(
                           data.totalInstallmentValue,
                         ),
                         isCompact: isSmallScreen,
                       ),
                       DetailRow(
-                        label: l10n.totalCashPrice,
+                        label: 'Сумма закупок',
                         value: currencyFormatter.format(data.totalCashPrice),
                         isCompact: isSmallScreen,
                       ),

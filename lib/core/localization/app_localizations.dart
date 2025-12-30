@@ -181,16 +181,20 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Название товара' : 'Product Name';
   String get cashPrice =>
       locale.languageCode == 'ru' ? 'Цена за наличные' : 'Cash Price';
-  String get totalCashPrice =>
-      locale.languageCode == 'ru'
-          ? 'Общая цена за наличные'
-          : 'Total Cash Price';
   String get installmentPrice =>
       locale.languageCode == 'ru' ? 'Цена в рассрочку' : 'Installment Price';
   String get cost => locale.languageCode == 'ru' ? 'Стоимость' : 'Cost';
   String get term => locale.languageCode == 'ru' ? 'Срок' : 'Term';
   String get termMonths =>
       locale.languageCode == 'ru' ? 'Срок (месяцы)' : 'Term (months)';
+  String get termMonthsExcludingDownPayment =>
+      locale.languageCode == 'ru'
+          ? 'Срок (месяцы платежей)'
+          : 'Term (payment months)';
+  String get termMonthsIncludingDownPayment =>
+      locale.languageCode == 'ru'
+          ? 'Срок (включая взнос)'
+          : 'Term (incl. down payment)';
   String get installmentTermShort =>
       locale.languageCode == 'ru' ? 'До 6 мес.' : 'Up to 6 mo.';
   String get installmentTermMedium =>
@@ -205,6 +209,32 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Первоначальный взнос' : 'Down Payment';
   String get monthlyPayment =>
       locale.languageCode == 'ru' ? 'Ежемесячный платеж' : 'Monthly Payment';
+  String get paymentsLabel =>
+      locale.languageCode == 'ru' ? 'платежей' : 'payments';
+  String get installmentTermModeTitle =>
+      locale.languageCode == 'ru'
+          ? 'Режим срока рассрочки'
+          : 'Installment term mode';
+  String get termModeIncludesDownPayment =>
+      locale.languageCode == 'ru'
+          ? 'Срок включает взнос'
+          : 'Term includes down payment';
+  String get termModeExcludesDownPayment =>
+      locale.languageCode == 'ru'
+          ? 'Срок без учета взноса'
+          : 'Term excludes down payment';
+  String get installmentTermModeHelp =>
+      locale.languageCode == 'ru'
+          ? 'Определяет, входит ли взнос в количество месяцев срока.'
+          : 'Controls whether the down payment counts in the term months.';
+  String get termModeIncludesDownPaymentSaved =>
+      locale.languageCode == 'ru'
+          ? 'Срок теперь включает взнос'
+          : 'Term now includes down payment';
+  String get termModeExcludesDownPaymentSaved =>
+      locale.languageCode == 'ru'
+          ? 'Срок теперь без учета взноса'
+          : 'Term now excludes down payment';
   String get installmentNumber =>
       locale.languageCode == 'ru' ? 'Номер рассрочки' : 'Installment Number';
   String get buyingDate =>
@@ -875,10 +905,6 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Общий портфель' : 'Total Portfolio';
   String get totalOverdue =>
       locale.languageCode == 'ru' ? 'Общая просрочка' : 'Total Overdue';
-  String get totalInstallmentValue =>
-      locale.languageCode == 'ru'
-          ? 'Общий объем бизнеса'
-          : 'Total Business Volume';
   String get averagePerDay =>
       locale.languageCode == 'ru' ? 'В среднем за день' : 'Average per day';
   String get vsPreview28days =>

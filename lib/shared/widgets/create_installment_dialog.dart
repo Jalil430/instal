@@ -28,6 +28,7 @@ import 'keyboard_navigable_dropdown.dart';
 import 'create_edit_client_dialog.dart';
 import '../../core/api/cache_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../core/services/term_mode_preferences.dart';
 
 class CreateInstallmentDialog extends StatefulWidget {
   final VoidCallback? onSuccess;
@@ -85,6 +86,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
   bool _isStartDateValid = true;
   bool _isUpdatingMonthlyPayment = false;
   bool _isUpdatingInstallmentPrice = false;
+  bool _termIncludesDownPayment = false;
   
   // Navigation state
   int _currentStep = 0; // 0: client, 1: wallet, 2: product name, etc.
@@ -102,6 +104,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     print('🚀 CreateInstallmentDialog initState called');
     _initializeRepositories();
     _initializeDates();
+    _loadTermModeSetting();
     
     // Populate form fields if in edit mode
     if (isEditMode) {
@@ -151,6 +154,31 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
       final now = DateTime.now();
       _installmentStartDate = DateTime(now.year, now.month + 1, now.day);
     }
+  }
+
+  Future<void> _loadTermModeSetting() async {
+    final storedValue =
+        await TermModePreferences.getTermIncludesDownPayment();
+    if (!mounted) return;
+    setState(() {
+      _termIncludesDownPayment = storedValue;
+    });
+    if (!isEditMode) {
+      _calculateMonthlyPayment();
+    }
+  }
+
+  int _effectiveTermMonths(int termInput, double downPayment) {
+    if (!_termIncludesDownPayment && downPayment > 0) {
+      return termInput + 1;
+    }
+    return termInput;
+  }
+
+  int _monthlyPaymentsCount(int termInput, double downPayment) {
+    final effectiveTerm = _effectiveTermMonths(termInput, downPayment);
+    final count = downPayment > 0 ? effectiveTerm - 1 : effectiveTerm;
+    return count < 0 ? 0 : count;
   }
 
   void _populateFormFromInstallment() {
@@ -311,13 +339,12 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     if (_isUpdatingInstallmentPrice) return;
     final installmentPrice = double.tryParse(_installmentPriceController.text) ?? 0;
     final downPayment = double.tryParse(_downPaymentController.text) ?? 0;
-    final term = int.tryParse(_termController.text) ?? 1;
+    final termInput = int.tryParse(_termController.text) ?? 0;
     
-    if (installmentPrice > 0 && term > 0) {
+    if (installmentPrice > 0 && termInput > 0) {
       final remainingAmount = installmentPrice - downPayment;
-      
-      // Calculate monthly payments based on if there's a down payment
-      final effectiveMonthlyPaymentCount = downPayment > 0 ? term - 1 : term;
+      final effectiveMonthlyPaymentCount =
+          _monthlyPaymentsCount(termInput, downPayment);
       
       // Avoid division by zero if term is 1 and there's a down payment
       if (effectiveMonthlyPaymentCount <= 0) {
@@ -338,11 +365,11 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
     if (_isUpdatingMonthlyPayment) return;
     final monthlyPayment = double.tryParse(_monthlyPaymentController.text) ?? 0;
     final downPayment = double.tryParse(_downPaymentController.text) ?? 0;
-    final term = int.tryParse(_termController.text) ?? 1;
+    final termInput = int.tryParse(_termController.text) ?? 0;
 
-    if (monthlyPayment <= 0 || term <= 0) return;
+    if (monthlyPayment <= 0 || termInput <= 0) return;
 
-    final paymentCount = downPayment > 0 ? term - 1 : term;
+    final paymentCount = _monthlyPaymentsCount(termInput, downPayment);
     if (paymentCount < 0) return;
 
     final installmentPrice =
@@ -471,10 +498,11 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         // Create mode - create new installment
         // Calculate installment end date
         final startDate = _installmentStartDate!;
-        final term = int.parse(_termController.text);
+        final termInput = int.parse(_termController.text);
         final downPayment = double.parse(_downPaymentController.text);
+        final term = _effectiveTermMonths(termInput, downPayment);
         
-        final monthlyPaymentsCount = downPayment > 0 ? term - 1 : term;
+        final monthlyPaymentsCount = _monthlyPaymentsCount(termInput, downPayment);
         final monthsToAdd = monthlyPaymentsCount - 1;
         final endDate = DateTime(startDate.year, startDate.month + monthsToAdd, startDate.day);
         
@@ -556,6 +584,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         downPaymentController: _downPaymentController,
         monthlyPaymentController: _monthlyPaymentController,
         installmentNumberController: _installmentNumberController,
+        termIncludesDownPayment: _termIncludesDownPayment,
         productNameFocus: _productNameFocus,
         cashPriceFocus: _cashPriceFocus,
         installmentPriceFocus: _installmentPriceFocus,
@@ -613,6 +642,7 @@ class _CreateInstallmentDialogState extends State<CreateInstallmentDialog> {
         downPaymentController: _downPaymentController,
         monthlyPaymentController: _monthlyPaymentController,
         installmentNumberController: _installmentNumberController,
+        termIncludesDownPayment: _termIncludesDownPayment,
         productNameFocus: _productNameFocus,
         cashPriceFocus: _cashPriceFocus,
         installmentPriceFocus: _installmentPriceFocus,

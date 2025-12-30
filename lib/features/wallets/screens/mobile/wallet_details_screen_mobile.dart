@@ -7,6 +7,7 @@ import '../../../../shared/widgets/custom_icon_button.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_contextual_dialog.dart';
 import '../../../../core/utils/num_format.dart';
+import '../../../../shared/widgets/installment_term_text.dart';
 import '../../widgets/wallet_dialogs.dart';
 import '../../domain/entities/wallet.dart';
 import '../../domain/entities/wallet_balance.dart';
@@ -796,8 +797,11 @@ class WalletDetailsScreenMobile extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${stripTrailingZeroMoney(currencyFormat.format(installment.installmentPrice))} • ${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
+                  InstallmentTermText(
+                    installment: installment,
+                    prefix:
+                        '${stripTrailingZeroMoney(currencyFormat.format(installment.installmentPrice))} • ',
+                    suffix: ' ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
                     style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ],

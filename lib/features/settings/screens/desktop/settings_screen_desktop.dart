@@ -3,6 +3,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../shared/widgets/custom_toggle.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../presentation/widgets/whatsapp_integration_section.dart';
 import '../../../../core/services/update_service.dart';
@@ -13,12 +14,14 @@ class SettingsScreenDesktop extends StatelessWidget {
   final String selectedLanguage;
   final bool isWhatsAppConfigured;
   final bool isWhatsAppLoading;
+  final bool termIncludesDownPayment;
   final VoidCallback onEditProfilePressed;
   final VoidCallback onLogoutPressed;
   final Function(String) onLanguageChanged;
   final VoidCallback onSetupPressed;
   final VoidCallback onCredentialsPressed;
   final VoidCallback onTemplatesPressed;
+  final ValueChanged<bool> onTermModeChanged;
 
   const SettingsScreenDesktop({
     Key? key,
@@ -27,12 +30,14 @@ class SettingsScreenDesktop extends StatelessWidget {
     required this.selectedLanguage,
     required this.isWhatsAppConfigured,
     required this.isWhatsAppLoading,
+    required this.termIncludesDownPayment,
     required this.onEditProfilePressed,
     required this.onLogoutPressed,
     required this.onLanguageChanged,
     required this.onSetupPressed,
     required this.onCredentialsPressed,
     required this.onTemplatesPressed,
+    required this.onTermModeChanged,
   }) : super(key: key);
 
   @override
@@ -152,7 +157,47 @@ class SettingsScreenDesktop extends StatelessWidget {
                     width: 250,
                   ),
                   const SizedBox(height: 32),
-                  
+
+                  // Installment Term Section
+                  Text(
+                    l10n.installmentTermModeTitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.installmentTermModeHelp,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      CustomToggle<bool>(
+                        value: termIncludesDownPayment,
+                        options: [
+                          CustomToggleOption(
+                            value: false,
+                            label: l10n.termModeExcludesDownPayment,
+                          ),
+                          CustomToggleOption(
+                            value: true,
+                            label: l10n.termModeIncludesDownPayment,
+                          ),
+                        ],
+                        onChanged: onTermModeChanged,
+                        height: 36,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
                   // WhatsApp Integration Section
                   WhatsAppIntegrationSection(
                     isConfigured: isWhatsAppConfigured,

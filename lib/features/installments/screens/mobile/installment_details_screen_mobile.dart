@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/installment_term_text.dart';
 import '../../domain/entities/installment.dart';
 import '../../domain/entities/installment_payment.dart';
 import '../../../clients/domain/entities/client.dart';
@@ -143,7 +144,20 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
                   _buildInfoRow(l10n?.product ?? 'Название товара', installment.productName),
                   _buildInfoRow(l10n?.cashPrice ?? 'Цена за наличные', currencyFormat.format(installment.cashPrice)),
                   _buildInfoRow(l10n?.installmentPrice ?? 'Сумма рассрочки', currencyFormat.format(installment.installmentPrice)),
-                  _buildInfoRow(l10n?.term ?? 'Срок в месяцах', '${installment.termMonths} ${l10n?.monthsLabel ?? 'месяцев'}'),
+                  _buildInfoRowWidget(
+                    l10n?.term ?? 'Срок в месяцах',
+                    InstallmentTermText(
+                      installment: installment,
+                      suffix: ' ${l10n?.monthsLabel ?? 'месяцев'}',
+                      suffixWhenIncludesDownPayment:
+                          ' ${l10n?.paymentsLabel ?? 'платежей'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
                   _buildInfoRow(l10n?.downPaymentFull ?? 'Первоначальный взнос', currencyFormat.format(installment.downPayment)),
                   _buildInfoRow(l10n?.monthlyPayment ?? 'Ежемесячный платеж', currencyFormat.format(installment.monthlyPayment)),
                   _buildInfoRow(l10n?.buyingDate ?? 'Дата первого взноса', dateFormat.format(installment.downPaymentDate)),
@@ -685,6 +699,27 @@ class InstallmentDetailsScreenMobile extends StatelessWidget {
               color: AppTheme.textPrimary,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWidget(String label, Widget valueWidget) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 4),
+          valueWidget,
         ],
       ),
     );

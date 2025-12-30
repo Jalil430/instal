@@ -10,6 +10,7 @@ import '../../domain/entities/wallet_balance.dart';
 import '../../domain/entities/ledger_transaction.dart';
 import '../../domain/entities/investment_summary.dart';
 import '../../../installments/domain/entities/installment.dart';
+import '../../../../shared/widgets/installment_term_text.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../../shared/widgets/custom_contextual_dialog.dart';
 import '../../widgets/wallet_dialogs.dart';
@@ -349,7 +350,11 @@ class WalletDetailsScreenDesktop extends StatelessWidget {
             ),
             Expanded(
               flex: 2,
-              child: Text('${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}', style: Theme.of(context).textTheme.bodyMedium),
+              child: InstallmentTermText(
+                installment: installment,
+                suffix: ' ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
             Expanded(
               flex: 2,

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/custom_icon_button.dart';
 import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/installment_term_text.dart';
 import '../../domain/entities/investor.dart';
 import '../../../installments/domain/entities/installment.dart';
 
@@ -231,8 +232,9 @@ class InvestorDetailsScreenMobile extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  '${installment.termMonths} ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
+                InstallmentTermText(
+                  installment: installment,
+                  suffix: ' ${AppLocalizations.of(context)?.months ?? 'месяцев'}',
                 ),
               ],
             ),

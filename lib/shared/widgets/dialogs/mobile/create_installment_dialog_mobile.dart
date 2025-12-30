@@ -23,6 +23,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
   final TextEditingController termController;
   final TextEditingController downPaymentController;
   final TextEditingController monthlyPaymentController;
+  final bool termIncludesDownPayment;
   final FocusNode productNameFocus;
   final FocusNode cashPriceFocus;
   final FocusNode installmentPriceFocus;
@@ -68,6 +69,7 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
     required this.termController,
     required this.downPaymentController,
     required this.monthlyPaymentController,
+    required this.termIncludesDownPayment,
     required this.productNameFocus,
     required this.cashPriceFocus,
     required this.installmentPriceFocus,
@@ -217,7 +219,12 @@ class CreateInstallmentDialogMobile extends StatelessWidget {
                         controller: termController,
                         focusNode: termFocus,
                         nextFocusNode: downPaymentFocus,
-                        label: l10n?.term ?? 'Term (months)',
+                        label:
+                            termIncludesDownPayment
+                                ? (l10n?.termMonthsIncludingDownPayment ??
+                                    'Term (incl. down payment)')
+                                : (l10n?.termMonthsExcludingDownPayment ??
+                                    'Term (payment months)'),
                         keyboardType: TextInputType.number,
                         suffix: l10n?.monthShort ?? 'mo.',
                         validator: (value) => _validateNumber(context, value, l10n?.enterValidTerm ?? 'Enter valid term'),
