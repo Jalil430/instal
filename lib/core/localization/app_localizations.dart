@@ -926,15 +926,15 @@ class AppLocalizations {
   String get profitAnalytics =>
       locale.languageCode == 'ru' ? 'Прибыль' : 'Profit Analytics';
   String get revenueAnalytics =>
-      locale.languageCode == 'ru' ? 'Выручка' : 'Revenue Analytics';
+      locale.languageCode == 'ru' ? 'Аналитика выручки' : 'Revenue Analytics';
   String get profitDynamics =>
       locale.languageCode == 'ru' ? 'Динамика прибыли' : 'Profit Dynamics';
   String get revenueDynamics =>
-      locale.languageCode == 'ru' ? 'Динамика выручки' : 'Revenue Dynamics';
+      locale.languageCode == 'ru' ? 'Динамика платежей' : 'Payments Dynamics';
   String get profitLabel =>
       locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';
   String get revenueLabel =>
-      locale.languageCode == 'ru' ? 'Выручка' : 'Revenue';
+      locale.languageCode == 'ru' ? 'Платежи' : 'Payments';
   String get profitAnalyticsExpected =>
       locale.languageCode == 'ru'
           ? 'Прибыль по срокам'

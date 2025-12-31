@@ -30845,8 +30845,7 @@ i=j?l:0
 h=k?m:0
 p+=Math.min(i,h)
 if(f&&n.d){k=k?m:0
-g+=Math.max(0,k-(j?l:0))}}Math.max(0,q-p)
-return new A.aSY(q,g)},
+g+=Math.max(0,k-(j?l:0))}}return new A.aSY(Math.max(0,q-p),g)},
 bv2(a){var s,r,q,p,o
 for(s=a.c,r=s.length,q=0,p=0;p<r;++p)q+=s[p].b
 s=a.a
@@ -30938,7 +30937,7 @@ aYi:function aYi(a,b){this.a=a
 this.b=b},
 a8s:function a8s(a,b){this.c=a
 this.a=b},
-aSY:function aSY(a,b){this.a=a
+aSY:function aSY(a,b){this.c=a
 this.d=b},
 aYx:function aYx(a,b){this.a=a
 this.b=b},
@@ -109459,7 +109458,7 @@ D(a){var s,r,q,p,o,n,m,l,k=this,j=null,i=A.v(a,B.i,t.J),h=i.a,g=A.fT(0,h.gj(0)==
 f=e.length
 s=f!==0
 r=s?e[B.j.dV(k.f,0,f-1)]:j
-if(k.e===B.dP)q=h.gj(0)==="ru"?"\u0414\u0438\u043d\u0430\u043c\u0438\u043a\u0430 \u0432\u044b\u0440\u0443\u0447\u043a\u0438":"Revenue Dynamics"
+if(k.e===B.dP)q=h.gj(0)==="ru"?"\u0414\u0438\u043d\u0430\u043c\u0438\u043a\u0430 \u043f\u043b\u0430\u0442\u0435\u0436\u0435\u0439":"Payments Dynamics"
 else q=h.gj(0)==="ru"?"\u0414\u0438\u043d\u0430\u043c\u0438\u043a\u0430 \u043f\u0440\u0438\u0431\u044b\u043b\u0438":"Profit Dynamics"
 if(k.a.e)p=B.dq
 else if(!s||r==null)p=new A.a8s(i,j)
@@ -109582,7 +109581,7 @@ A.a9i.prototype={
 D(a){var s=null,r=t.p
 return A.N(A.a([A.V(A.a([A.a_(A.V(A.a([new A.eo(1,B.br,A.h(this.c,s,B.ag,s,s,B.adP,s,s,s),s)],r),B.k,B.f,B.Q,0),1),B.ac,A.oC(new A.aTV(this))],r),B.p,B.f,B.h,0)],r),B.p,B.f,B.h)}}
 A.aTV.prototype={
-$2(a,b){var s,r,q=null,p=this.a,o=p.w.a,n=o.gj(0)==="ru"?"\u0412\u044b\u0440\u0443\u0447\u043a\u0430":"Revenue",m=t.qM,l=o.gj(0)==="ru"?"\u041f\u0440\u0438\u0431\u044b\u043b\u044c":"Profit"
+$2(a,b){var s,r,q=null,p=this.a,o=p.w.a,n=o.gj(0)==="ru"?"\u041f\u043b\u0430\u0442\u0435\u0436\u0438":"Payments",m=t.qM,l=o.gj(0)==="ru"?"\u041f\u0440\u0438\u0431\u044b\u043b\u044c":"Profit"
 m=A.a([new A.dL(B.dP,n,q,m),new A.dL(B.pJ,l,q,m)],t.RJ)
 n=o.gj(0)==="ru"?"\u041e\u0436\u0438\u0434\u0430\u0435\u043c\u0430\u044f":"Expected"
 l=t.Yj
@@ -109602,10 +109601,10 @@ return A.b5(new A.H3(!0,this.d,s,s,s,r,s,s,!1,s,!0,s,new A.aaZ(p,B.Th,r,s,s),s),
 A.aeo.prototype={
 D(a){var s,r,q,p,o,n,m,l,k,j=this,i=null,h=j.c===B.mM,g=j.f
 if(h){g=g.a
-s=g.gj(0)==="ru"?"\u041e\u0436\u0438\u0434\u0430\u0435\u043c\u0430\u044f":"Expected"
+s=g.gj(0)==="ru"?"\u041a \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u044e":"To receive"
 r=j.r
 q=j.d
-p=r.aH(q.a)
+p=r.aH(q.c)
 o=g.gj(0)==="ru"?"\u041f\u043e\u043b\u0443\u0447\u0435\u043d\u043e":"Collected"
 n=r.aH(j.e.a)
 m=g.gj(0)==="ru"?"\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u043e":"Overdue"

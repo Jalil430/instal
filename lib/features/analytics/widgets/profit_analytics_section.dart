@@ -471,8 +471,8 @@ class _SummaryRow extends StatelessWidget {
         mode == _ProfitViewMode.expected
             ? [
               _SummaryTile(
-                label: l10n.expectedByDueDate,
-                value: currencyFormatter.format(expectedMetrics.total),
+                label: l10n.toReceive,
+                value: currencyFormatter.format(expectedMetrics.toReceive),
               ),
               _SummaryTile(
                 label: l10n.collected,

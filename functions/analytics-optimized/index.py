@@ -776,35 +776,33 @@ def calculate_profit_analytics(installments, scheduled_payments, paid_payments, 
             if ratio is None:
                 continue
 
-            expected_amount = expected_amount_raw * ratio
-            paid_base_amount = paid_amount_raw if paid_amount_raw is not None else expected_amount_raw
-            paid_amount = (paid_base_amount or 0.0) * ratio if is_paid else 0.0
-
-            if due_date:
+            # Expected view should sum ONLY unpaid scheduled payments.
+            if not is_paid and due_date:
                 bucket_tuple = get_bucket(metric_name, due_date)
                 if bucket_tuple:
                     bucket, normalized_due = bucket_tuple
                     day = normalized_due.day
+                    expected_amount = expected_amount_raw * ratio
                     existing = bucket['expected_daily'].get(day, {
                         'expected_amount': 0.0,
                         'paid_amount': 0.0,
                         'is_overdue': False
                     })
                     existing['expected_amount'] += expected_amount
-                    existing['paid_amount'] += paid_amount
-                    existing['is_overdue'] = existing['is_overdue'] or (normalized_due < today and not is_paid)
+                    existing['is_overdue'] = existing['is_overdue'] or (normalized_due < today)
                     bucket['expected_daily'][day] = existing
 
-                    if normalized_due < today and expected_amount > paid_amount:
-                        overdue_diff = (expected_amount - paid_amount)
-                        bucket['overdue'] += overdue_diff
-                        metrics[metric_name]['total_overdue'] += overdue_diff
+                    if normalized_due < today:
+                        bucket['overdue'] += expected_amount
+                        metrics[metric_name]['total_overdue'] += expected_amount
 
             if is_paid and paid_date:
                 bucket_tuple = get_bucket(metric_name, paid_date)
                 if bucket_tuple:
                     bucket, normalized_paid = bucket_tuple
-                    paid_amount_normalized = (paid_base_amount or 0.0) * ratio
+                    paid_base_amount = paid_amount_raw if paid_amount_raw is not None else expected_amount_raw
+                    paid_amount = (paid_base_amount or 0.0) * ratio
+                    paid_amount_normalized = paid_amount
                     key = paid_dedupe_key(payment, normalized_paid, paid_amount_normalized)
                     seen_paid_keys = metrics[metric_name]['seen_paid_keys']
                     if key in seen_paid_keys:
@@ -853,14 +851,7 @@ def calculate_profit_analytics(installments, scheduled_payments, paid_payments, 
             })
             bucket['received_daily'][day]['amount'] += paid_amount
 
-            # If we lack an expected entry for this day (common when schedules store only unpaid),
-            # mirror the paid amount into expected so the expected view reflects paid installments too.
-            if day not in bucket['expected_daily']:
-                bucket['expected_daily'][day] = {
-                    'expected_amount': paid_amount,
-                    'paid_amount': paid_amount,
-                    'is_overdue': False,
-                }
+            # Expected view should remain unpaid-only; no mirroring for paid entries.
 
     def transform_metric(metric_name):
         metric = metrics[metric_name]
