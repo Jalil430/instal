@@ -65,6 +65,36 @@
       if (loader) loader.style.display = 'none';
     });
   </script>
+  <script>
+    // On each load, check version.json; if it changed, clear caches and reload.
+    window.addEventListener('load', async () => {
+      try {
+        const res = await fetch('version.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const newVersion = data && data.version ? String(data.version) : null;
+        if (!newVersion) return;
+
+        const key = 'app_version';
+        const currentVersion = localStorage.getItem(key);
+        if (currentVersion && currentVersion !== newVersion) {
+          if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          }
+          localStorage.setItem(key, newVersion);
+          window.location.reload(true);
+          return;
+        }
+
+        if (!currentVersion) {
+          localStorage.setItem(key, newVersion);
+        }
+      } catch (e) {
+        // Ignore version check failures; app can still load.
+      }
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
