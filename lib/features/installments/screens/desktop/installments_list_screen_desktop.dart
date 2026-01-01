@@ -887,6 +887,7 @@ class _InstallmentsFilterSheetState extends State<_InstallmentsFilterSheet> {
                             );
                           }
                         });
+                        _apply(autoClose: false);
                       },
                       hint: 'Все',
                       width: double.infinity,

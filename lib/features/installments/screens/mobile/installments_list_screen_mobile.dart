@@ -883,7 +883,7 @@ class _MobileFilterSheetState extends State<_MobileFilterSheet> {
                       orElse: () => null,
                     );
                   }
-                  state.setWalletFilter(_wallet);
+                  _applyFilters();
                 },
               ),
             const SizedBox(height: 16),
@@ -1038,6 +1038,24 @@ class _MobileFilterSheetState extends State<_MobileFilterSheet> {
       'installmentNumber': 'Номер',
       'amount': 'Стоимость',
     };
+  }
+
+  void _applyFilters() {
+    if (state.statusFilter != _status) {
+      state.setStatusFilter(_status);
+    }
+    if (state.walletFilter != _wallet) {
+      state.setWalletFilter(_wallet);
+    }
+    if (state.sortBy != _sortBy) {
+      state.setSortBy(_sortBy);
+    }
+    if (state.sortAscending != _ascending) {
+      state.setSortAscending(_ascending);
+    }
+    if (state.createdDateFilter != _createdDateFilter) {
+      state.setCreatedDateFilter(_createdDateFilter);
+    }
   }
 
 }

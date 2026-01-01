@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import ydb
 import jwt
@@ -7,7 +8,7 @@ from datetime import datetime, date, timedelta
 from typing import Optional, Tuple
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, force=True)
 logger = logging.getLogger(__name__)
 
 DEFAULT_CORS_HEADERS = {
@@ -452,8 +453,10 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
             if due_date < today:
                 scheduled_total_overdue += float(payment.get('expected_amount', 0.0) or 0.0)
         logger.info(f"Calculated overdue total from schedule: {scheduled_total_overdue}")
+        print(f"OVERDUE (scheduled) total={scheduled_total_overdue}")
     else:
         logger.info("No scheduled_payments provided for overdue calculation")
+        print("OVERDUE (scheduled) total unavailable - no scheduled payments provided")
     
     # Weekly sales arrays (Monday=0, Tuesday=1, ..., Sunday=6)
     current_week_sales = [0.0] * 7
@@ -639,6 +642,13 @@ def calculate_analytics(installments, paid_payments, scheduled_payments, today, 
         scheduled_total_overdue,
         fallback_total_overdue,
         scheduled_total_overdue if scheduled_total_overdue is not None else fallback_total_overdue,
+    )
+    print(
+        "OVERDUE TOTALS scheduled={0} fallback={1} final={2}".format(
+            scheduled_total_overdue,
+            fallback_total_overdue,
+            scheduled_total_overdue if scheduled_total_overdue is not None else fallback_total_overdue,
+        )
     )
 
     return {
