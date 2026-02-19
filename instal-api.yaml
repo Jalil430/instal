@@ -56,6 +56,28 @@ paths:
         function_id: d4e2hioa9nvq86e1fhtv
         service_account_id: ajevsnimu8g62t29vlad
         timeout: 30
+  /migration/export:
+    options:
+      summary: CORS preflight
+      security: []  # no auth for preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4elqn8ge43k7ucjdv42
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 5
+        payload_format_version: '1.0'
+      responses:
+        '200':
+          description: CORS preflight OK
+    get:
+      summary: Export current user data for migration
+      operationId: export-migration
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4elqn8ge43k7ucjdv42
+        service_account_id: ajevsnimu8g62t29vlad
+        timeout: 60
+        payload_format_version: '1.0'
   /clients/search:
     options:
       summary: CORS preflight

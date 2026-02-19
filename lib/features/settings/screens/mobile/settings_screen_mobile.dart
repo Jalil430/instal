@@ -6,7 +6,6 @@ import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../shared/widgets/custom_toggle.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../presentation/widgets/whatsapp_integration_section.dart';
-import '../../../../core/services/update_service.dart';
 
 class SettingsScreenMobile extends StatelessWidget {
   final User? currentUser;
@@ -22,6 +21,8 @@ class SettingsScreenMobile extends StatelessWidget {
   final VoidCallback onCredentialsPressed;
   final VoidCallback onTemplatesPressed;
   final ValueChanged<bool> onTermModeChanged;
+  final bool isMigrationExporting;
+  final VoidCallback onMigrationExportPressed;
 
   const SettingsScreenMobile({
     Key? key,
@@ -38,6 +39,8 @@ class SettingsScreenMobile extends StatelessWidget {
     required this.onCredentialsPressed,
     required this.onTemplatesPressed,
     required this.onTermModeChanged,
+    required this.isMigrationExporting,
+    required this.onMigrationExportPressed,
   }) : super(key: key);
 
   @override
@@ -98,9 +101,7 @@ class SettingsScreenMobile extends StatelessWidget {
                   if (loadingUser)
                     const SizedBox(
                       height: 100,
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                      child: Center(child: CircularProgressIndicator()),
                     )
                   else if (currentUser != null)
                     _buildProfileView(context, currentUser!)
@@ -143,7 +144,7 @@ class SettingsScreenMobile extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 32),
-                  
+
                   // Language Section
                   Text(
                     l10n.language,
@@ -168,7 +169,7 @@ class SettingsScreenMobile extends StatelessWidget {
                     width: double.infinity,
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Installment Term Section
                   Text(
                     l10n.installmentTermModeTitle,
@@ -217,8 +218,45 @@ class SettingsScreenMobile extends StatelessWidget {
                     onCredentialsPressed: onCredentialsPressed,
                     onTemplatesPressed: onTemplatesPressed,
                   ),
-                  
+
                   const SizedBox(height: 32),
+
+                  // Migration export section
+                  Text(
+                    l10n.migrationExportTitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.migrationExportDescription,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      onPressed:
+                          isMigrationExporting
+                              ? null
+                              : onMigrationExportPressed,
+                      text:
+                          isMigrationExporting
+                              ? l10n.exportingMigrationData
+                              : l10n.exportForFinPayCrm,
+                      icon: Icons.download_rounded,
+                      showIcon: true,
+                      height: 44,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -230,7 +268,7 @@ class SettingsScreenMobile extends StatelessWidget {
 
   Widget _buildProfileView(BuildContext context, User user) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -243,11 +281,7 @@ class SettingsScreenMobile extends StatelessWidget {
                 color: AppTheme.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(32),
               ),
-              child: Icon(
-                Icons.person,
-                size: 32,
-                color: AppTheme.primaryColor,
-              ),
+              child: Icon(Icons.person, size: 32, color: AppTheme.primaryColor),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -275,7 +309,7 @@ class SettingsScreenMobile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // Buttons - full width for mobile
         SizedBox(
           width: double.infinity,
@@ -302,4 +336,4 @@ class SettingsScreenMobile extends StatelessWidget {
       ],
     );
   }
-} 
+}

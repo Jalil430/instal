@@ -711,6 +711,28 @@ class AppLocalizations {
       locale.languageCode == 'ru'
           ? 'Проверить обновления'
           : 'Check for updates';
+  String get migrationExportTitle =>
+      locale.languageCode == 'ru'
+          ? 'Миграция в FinPay CRM'
+          : 'Migration to FinPay CRM';
+  String get migrationExportDescription =>
+      locale.languageCode == 'ru'
+          ? 'Скачайте JSON-файл с вашими клиентами, рассрочками и платежами для импорта в новый FinPay CRM.'
+          : 'Download a JSON file with your clients, installments, and payments for import into the new FinPay CRM.';
+  String get exportForFinPayCrm =>
+      locale.languageCode == 'ru'
+          ? 'Экспорт для FinPay CRM'
+          : 'Export for FinPay CRM';
+  String get exportingMigrationData =>
+      locale.languageCode == 'ru' ? 'Экспорт...' : 'Exporting...';
+  String migrationExportSuccess(String filename) =>
+      locale.languageCode == 'ru'
+          ? 'Экспорт завершен: $filename'
+          : 'Export completed: $filename';
+  String migrationExportError(Object error) =>
+      locale.languageCode == 'ru'
+          ? 'Не удалось выполнить экспорт: $error'
+          : 'Failed to export data: $error';
   String get languageRussian =>
       locale.languageCode == 'ru' ? 'Русский' : 'Russian';
   String get languageEnglish =>
@@ -931,14 +953,11 @@ class AppLocalizations {
       locale.languageCode == 'ru' ? 'Динамика прибыли' : 'Profit Dynamics';
   String get revenueDynamics =>
       locale.languageCode == 'ru' ? 'Динамика платежей' : 'Payments Dynamics';
-  String get profitLabel =>
-      locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';
+  String get profitLabel => locale.languageCode == 'ru' ? 'Прибыль' : 'Profit';
   String get revenueLabel =>
       locale.languageCode == 'ru' ? 'Платежи' : 'Payments';
   String get profitAnalyticsExpected =>
-      locale.languageCode == 'ru'
-          ? 'Прибыль по срокам'
-          : 'Profit by due date';
+      locale.languageCode == 'ru' ? 'Прибыль по срокам' : 'Profit by due date';
   String get profitAnalyticsReceived =>
       locale.languageCode == 'ru'
           ? 'Прибыль по оплатам'
@@ -951,18 +970,12 @@ class AppLocalizations {
       locale.languageCode == 'ru'
           ? 'Платежи по оплатам'
           : 'Payments by paid date';
-  String get metricLabel =>
-      locale.languageCode == 'ru' ? 'Метрика' : 'Metric';
-  String get basisLabel =>
-      locale.languageCode == 'ru' ? 'База' : 'Basis';
+  String get metricLabel => locale.languageCode == 'ru' ? 'Метрика' : 'Metric';
+  String get basisLabel => locale.languageCode == 'ru' ? 'База' : 'Basis';
   String get expectedByDueDate =>
-      locale.languageCode == 'ru'
-          ? 'Ожидаемая'
-          : 'Expected';
+      locale.languageCode == 'ru' ? 'Ожидаемая' : 'Expected';
   String get receivedByPaidDate =>
-      locale.languageCode == 'ru'
-          ? 'Полученная'
-          : 'Received';
+      locale.languageCode == 'ru' ? 'Полученная' : 'Received';
   String get profitNext30Days =>
       locale.languageCode == 'ru'
           ? 'Прибыль за 30 дней'

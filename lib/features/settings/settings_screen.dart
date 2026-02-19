@@ -5,6 +5,7 @@ import '../auth/domain/entities/user.dart';
 import '../../shared/widgets/edit_profile_dialog.dart';
 import '../../shared/widgets/responsive_layout.dart';
 import 'data/services/whatsapp_api_service.dart';
+import 'data/services/migration_export_api_service.dart';
 import 'presentation/widgets/whatsapp_setup_dialog.dart';
 import 'presentation/widgets/whatsapp_credentials_dialog.dart';
 import 'presentation/widgets/whatsapp_templates_dialog.dart';
@@ -26,7 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   User? _currentUser;
   bool _loadingUser = true;
   bool _isInitialized = false;
-  
+
   // WhatsApp settings state
   bool _isWhatsAppEnabled = false;
   bool _isWhatsAppLoading = true;
@@ -37,6 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _templateDueToday = '';
   String _templateManual = '';
   bool _termIncludesDownPayment = false;
+  bool _isExportingMigration = false;
 
   @override
   void initState() {
@@ -70,10 +72,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _isWhatsAppLoading = true;
     });
-    
+
     try {
       final settings = await WhatsAppApiService.getSettings();
-      
+
       setState(() {
         _instanceId = settings['green_api_instance_id'] ?? '';
         _token = settings['green_api_token'] ?? '';
@@ -84,10 +86,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isWhatsAppConfigured = settings['is_configured'] ?? false;
         _isWhatsAppLoading = false;
       });
-      
     } catch (e) {
-      print('${AppLocalizations.of(context)?.errorLoadingWhatsAppSettings ?? 'Error loading WhatsApp settings'}: $e');
-      
+      print(
+        '${AppLocalizations.of(context)?.errorLoadingWhatsAppSettings ?? 'Error loading WhatsApp settings'}: $e',
+      );
+
       setState(() {
         _isWhatsAppLoading = false;
         _instanceId = '';
@@ -102,8 +105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadTermModeSetting() async {
-    final storedValue =
-        await TermModePreferences.getTermIncludesDownPayment();
+    final storedValue = await TermModePreferences.getTermIncludesDownPayment();
     if (mounted) {
       setState(() {
         _termIncludesDownPayment = storedValue;
@@ -133,11 +135,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _isWhatsAppEnabled = enabled;
       });
-      _showSuccessSnackBar(enabled 
-          ? AppLocalizations.of(context)?.whatsAppRemindersEnabled ?? 'WhatsApp reminders enabled' 
-          : AppLocalizations.of(context)?.whatsAppRemindersDisabled ?? 'WhatsApp reminders disabled');
+      _showSuccessSnackBar(
+        enabled
+            ? AppLocalizations.of(context)?.whatsAppRemindersEnabled ??
+                'WhatsApp reminders enabled'
+            : AppLocalizations.of(context)?.whatsAppRemindersDisabled ??
+                'WhatsApp reminders disabled',
+      );
     } catch (e) {
-      _showErrorSnackBar('${AppLocalizations.of(context)?.failedToUpdateSettings ?? 'Failed to update reminder settings'}: $e');
+      _showErrorSnackBar(
+        '${AppLocalizations.of(context)?.failedToUpdateSettings ?? 'Failed to update reminder settings'}: $e',
+      );
     }
   }
 
@@ -145,35 +153,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WhatsAppSetupDialog(
-        onSetupComplete: _loadWhatsAppSettings,
-      ),
+      builder:
+          (context) =>
+              WhatsAppSetupDialog(onSetupComplete: _loadWhatsAppSettings),
     );
   }
 
   void _showCredentialsDialog() {
     showDialog(
       context: context,
-      builder: (context) => WhatsAppCredentialsDialog(
-        initialInstanceId: _instanceId,
-        initialToken: _token,
-        onSaved: _loadWhatsAppSettings,
-      ),
+      builder:
+          (context) => WhatsAppCredentialsDialog(
+            initialInstanceId: _instanceId,
+            initialToken: _token,
+            onSaved: _loadWhatsAppSettings,
+          ),
     );
   }
 
   void _showTemplatesDialog() {
     showDialog(
       context: context,
-      builder: (context) => WhatsAppTemplatesDialog(
-        initialTemplate7Days: _template7Days,
-        initialTemplateDueToday: _templateDueToday,
-        initialTemplateManual: _templateManual,
-        onSaved: _loadWhatsAppSettings,
-      ),
+      builder:
+          (context) => WhatsAppTemplatesDialog(
+            initialTemplate7Days: _template7Days,
+            initialTemplateDueToday: _templateDueToday,
+            initialTemplateManual: _templateManual,
+            onSaved: _loadWhatsAppSettings,
+          ),
     );
   }
-  
+
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -183,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -194,10 +204,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _exportMigrationData() async {
+    if (_isExportingMigration) return;
+
+    setState(() {
+      _isExportingMigration = true;
+    });
+
+    try {
+      final filename = await MigrationExportApiService.exportAndDownload();
+      if (!mounted) return;
+      _showSuccessSnackBar(
+        AppLocalizations.of(context)?.migrationExportSuccess(filename) ??
+            'Export completed: $filename',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar(
+        AppLocalizations.of(context)?.migrationExportError(e) ??
+            'Failed to export data: $e',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExportingMigration = false;
+        });
+      }
+    }
+  }
+
   Future<void> _loadCurrentUser() async {
     try {
       final authService = AuthServiceProvider.of(context);
-      
+
       final isAuthenticated = await authService.isAuthenticated();
       if (!isAuthenticated) {
         if (mounted) {
@@ -208,9 +247,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
         return;
       }
-      
+
       final user = await authService.getCurrentUserFromServer();
-      
+
       if (mounted) {
         setState(() {
           _currentUser = user;
@@ -218,14 +257,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
       }
     } catch (e) {
-      print('${AppLocalizations.of(context)?.errorLoadingUserData ?? 'Error loading user data'}: $e');
+      print(
+        '${AppLocalizations.of(context)?.errorLoadingUserData ?? 'Error loading user data'}: $e',
+      );
       if (mounted) {
         setState(() {
           _loadingUser = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)?.errorLoadingUserData ?? 'Error loading user data'}: $e'),
+            content: Text(
+              '${AppLocalizations.of(context)?.errorLoadingUserData ?? 'Error loading user data'}: $e',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -237,7 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final authService = AuthServiceProvider.of(context);
       await authService.logout();
-      
+
       if (mounted) {
         context.go('/auth/login');
       }
@@ -245,7 +288,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)?.errorDuringLogout ?? 'Error during logout'}: $e'),
+            content: Text(
+              '${AppLocalizations.of(context)?.errorDuringLogout ?? 'Error during logout'}: $e',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -257,10 +302,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_currentUser == null) return;
     showDialog(
       context: context,
-      builder: (context) => EditProfileDialog(
-        user: _currentUser!,
-        onSuccess: _loadCurrentUser,
-      ),
+      builder:
+          (context) => EditProfileDialog(
+            user: _currentUser!,
+            onSuccess: _loadCurrentUser,
+          ),
     );
   }
 
@@ -287,6 +333,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onCredentialsPressed: _showCredentialsDialog,
         onTemplatesPressed: _showTemplatesDialog,
         onTermModeChanged: _updateTermMode,
+        isMigrationExporting: _isExportingMigration,
+        onMigrationExportPressed: () {
+          _exportMigrationData();
+        },
       ),
       desktop: SettingsScreenDesktop(
         currentUser: _currentUser,
@@ -302,6 +352,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onCredentialsPressed: _showCredentialsDialog,
         onTemplatesPressed: _showTemplatesDialog,
         onTermModeChanged: _updateTermMode,
+        isMigrationExporting: _isExportingMigration,
+        onMigrationExportPressed: () {
+          _exportMigrationData();
+        },
       ),
     );
   }

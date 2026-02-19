@@ -41,3 +41,6 @@ update-wallet: d4epa3d73vqo5flpjfk4
 archive-wallet: d4eh92ksggk6b1hj8rlt
 wallet-ledger: d4e9uc7dn0rk9lcbu6a0
 wallet-top-up: d4eacss6qhh0o9etq3kc
+
+# Migration export
+export-migration: d4elqn8ge43k7ucjdv42

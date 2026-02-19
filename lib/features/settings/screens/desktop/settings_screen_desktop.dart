@@ -22,6 +22,8 @@ class SettingsScreenDesktop extends StatelessWidget {
   final VoidCallback onCredentialsPressed;
   final VoidCallback onTemplatesPressed;
   final ValueChanged<bool> onTermModeChanged;
+  final bool isMigrationExporting;
+  final VoidCallback onMigrationExportPressed;
 
   const SettingsScreenDesktop({
     Key? key,
@@ -38,6 +40,8 @@ class SettingsScreenDesktop extends StatelessWidget {
     required this.onCredentialsPressed,
     required this.onTemplatesPressed,
     required this.onTermModeChanged,
+    required this.isMigrationExporting,
+    required this.onMigrationExportPressed,
   }) : super(key: key);
 
   @override
@@ -87,9 +91,7 @@ class SettingsScreenDesktop extends StatelessWidget {
                   if (loadingUser)
                     const SizedBox(
                       height: 100,
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                      child: Center(child: CircularProgressIndicator()),
                     )
                   else if (currentUser != null)
                     _buildProfileView(context, currentUser!)
@@ -206,7 +208,7 @@ class SettingsScreenDesktop extends StatelessWidget {
                     onCredentialsPressed: onCredentialsPressed,
                     onTemplatesPressed: onTemplatesPressed,
                   ),
-                  
+
                   const SizedBox(height: 32),
 
                   // Updates section
@@ -231,6 +233,45 @@ class SettingsScreenDesktop extends StatelessWidget {
                       height: 44,
                     ),
                   ),
+                  const SizedBox(height: 32),
+
+                  // Migration export section
+                  Text(
+                    l10n.migrationExportTitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: 560,
+                    child: Text(
+                      l10n.migrationExportDescription,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: 350,
+                    child: CustomButton(
+                      onPressed:
+                          isMigrationExporting
+                              ? null
+                              : onMigrationExportPressed,
+                      text:
+                          isMigrationExporting
+                              ? l10n.exportingMigrationData
+                              : l10n.exportForFinPayCrm,
+                      icon: Icons.download_rounded,
+                      showIcon: true,
+                      height: 44,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -242,7 +283,7 @@ class SettingsScreenDesktop extends StatelessWidget {
 
   Widget _buildProfileView(BuildContext context, User user) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,11 +296,7 @@ class SettingsScreenDesktop extends StatelessWidget {
                 color: AppTheme.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(32),
               ),
-              child: Icon(
-                Icons.person,
-                size: 32,
-                color: AppTheme.primaryColor,
-              ),
+              child: Icon(Icons.person, size: 32, color: AppTheme.primaryColor),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -287,7 +324,7 @@ class SettingsScreenDesktop extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // Buttons - same style as WhatsApp integration section
         SizedBox(
           width: 350, // Same width as language dropdown and WhatsApp buttons
@@ -314,4 +351,4 @@ class SettingsScreenDesktop extends StatelessWidget {
       ],
     );
   }
-} 
+}
