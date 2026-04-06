@@ -717,8 +717,8 @@ class AppLocalizations {
           : 'Migration to FinPay CRM';
   String get migrationExportDescription =>
       locale.languageCode == 'ru'
-          ? 'Скачайте JSON-файл с вашими клиентами, рассрочками и платежами для импорта в новый FinPay CRM.'
-          : 'Download a JSON file with your clients, installments, and payments for import into the new FinPay CRM.';
+          ? 'Скачайте JSON-файл с вашими клиентами, кошельками, рассрочками и платежами для импорта в новый FinPay CRM.'
+          : 'Download a JSON file with your clients, wallets, installments, and payments for import into the new FinPay CRM.';
   String get exportForFinPayCrm =>
       locale.languageCode == 'ru'
           ? 'Экспорт для FinPay CRM'

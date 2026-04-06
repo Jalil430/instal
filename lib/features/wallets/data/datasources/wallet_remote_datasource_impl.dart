@@ -285,7 +285,26 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
     int? offset,
   }) async {
     try {
-      final response = await api.ApiClient.get('/wallets/$walletId/ledger');
+      final queryParams = <String, String>{};
+      if (fromDate != null) {
+        queryParams['start_date'] = fromDate.toUtc().toIso8601String();
+      }
+      if (toDate != null) {
+        queryParams['end_date'] = toDate.toUtc().toIso8601String();
+      }
+      if (limit != null) {
+        queryParams['limit'] = limit.toString();
+      }
+      if (offset != null) {
+        queryParams['offset'] = offset.toString();
+      }
+
+      final encodedQuery = queryParams.entries
+          .map((entry) => '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(entry.value)}')
+          .join('&');
+      final queryString = queryParams.isEmpty ? '' : '?$encodedQuery';
+
+      final response = await api.ApiClient.get('/wallets/$walletId/ledger$queryString');
 
       if (response.statusCode == 200) {
         final ledgerData = json.decode(response.body) as Map<String, dynamic>;

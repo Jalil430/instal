@@ -102,7 +102,7 @@ def convert_timestamp(ts):
 
 def handler(event, context):
     """
-    Yandex Cloud Function handler to get wallet transaction ledger with pagination
+    Yandex Cloud Function handler to get wallet transaction ledger.
     """
     if event.get('httpMethod') == 'OPTIONS':
         return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
@@ -134,7 +134,25 @@ def handler(event, context):
         
         # 3. Parse query parameters
         query_params = event.get('queryStringParameters') or {}
-        limit = min(int(query_params.get('limit', 50)), 100)  # Max 100 transactions per request
+        limit = None
+        limit_raw = query_params.get('limit')
+        if limit_raw not in (None, ''):
+            try:
+                limit = int(limit_raw)
+            except (TypeError, ValueError):
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Limit must be a positive integer'})
+                }
+
+            if not (0 < limit <= 50000):
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Limit must be between 1 and 50000'})
+                }
+
         reference_type = query_params.get('type')  # Optional filter by transaction type
         start_date = query_params.get('start_date')  # ISO format date
         end_date = query_params.get('end_date')  # ISO format date
@@ -185,7 +203,6 @@ def handler(event, context):
                 base_query = """
                 DECLARE $wallet_id AS Utf8;
                 DECLARE $user_id AS Utf8;
-                DECLARE $limit AS Int32;
                 DECLARE $reference_type AS Utf8;
                 DECLARE $start_date AS Timestamp;
                 DECLARE $end_date AS Timestamp;
@@ -207,12 +224,17 @@ def handler(event, context):
                 FROM ledger_transactions
                 WHERE wallet_id = $wallet_id AND user_id = $user_id
                 """
+
+                if limit is not None:
+                    base_query = "DECLARE $limit AS Int32;\n" + base_query
                 
                 params = {
                     '$wallet_id': wallet_id,
                     '$user_id': user_id,
-                    '$limit': limit,
                 }
+
+                if limit is not None:
+                    params['$limit'] = limit
                 
                 # Add filters
                 if reference_type:
@@ -243,8 +265,11 @@ def handler(event, context):
                             'body': json.dumps({'error': 'Invalid end_date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)'})
                         }
                 
-                # Order by created_at DESC for most recent first, limit results
-                base_query += " ORDER BY created_at DESC LIMIT $limit;"
+                # Order by created_at DESC for most recent first
+                base_query += " ORDER BY created_at DESC"
+                if limit is not None:
+                    base_query += " LIMIT $limit"
+                base_query += ";"
                 
                 prepared_query = session.prepare(base_query)
                 result_sets = session.transaction().execute(
@@ -293,7 +318,7 @@ def handler(event, context):
                     'pagination': {
                         'limit': limit,
                         'count': len(transactions),
-                        'has_more': len(transactions) == limit,  # Assume more if we hit the limit
+                        'has_more': limit is not None and len(transactions) == limit,
                     },
                     'filters': {
                         'reference_type': reference_type,
