@@ -17,10 +17,34 @@ DEFAULT_CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type,X-API-Key,Authorization',
 }
 
+LEGACY_EXPORT_RESPONSE_LIMIT_BYTES = 2_300_000
+DEFAULT_EXPORT_PAGE_SIZE = 250
+MAX_EXPORT_PAGE_SIZE = 1000
+PAGED_EXPORT_SECTIONS = (
+    'investors',
+    'accounts',
+    'clients',
+    'installments',
+    'payments',
+    'warnings',
+)
+
 
 def _cors(resp):
     headers = resp.get('headers', {})
     return {**resp, 'headers': {**DEFAULT_CORS_HEADERS, **headers}}
+
+
+def _json_dumps(value) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
+
+
+def _json_response(status_code: int, payload: dict):
+    return _cors({
+        'statusCode': status_code,
+        'headers': {'Content-Type': 'application/json'},
+        'body': _json_dumps(payload),
+    })
 
 
 class JWTAuth:
@@ -200,24 +224,351 @@ def _read_rows(session, query: str, params: dict):
     return list(result_sets[0].rows)
 
 
+def _parse_int_param(raw_value, *, name: str, default: int, minimum: int = 0, maximum: Optional[int] = None) -> int:
+    if raw_value in (None, ''):
+        return default
+
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(f'{name} must be an integer')
+
+    if value < minimum:
+        raise ValueError(f'{name} must be at least {minimum}')
+    if maximum is not None and value > maximum:
+        raise ValueError(f'{name} must be at most {maximum}')
+
+    return value
+
+
+def _build_export_payload(session, user_id: str) -> dict:
+    warnings = []
+    seen_warnings = set()
+
+    clients_query = """
+    DECLARE $user_id AS Utf8;
+    SELECT id, full_name, contact_number, passport_number, address, created_at, updated_at
+    FROM clients
+    WHERE user_id = $user_id
+    ORDER BY created_at ASC, id ASC;
+    """
+    client_rows = _read_rows(session, clients_query, {'$user_id': user_id})
+
+    wallets_query = """
+    DECLARE $user_id AS Utf8;
+    SELECT
+        w.id AS id,
+        w.name AS name,
+        w.type AS type,
+        w.currency AS currency,
+        w.status AS status,
+        w.investment_amount_minor_units AS investment_amount_minor_units,
+        w.starting_amount_minor_units AS starting_amount_minor_units,
+        w.investor_percentage AS investor_percentage,
+        w.user_percentage AS user_percentage,
+        w.investment_return_date AS investment_return_date,
+        w.created_at AS created_at,
+        w.updated_at AS updated_at,
+        wb.balance_minor_units AS balance_minor_units,
+        wb.total_allocated_minor_units AS total_allocated_minor_units,
+        wb.due_to_get_minor_units AS due_to_get_minor_units,
+        wb.expected_revenue_minor_units AS expected_revenue_minor_units,
+        wb.spent_on_products_minor_units AS spent_on_products_minor_units
+    FROM wallets AS w
+    LEFT JOIN wallet_balances AS wb ON wb.wallet_id = w.id AND wb.user_id = w.user_id
+    WHERE w.user_id = $user_id
+    ORDER BY w.created_at ASC, w.id ASC;
+    """
+    wallet_rows = _read_rows(session, wallets_query, {'$user_id': user_id})
+
+    installments_query = """
+    DECLARE $user_id AS Utf8;
+    SELECT
+        id,
+        client_id,
+        wallet_id,
+        installment_number,
+        product_name,
+        cash_price,
+        installment_price,
+        term_months,
+        down_payment,
+        monthly_payment,
+        down_payment_date,
+        installment_start_date,
+        created_at,
+        updated_at
+    FROM installments
+    WHERE user_id = $user_id
+    ORDER BY created_at ASC, id ASC;
+    """
+    installment_rows = _read_rows(session, installments_query, {'$user_id': user_id})
+
+    payments_query = """
+    DECLARE $user_id AS Utf8;
+    SELECT
+        p.id AS id,
+        p.installment_id AS installment_id,
+        p.payment_number AS payment_number,
+        p.due_date AS due_date,
+        p.expected_amount AS expected_amount,
+        COALESCE(p.paid_amount, CAST(0 AS Decimal(22,9))) AS paid_amount,
+        p.is_paid AS is_paid,
+        p.paid_date AS paid_date,
+        p.created_at AS created_at,
+        p.updated_at AS updated_at
+    FROM installment_payments AS p
+    INNER JOIN installments AS i ON i.id = p.installment_id
+    WHERE i.user_id = $user_id
+    ORDER BY p.installment_id ASC, p.payment_number ASC, p.created_at ASC, p.id ASC;
+    """
+    payment_rows = _read_rows(session, payments_query, {'$user_id': user_id})
+
+    investors = []
+    accounts = []
+    exported_account_ids = set()
+
+    for row in wallet_rows:
+        wallet_id = _to_text(getattr(row, 'id', None)).strip()
+        if not wallet_id:
+            continue
+
+        wallet_name = _to_text(getattr(row, 'name', None)).strip() or f'Legacy wallet {wallet_id}'
+        wallet_status = _to_text(getattr(row, 'status', None), 'active').strip() or 'active'
+        wallet_currency = _to_text(getattr(row, 'currency', None), 'RUB').strip() or 'RUB'
+        wallet_type = _normalize_wallet_type(row)
+        created_at = _to_iso_timestamp(getattr(row, 'created_at', None))
+        updated_at = _to_iso_timestamp(getattr(row, 'updated_at', None))
+
+        account = {
+            'legacy_id': wallet_id,
+            'name': wallet_name,
+            'type': 'investor_account' if wallet_type == 'investor' else 'company_account',
+            'status': wallet_status,
+            'currency': wallet_currency,
+            'created_at': created_at,
+            'updated_at': updated_at,
+        }
+
+        initial_investment_minor_units = (
+            _to_minor_units(getattr(row, 'investment_amount_minor_units', None))
+            if wallet_type == 'investor'
+            else _to_minor_units(getattr(row, 'starting_amount_minor_units', None))
+        )
+        if initial_investment_minor_units is not None:
+            if initial_investment_minor_units >= 0:
+                account['initial_investment_cents'] = initial_investment_minor_units
+                account['investment_cents'] = initial_investment_minor_units
+            else:
+                _append_warning(
+                    warnings,
+                    seen_warnings,
+                    f'Wallet "{wallet_name}" ({wallet_id}) has negative initial investment {initial_investment_minor_units}; initial_investment_cents was omitted.',
+                )
+
+        balance_minor_units = _to_minor_units(getattr(row, 'balance_minor_units', None))
+        if balance_minor_units is not None:
+            if balance_minor_units >= 0:
+                account['available_cents'] = balance_minor_units
+            else:
+                _append_warning(
+                    warnings,
+                    seen_warnings,
+                    f'Wallet "{wallet_name}" ({wallet_id}) has negative balance {balance_minor_units}; available_cents was omitted because the new app does not accept negative imported balances.',
+                )
+        else:
+            _append_warning(
+                warnings,
+                seen_warnings,
+                f'Wallet "{wallet_name}" ({wallet_id}) has no wallet_balances row; available_cents was omitted.',
+            )
+
+        if wallet_type == 'investor':
+            _append_warning(
+                warnings,
+                seen_warnings,
+                'Legacy app has no standalone investor entity; exporter creates one synthetic investor per investor wallet.',
+            )
+            investor_legacy_id = f'wallet-investor-{wallet_id}'
+            investors.append({
+                'legacy_id': investor_legacy_id,
+                'name': wallet_name,
+                'contact_number': '',
+                'email': '',
+                'address': '',
+                'status': wallet_status,
+                'created_at': created_at,
+                'updated_at': updated_at,
+            })
+
+            investor_bps, company_bps = _resolve_profit_split(
+                wallet_id,
+                wallet_name,
+                getattr(row, 'investor_percentage', None),
+                getattr(row, 'user_percentage', None),
+                warnings,
+                seen_warnings,
+            )
+
+            account['legacy_investor_id'] = investor_legacy_id
+            account['investor_profit_bps'] = investor_bps
+            account['company_profit_bps'] = company_bps
+
+        accounts.append(account)
+        exported_account_ids.add(wallet_id)
+
+    clients = []
+    for row in client_rows:
+        clients.append({
+            'legacy_id': str(row.id),
+            'full_name': str(row.full_name or ''),
+            'contact_number': str(row.contact_number or ''),
+            'passport_number': str(row.passport_number or ''),
+            'address': str(row.address or ''),
+            'status': 'active',
+            'created_at': _to_iso_timestamp(row.created_at),
+            'updated_at': _to_iso_timestamp(row.updated_at),
+        })
+
+    installments = []
+    for row in installment_rows:
+        wallet_id = _to_text(getattr(row, 'wallet_id', None)).strip()
+        installment = {
+            'legacy_id': str(row.id),
+            'legacy_client_id': str(row.client_id),
+            'installment_number': int(getattr(row, 'installment_number', 0) or 0),
+            'product_name': str(row.product_name or ''),
+            'cash_price_cents': _to_cents(row.cash_price),
+            'installment_price_cents': _to_cents(row.installment_price),
+            'term_months': int(row.term_months or 0),
+            'down_payment_cents': _to_cents(row.down_payment),
+            'monthly_payment_cents': _to_cents(row.monthly_payment),
+            'down_payment_date': _to_iso_date(row.down_payment_date),
+            'installment_start_date': _to_iso_date(row.installment_start_date),
+            'status': 'active',
+            'created_at': _to_iso_timestamp(row.created_at),
+            'updated_at': _to_iso_timestamp(row.updated_at),
+        }
+        if wallet_id:
+            installment['legacy_funding_account_id'] = wallet_id
+            if wallet_id not in exported_account_ids:
+                accounts.append({
+                    'legacy_id': wallet_id,
+                    'name': f'Archived legacy wallet {wallet_id}',
+                    'type': 'company_account',
+                    'status': 'archived',
+                    'currency': 'RUB',
+                })
+                exported_account_ids.add(wallet_id)
+                _append_warning(
+                    warnings,
+                    seen_warnings,
+                    f'Installments reference wallet {wallet_id}, but that wallet record is missing; exporter created an archived placeholder company account so the funding link can still import.',
+                )
+        installments.append(installment)
+
+    payments = []
+    for row in payment_rows:
+        payments.append({
+            'legacy_id': str(row.id),
+            'legacy_installment_id': str(row.installment_id),
+            'payment_number': int(row.payment_number or 0),
+            'due_date': _to_iso_date(row.due_date),
+            'expected_amount_cents': _to_cents(row.expected_amount),
+            'is_paid': bool(row.is_paid),
+            'paid_amount_cents': _to_cents(row.paid_amount),
+            'paid_date': _to_iso_date(row.paid_date),
+            'payment_method': '',
+            'transaction_ref': '',
+            'created_at': _to_iso_timestamp(row.created_at),
+            'updated_at': _to_iso_timestamp(row.updated_at),
+        })
+
+    payload = {
+        'investors': investors,
+        'accounts': accounts,
+        'clients': clients,
+        'installments': installments,
+        'payments': payments,
+    }
+    if warnings:
+        payload['warnings'] = warnings
+
+    return payload
+
+
+def _build_export_manifest(payload: dict) -> dict:
+    sections = {}
+    for section in PAGED_EXPORT_SECTIONS:
+        sections[section] = {
+            'total': len(payload.get(section, [])),
+        }
+
+    return {
+        'version': 2,
+        'mode': 'paged',
+        'page_size': DEFAULT_EXPORT_PAGE_SIZE,
+        'sections': sections,
+    }
+
+
+def _build_export_page(payload: dict, section: str, offset: int, limit: int) -> dict:
+    items = payload.get(section, [])
+    if not isinstance(items, list):
+        raise ValueError(f'Section "{section}" is not exportable')
+
+    page_items = items[offset:offset + limit]
+    next_offset = offset + len(page_items)
+
+    return {
+        'version': 2,
+        'mode': 'page',
+        'section': section,
+        'offset': offset,
+        'limit': limit,
+        'count': len(page_items),
+        'total': len(items),
+        'has_more': next_offset < len(items),
+        'items': page_items,
+    }
+
+
 def handler(event, context):
     if event.get('httpMethod') == 'OPTIONS':
         return _cors({'statusCode': 200, 'headers': DEFAULT_CORS_HEADERS, 'body': ''})
 
     if event.get('httpMethod') != 'GET':
-        return _cors({
-            'statusCode': 405,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': 'Method not allowed'}),
-        })
+        return _json_response(405, {'error': 'Method not allowed'})
 
     user_id, auth_error = JWTAuth.authenticate_request(event)
     if not user_id:
-        return _cors({
-            'statusCode': 401,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': f'Unauthorized: {auth_error}'}),
-        })
+        return _json_response(401, {'error': f'Unauthorized: {auth_error}'})
+
+    query_params = event.get('queryStringParameters') or {}
+    mode = _to_text(query_params.get('mode'), 'full').strip().lower() or 'full'
+    if mode not in ('full', 'manifest', 'page'):
+        return _json_response(400, {'error': 'Invalid mode. Expected full, manifest, or page.'})
+
+    section = _to_text(query_params.get('section')).strip()
+    if mode == 'page' and section not in PAGED_EXPORT_SECTIONS:
+        return _json_response(400, {'error': f'Invalid section. Expected one of: {", ".join(PAGED_EXPORT_SECTIONS)}'})
+
+    try:
+        limit = _parse_int_param(
+            query_params.get('limit'),
+            name='limit',
+            default=DEFAULT_EXPORT_PAGE_SIZE,
+            minimum=1,
+            maximum=MAX_EXPORT_PAGE_SIZE,
+        )
+        offset = _parse_int_param(
+            query_params.get('offset'),
+            name='offset',
+            default=0,
+            minimum=0,
+        )
+    except ValueError as e:
+        return _json_response(400, {'error': str(e)})
 
     driver = None
     try:
@@ -231,280 +582,42 @@ def handler(event, context):
         pool = ydb.SessionPool(driver)
 
         def export_data(session):
-            warnings = []
-            seen_warnings = set()
+            payload = _build_export_payload(session, user_id)
 
-            clients_query = """
-            DECLARE $user_id AS Utf8;
-            SELECT id, full_name, contact_number, passport_number, address, created_at, updated_at
-            FROM clients
-            WHERE user_id = $user_id
-            ORDER BY created_at ASC;
-            """
-            client_rows = _read_rows(session, clients_query, {'$user_id': user_id})
+            if mode == 'manifest':
+                return _json_response(200, _build_export_manifest(payload))
 
-            wallets_query = """
-            DECLARE $user_id AS Utf8;
-            SELECT
-                w.id AS id,
-                w.name AS name,
-                w.type AS type,
-                w.currency AS currency,
-                w.status AS status,
-                w.investment_amount_minor_units AS investment_amount_minor_units,
-                w.starting_amount_minor_units AS starting_amount_minor_units,
-                w.investor_percentage AS investor_percentage,
-                w.user_percentage AS user_percentage,
-                w.investment_return_date AS investment_return_date,
-                w.created_at AS created_at,
-                w.updated_at AS updated_at,
-                wb.balance_minor_units AS balance_minor_units,
-                wb.total_allocated_minor_units AS total_allocated_minor_units,
-                wb.due_to_get_minor_units AS due_to_get_minor_units,
-                wb.expected_revenue_minor_units AS expected_revenue_minor_units,
-                wb.spent_on_products_minor_units AS spent_on_products_minor_units
-            FROM wallets AS w
-            LEFT JOIN wallet_balances AS wb ON wb.wallet_id = w.id AND wb.user_id = w.user_id
-            WHERE w.user_id = $user_id
-            ORDER BY w.created_at ASC, w.id ASC;
-            """
-            wallet_rows = _read_rows(session, wallets_query, {'$user_id': user_id})
+            if mode == 'page':
+                return _json_response(200, _build_export_page(payload, section, offset, limit))
 
-            installments_query = """
-            DECLARE $user_id AS Utf8;
-            SELECT
-                id,
-                client_id,
-                wallet_id,
-                installment_number,
-                product_name,
-                cash_price,
-                installment_price,
-                term_months,
-                down_payment,
-                monthly_payment,
-                down_payment_date,
-                installment_start_date,
-                created_at,
-                updated_at
-            FROM installments
-            WHERE user_id = $user_id
-            ORDER BY created_at ASC;
-            """
-            installment_rows = _read_rows(session, installments_query, {'$user_id': user_id})
-
-            payments_query = """
-            DECLARE $user_id AS Utf8;
-            SELECT
-                p.id AS id,
-                p.installment_id AS installment_id,
-                p.payment_number AS payment_number,
-                p.due_date AS due_date,
-                p.expected_amount AS expected_amount,
-                COALESCE(p.paid_amount, CAST(0 AS Decimal(22,9))) AS paid_amount,
-                p.is_paid AS is_paid,
-                p.paid_date AS paid_date,
-                p.created_at AS created_at,
-                p.updated_at AS updated_at
-            FROM installment_payments AS p
-            INNER JOIN installments AS i ON i.id = p.installment_id
-            WHERE i.user_id = $user_id
-            ORDER BY p.installment_id ASC, p.payment_number ASC, p.created_at ASC;
-            """
-            payment_rows = _read_rows(session, payments_query, {'$user_id': user_id})
-
-            investors = []
-            accounts = []
-            exported_account_ids = set()
-
-            for row in wallet_rows:
-                wallet_id = _to_text(getattr(row, 'id', None)).strip()
-                if not wallet_id:
-                    continue
-
-                wallet_name = _to_text(getattr(row, 'name', None)).strip() or f'Legacy wallet {wallet_id}'
-                wallet_status = _to_text(getattr(row, 'status', None), 'active').strip() or 'active'
-                wallet_currency = _to_text(getattr(row, 'currency', None), 'RUB').strip() or 'RUB'
-                wallet_type = _normalize_wallet_type(row)
-                created_at = _to_iso_timestamp(getattr(row, 'created_at', None))
-                updated_at = _to_iso_timestamp(getattr(row, 'updated_at', None))
-
-                account = {
-                    'legacy_id': wallet_id,
-                    'name': wallet_name,
-                    'type': 'investor_account' if wallet_type == 'investor' else 'company_account',
-                    'status': wallet_status,
-                    'currency': wallet_currency,
-                    'created_at': created_at,
-                    'updated_at': updated_at,
-                }
-
-                initial_investment_minor_units = (
-                    _to_minor_units(getattr(row, 'investment_amount_minor_units', None))
-                    if wallet_type == 'investor'
-                    else _to_minor_units(getattr(row, 'starting_amount_minor_units', None))
+            body = _json_dumps(payload)
+            body_size = len(body.encode('utf-8'))
+            if body_size > LEGACY_EXPORT_RESPONSE_LIMIT_BYTES:
+                logger.warning(
+                    'Legacy export for user=%s is too large for a single gateway response: %s bytes',
+                    user_id,
+                    body_size,
                 )
-                if initial_investment_minor_units is not None:
-                    if initial_investment_minor_units >= 0:
-                        account['initial_investment_cents'] = initial_investment_minor_units
-                        account['investment_cents'] = initial_investment_minor_units
-                    else:
-                        _append_warning(
-                            warnings,
-                            seen_warnings,
-                            f'Wallet "{wallet_name}" ({wallet_id}) has negative initial investment {initial_investment_minor_units}; initial_investment_cents was omitted.',
-                        )
-
-                balance_minor_units = _to_minor_units(getattr(row, 'balance_minor_units', None))
-                if balance_minor_units is not None:
-                    if balance_minor_units >= 0:
-                        account['available_cents'] = balance_minor_units
-                    else:
-                        _append_warning(
-                            warnings,
-                            seen_warnings,
-                            f'Wallet "{wallet_name}" ({wallet_id}) has negative balance {balance_minor_units}; available_cents was omitted because the new app does not accept negative imported balances.',
-                        )
-                else:
-                    _append_warning(
-                        warnings,
-                        seen_warnings,
-                        f'Wallet "{wallet_name}" ({wallet_id}) has no wallet_balances row; available_cents was omitted.',
-                    )
-
-                if wallet_type == 'investor':
-                    _append_warning(
-                        warnings,
-                        seen_warnings,
-                        'Legacy app has no standalone investor entity; exporter creates one synthetic investor per investor wallet.',
-                    )
-                    investor_legacy_id = f'wallet-investor-{wallet_id}'
-                    investors.append({
-                        'legacy_id': investor_legacy_id,
-                        'name': wallet_name,
-                        'contact_number': '',
-                        'email': '',
-                        'address': '',
-                        'status': wallet_status,
-                        'created_at': created_at,
-                        'updated_at': updated_at,
-                    })
-
-                    investor_bps, company_bps = _resolve_profit_split(
-                        wallet_id,
-                        wallet_name,
-                        getattr(row, 'investor_percentage', None),
-                        getattr(row, 'user_percentage', None),
-                        warnings,
-                        seen_warnings,
-                    )
-
-                    account['legacy_investor_id'] = investor_legacy_id
-                    account['investor_profit_bps'] = investor_bps
-                    account['company_profit_bps'] = company_bps
-
-                accounts.append(account)
-                exported_account_ids.add(wallet_id)
-
-            clients = []
-            for row in client_rows:
-                clients.append({
-                    'legacy_id': str(row.id),
-                    'full_name': str(row.full_name or ''),
-                    'contact_number': str(row.contact_number or ''),
-                    'passport_number': str(row.passport_number or ''),
-                    'address': str(row.address or ''),
-                    'status': 'active',
-                    'created_at': _to_iso_timestamp(row.created_at),
-                    'updated_at': _to_iso_timestamp(row.updated_at),
+                return _json_response(413, {
+                    'error': 'Export is too large for a single response. Please update the app and retry the export.',
+                    'mode': 'paged',
+                    'version': 2,
                 })
-
-            installments = []
-            for row in installment_rows:
-                wallet_id = _to_text(getattr(row, 'wallet_id', None)).strip()
-                installment = {
-                    'legacy_id': str(row.id),
-                    'legacy_client_id': str(row.client_id),
-                    'installment_number': int(getattr(row, 'installment_number', 0) or 0),
-                    'product_name': str(row.product_name or ''),
-                    'cash_price_cents': _to_cents(row.cash_price),
-                    'installment_price_cents': _to_cents(row.installment_price),
-                    'term_months': int(row.term_months or 0),
-                    'down_payment_cents': _to_cents(row.down_payment),
-                    'monthly_payment_cents': _to_cents(row.monthly_payment),
-                    'down_payment_date': _to_iso_date(row.down_payment_date),
-                    'installment_start_date': _to_iso_date(row.installment_start_date),
-                    'status': 'active',
-                    'created_at': _to_iso_timestamp(row.created_at),
-                    'updated_at': _to_iso_timestamp(row.updated_at),
-                }
-                if wallet_id:
-                    installment['legacy_funding_account_id'] = wallet_id
-                    if wallet_id not in exported_account_ids:
-                        accounts.append({
-                            'legacy_id': wallet_id,
-                            'name': f'Archived legacy wallet {wallet_id}',
-                            'type': 'company_account',
-                            'status': 'archived',
-                            'currency': 'RUB',
-                        })
-                        exported_account_ids.add(wallet_id)
-                        _append_warning(
-                            warnings,
-                            seen_warnings,
-                            f'Installments reference wallet {wallet_id}, but that wallet record is missing; exporter created an archived placeholder company account so the funding link can still import.',
-                        )
-                installments.append(installment)
-
-            payments = []
-            for row in payment_rows:
-                payments.append({
-                    'legacy_id': str(row.id),
-                    'legacy_installment_id': str(row.installment_id),
-                    'payment_number': int(row.payment_number or 0),
-                    'due_date': _to_iso_date(row.due_date),
-                    'expected_amount_cents': _to_cents(row.expected_amount),
-                    'is_paid': bool(row.is_paid),
-                    'paid_amount_cents': _to_cents(row.paid_amount),
-                    'paid_date': _to_iso_date(row.paid_date),
-                    'payment_method': '',
-                    'transaction_ref': '',
-                    'created_at': _to_iso_timestamp(row.created_at),
-                    'updated_at': _to_iso_timestamp(row.updated_at),
-                })
-
-            payload = {
-                'investors': investors,
-                'accounts': accounts,
-                'clients': clients,
-                'installments': installments,
-                'payments': payments,
-            }
-            if warnings:
-                payload['warnings'] = warnings
 
             return _cors({
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps(payload, ensure_ascii=False),
+                'body': body,
             })
 
         return pool.retry_operation_sync(export_data)
 
     except ydb.Error as e:
         logger.exception('YDB error while exporting migration payload')
-        return _cors({
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': f'Database operation failed: {str(e)}'}),
-        })
+        return _json_response(500, {'error': f'Database operation failed: {str(e)}'})
     except Exception:
         logger.exception('Unexpected error while exporting migration payload')
-        return _cors({
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': 'Internal server error'}),
-        })
+        return _json_response(500, {'error': 'Internal server error'})
     finally:
         if driver is not None:
             driver.stop()
