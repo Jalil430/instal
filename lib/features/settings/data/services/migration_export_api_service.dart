@@ -10,6 +10,7 @@ class MigrationExportApiService {
     'investors',
     'accounts',
     'clients',
+    'guarantors',
     'installments',
     'payments',
     'warnings',
@@ -167,6 +168,7 @@ class MigrationExportApiService {
     final payments = decoded['payments'];
     final investors = decoded['investors'];
     final accounts = decoded['accounts'];
+    final guarantors = decoded['guarantors'];
     final warnings = decoded['warnings'];
 
     final hasRequiredLists =
@@ -174,6 +176,7 @@ class MigrationExportApiService {
     final hasOptionalLists =
         (investors == null || investors is List) &&
         (accounts == null || accounts is List) &&
+        (guarantors == null || guarantors is List) &&
         (warnings == null || warnings is List);
 
     return hasRequiredLists && hasOptionalLists;

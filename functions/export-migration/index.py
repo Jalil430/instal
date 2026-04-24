@@ -24,6 +24,7 @@ PAGED_EXPORT_SECTIONS = (
     'investors',
     'accounts',
     'clients',
+    'guarantors',
     'installments',
     'payments',
     'warnings',
@@ -149,6 +150,10 @@ def _to_text(value, default: str = '') -> str:
     return str(value)
 
 
+def _has_meaningful_text(value) -> bool:
+    return bool(_to_text(value).strip())
+
+
 def _normalize_wallet_type(row) -> str:
     raw_type = _to_text(getattr(row, 'type', None)).strip().lower()
     if raw_type in ('investor', 'personal'):
@@ -247,7 +252,18 @@ def _build_export_payload(session, user_id: str) -> dict:
 
     clients_query = """
     DECLARE $user_id AS Utf8;
-    SELECT id, full_name, contact_number, passport_number, address, created_at, updated_at
+    SELECT
+        id,
+        full_name,
+        contact_number,
+        passport_number,
+        address,
+        guarantor_full_name,
+        guarantor_contact_number,
+        guarantor_passport_number,
+        guarantor_address,
+        created_at,
+        updated_at
     FROM clients
     WHERE user_id = $user_id
     ORDER BY created_at ASC, id ASC;
@@ -418,17 +434,45 @@ def _build_export_payload(session, user_id: str) -> dict:
         exported_account_ids.add(wallet_id)
 
     clients = []
+    guarantors = []
     for row in client_rows:
+        client_id = str(row.id)
+        created_at = _to_iso_timestamp(row.created_at)
+        updated_at = _to_iso_timestamp(row.updated_at)
+
         clients.append({
-            'legacy_id': str(row.id),
+            'legacy_id': client_id,
             'full_name': str(row.full_name or ''),
             'contact_number': str(row.contact_number or ''),
             'passport_number': str(row.passport_number or ''),
             'address': str(row.address or ''),
             'status': 'active',
-            'created_at': _to_iso_timestamp(row.created_at),
-            'updated_at': _to_iso_timestamp(row.updated_at),
+            'created_at': created_at,
+            'updated_at': updated_at,
         })
+
+        guarantor_full_name = _to_text(getattr(row, 'guarantor_full_name', None)).strip()
+        guarantor_contact_number = _to_text(getattr(row, 'guarantor_contact_number', None)).strip()
+        guarantor_passport_number = _to_text(getattr(row, 'guarantor_passport_number', None)).strip()
+        guarantor_address = _to_text(getattr(row, 'guarantor_address', None)).strip()
+
+        if any((
+            _has_meaningful_text(guarantor_full_name),
+            _has_meaningful_text(guarantor_contact_number),
+            _has_meaningful_text(guarantor_passport_number),
+            _has_meaningful_text(guarantor_address),
+        )):
+            guarantors.append({
+                'legacy_id': f'client-guarantor-{client_id}',
+                'legacy_client_id': client_id,
+                'full_name': guarantor_full_name,
+                'contact_number': guarantor_contact_number,
+                'passport_number': guarantor_passport_number,
+                'address': guarantor_address,
+                'status': 'active',
+                'created_at': created_at,
+                'updated_at': updated_at,
+            })
 
     installments = []
     for row in installment_rows:
@@ -488,6 +532,7 @@ def _build_export_payload(session, user_id: str) -> dict:
         'investors': investors,
         'accounts': accounts,
         'clients': clients,
+        'guarantors': guarantors,
         'installments': installments,
         'payments': payments,
     }
